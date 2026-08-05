@@ -1,0 +1,27 @@
+{
+  "name": "pratto",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.12.4",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:e2e": "pnpm --filter @pratto/web test:e2e",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "pnpm --filter @pratto/database db:generate",
+    "db:validate": "pnpm --filter @pratto/database db:validate",
+    "db:push": "pnpm --filter @pratto/database db:push",
+    "db:seed": "pnpm --filter @pratto/database db:seed",
+    "db:reset": "pnpm --filter @pratto/database db:reset"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.6",
+    "typescript": "^5.8.3"
+  }
+}
