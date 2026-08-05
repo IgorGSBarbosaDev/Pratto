@@ -1,0 +1,35 @@
+{
+  "name": "@pratto/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "development": "./src/index.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "prisma generate && tsc --module commonjs --moduleResolution node --outDir dist --declaration --declarationMap false --noEmit false",
+    "db:generate": "prisma generate",
+    "db:validate": "prisma validate",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "prisma migrate reset --force",
+    "lint": "eslint src prisma",
+    "typecheck": "prisma generate && tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.14.0"
+  },
+  "devDependencies": {
+    "@pratto/config": "workspace:*",
+    "@pratto/eslint-config": "workspace:*",
+    "prisma": "^6.14.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
