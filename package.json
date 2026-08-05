@@ -13,10 +13,12 @@
     "test:e2e": "pnpm --filter @pratto/web test:e2e",
     "typecheck": "turbo run typecheck",
     "db:generate": "pnpm --filter @pratto/database db:generate",
+    "db:migrate": "pnpm --filter @pratto/database db:migrate",
+    "db:migrate:deploy": "pnpm --filter @pratto/database db:migrate:deploy",
     "db:validate": "pnpm --filter @pratto/database db:validate",
-    "db:push": "pnpm --filter @pratto/database db:push",
     "db:seed": "pnpm --filter @pratto/database db:seed",
-    "db:reset": "pnpm --filter @pratto/database db:reset"
+    "db:reset": "pnpm --filter @pratto/database db:reset",
+    "db:test:reset": "pnpm --filter @pratto/database db:test:reset"
   },
   "devDependencies": {
     "eslint": "^8.57.1",
