@@ -33,11 +33,20 @@ pnpm test
 pnpm build
 pnpm format:check
 pnpm db:validate
+pnpm db:migrate
+pnpm db:seed
+pnpm db:reset
 ```
+
+`pnpm db:reset` reapplies every migration without running the seed. Run `pnpm db:seed` afterwards
+when demo data is required. Integration tests use the isolated `pratto_test` PostgreSQL schema from
+`.env.test` and reset only that schema.
 
 The database schema, authentication, catalog, publication, public feed, analytics, and dashboard
 will be delivered incrementally following the implementation plan in
 `docs/Pratto-Plano-de-Implementacao-e-Arquitetura.md`.
+
+The initial multi-tenant data model is documented in `docs/architecture/data-model.md`.
 
 ## Repository layout
 

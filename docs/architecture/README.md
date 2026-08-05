@@ -27,3 +27,9 @@ Web ───────► API ───────► PostgreSQL
 
 Os adapters de storage e e-mail são acessados por interfaces. Isso permite substituir MinIO e
 Mailpit sem alterar as regras de negócio.
+
+## Persistência do domínio
+
+O primeiro schema multi-tenant e suas regras de integridade estão descritos em
+[`data-model.md`](./data-model.md). Ele cobre usuários, sessões, organizações, memberships,
+estabelecimentos e menus, sem antecipar autenticação ou catálogo.

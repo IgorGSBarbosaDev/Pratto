@@ -1,0 +1,11 @@
+# Critérios de aceite — domínio e banco inicial
+
+- User participa de organizações somente por Membership.
+- Session sempre pertence a User e armazena somente o hash do token.
+- Establishment pertence a exatamente uma Organization e pode possuir menus.
+- Menu não pode combinar um estabelecimento com a organização de outro tenant.
+- E-mail, token de sessão, membership, public ID, slug e nome de menu respeitam suas unicidades.
+- Public ID do estabelecimento é estável; slug não é identidade permanente.
+- Seed cria dois tenants demonstrativos e pode ser executado repetidamente sem duplicação.
+- Factories reutilizáveis permitem montar tenants e relações em testes.
+- Migration, seed, testes de integração, lint, typecheck e build são reproduzíveis pela raiz.
