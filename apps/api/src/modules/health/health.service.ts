@@ -42,19 +42,19 @@ export class HealthService {
     try {
       await operation();
       return [name, { status: 'up', latencyMs: Math.round(performance.now() - startedAt) }];
-    } catch (error) {
+    } catch {
       return [
         name,
         {
           status: 'down',
           latencyMs: Math.round(performance.now() - startedAt),
-          message: this.safeMessage(error),
+          message: this.safeMessage(),
         },
       ];
     }
   }
 
-  private safeMessage(error: unknown): string {
-    return error instanceof Error ? error.message : 'Dependency check failed';
+  private safeMessage(): string {
+    return 'Dependency check failed';
   }
 }

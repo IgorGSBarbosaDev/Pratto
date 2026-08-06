@@ -18,7 +18,8 @@
     "db:validate": "pnpm --filter @pratto/database db:validate",
     "db:seed": "pnpm --filter @pratto/database db:seed",
     "db:reset": "pnpm --filter @pratto/database db:reset",
-    "db:test:reset": "pnpm --filter @pratto/database db:test:reset"
+    "db:test:reset": "pnpm --filter @pratto/database db:test:reset",
+    "db:test:seed": "pnpm --filter @pratto/database db:test:seed"
   },
   "devDependencies": {
     "eslint": "^8.57.1",

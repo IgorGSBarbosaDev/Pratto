@@ -4,6 +4,8 @@
 
 ```text
 User 1 ── * Session
+User 1 ── 1 PasswordCredential
+User 1 ── 0..1 PasswordResetToken
 User 1 ── * Membership * ── 1 Organization
 Organization 1 ── * Establishment
 Establishment 1 ── * Menu
@@ -24,8 +26,9 @@ dentro da organização; ele não é usado como chave estrangeira nem identidade
 
 `Menu` mantém `organizationId` e `establishmentId`. A FK composta referencia
 `Establishment(id, organizationId)`, impedindo que um menu seja gravado com o tenant de outro
-estabelecimento. Consultas administrativas devem continuar filtrando explicitamente pelo contexto
-de organização derivado da sessão; autorização e guards serão adicionados na fase de autenticação.
+estabelecimento. Consultas administrativas filtram explicitamente pelo contexto de organização
+derivado da sessão. A FK composta da seleção ativa também garante que a membership pertença ao
+usuário da sessão.
 
 As constraints também garantem e-mails normalizados, textos obrigatórios não vazios, slugs em
 formato canônico, coerência temporal das sessões e unicidades de memberships e identificadores.
@@ -38,8 +41,9 @@ cascade. Sessões e memberships, por serem registros dependentes, acompanham a e
 - `MembershipRole`: `OWNER`, `ADMIN`, `MEMBER`.
 - `MenuStatus`: `DRAFT`, `ACTIVE`, `ARCHIVED`.
 
-Sessões derivam validade e revogação de `expiresAt` e `revokedAt`, sem estado duplicado. Senhas não
-fazem parte deste schema; hash e fluxos de autenticação pertencem à próxima fase.
+Sessões derivam validade de `expiresAt` (inatividade), `absoluteExpiresAt` e `revokedAt`, sem estado
+duplicado. Credenciais, tokens de recuperação, buckets de limite e eventos de autenticação são
+tabelas técnicas sem expor valores sensíveis em claro.
 
 ## Desenvolvimento e testes
 
@@ -50,5 +54,5 @@ pnpm db:reset
 pnpm test
 ```
 
-O seed usa chaves determinísticas e `upsert` dentro de uma transação, podendo ser repetido sem
-duplicar dados. Os testes de integração usam `.env.test` e recriam apenas o schema `pratto_test`.
+O seed lê `SEED_ADMIN_PASSWORD`, usa chaves determinísticas e não sobrescreve uma credencial já
+existente. Os testes de integração usam `.env.test` e recriam apenas o schema `pratto_test`.

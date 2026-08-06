@@ -27,12 +27,15 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force --skip-seed",
     "db:test:reset": "dotenv -e ../../.env.test -o -- prisma migrate reset --force --skip-seed",
+    "db:test:seed": "dotenv -e ../../.env.test -o -- tsx prisma/seed.ts",
     "lint": "eslint src prisma test",
     "test": "pnpm db:test:reset && dotenv -e ../../.env.test -o -- jest --config jest.config.cjs --runInBand",
     "typecheck": "prisma generate && tsc --noEmit"
   },
   "dependencies": {
-    "@prisma/client": "^6.14.0"
+    "@prisma/client": "^6.14.0",
+    "argon2": "^0.45.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@pratto/config": "workspace:*",

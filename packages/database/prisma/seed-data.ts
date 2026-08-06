@@ -1,4 +1,5 @@
 import { LifecycleStatus, MembershipRole, MenuStatus, type PrismaClient } from '@prisma/client';
+import { hash } from 'argon2';
 
 export const seedIds = {
   users: {
@@ -23,7 +24,14 @@ export const seedIds = {
   },
 } as const;
 
-export async function seedDatabase(database: PrismaClient): Promise<void> {
+export async function seedDatabase(database: PrismaClient, adminPassword: string): Promise<void> {
+  const passwordHash = await hash(adminPassword, {
+    type: 2,
+    memoryCost: 19 * 1024,
+    timeCost: 2,
+    parallelism: 1,
+  });
+
   await database.$transaction(async (transaction) => {
     const prattoOwner = await transaction.user.upsert({
       where: { email: 'owner@pratto.local' },
@@ -45,6 +53,14 @@ export async function seedDatabase(database: PrismaClient): Promise<void> {
         name: 'Café Aurora Owner',
         status: LifecycleStatus.ACTIVE,
       },
+    });
+
+    await transaction.passwordCredential.createMany({
+      data: [
+        { userId: prattoOwner.id, passwordHash },
+        { userId: cafeOwner.id, passwordHash },
+      ],
+      skipDuplicates: true,
     });
 
     const prattoOrganization = await transaction.organization.upsert({

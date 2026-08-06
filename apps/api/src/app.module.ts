@@ -8,6 +8,8 @@ import { LoggerModule } from 'nestjs-pino';
 import { EmailModule } from './infrastructure/email/email.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
 import { HealthModule } from './modules/health/health.module';
+import { IdentityModule } from './modules/identity/identity.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
 
 const environment = loadEnvironment();
 
@@ -18,11 +20,19 @@ const environment = loadEnvironment();
       pinoHttp: {
         level: environment.LOG_LEVEL,
         genReqId: (request) => request.headers['x-request-id']?.toString() ?? randomUUID(),
-        redact: ['req.headers.cookie', 'req.headers.authorization'],
+        redact: [
+          'req.headers.cookie',
+          'req.headers.authorization',
+          'req.headers.x-csrf-token',
+          'req.body.password',
+          'req.body.token',
+        ],
       },
     }),
     StorageModule,
     EmailModule,
+    IdentityModule,
+    OrganizationsModule,
     HealthModule,
   ],
 })

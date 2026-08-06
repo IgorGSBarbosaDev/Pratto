@@ -17,6 +17,8 @@ cp .env.example .env
 corepack enable
 pnpm install
 docker compose up -d
+pnpm db:migrate
+pnpm db:seed
 pnpm dev
 ```
 
@@ -36,17 +38,25 @@ pnpm db:validate
 pnpm db:migrate
 pnpm db:seed
 pnpm db:reset
+pnpm db:test:reset
+pnpm db:test:seed
 ```
 
 `pnpm db:reset` reapplies every migration without running the seed. Run `pnpm db:seed` afterwards
 when demo data is required. Integration tests use the isolated `pratto_test` PostgreSQL schema from
 `.env.test` and reset only that schema.
 
-The database schema, authentication, catalog, publication, public feed, analytics, and dashboard
-will be delivered incrementally following the implementation plan in
+Before the authentication E2E suite, run `pnpm db:test:reset && pnpm db:test:seed`. The suite starts
+the API and web app with `.env.test`; Mailpit and PostgreSQL must be available.
+
+Set `SEED_ADMIN_PASSWORD` before seeding. The seed creates `owner@pratto.local` and
+`owner@cafe-aurora.local` without replacing a password that was already changed.
+
+The catalog, publication, public feed, analytics, and dashboard will be delivered incrementally following the implementation plan in
 `docs/Pratto-Plano-de-Implementacao-e-Arquitetura.md`.
 
-The initial multi-tenant data model is documented in `docs/architecture/data-model.md`.
+The multi-tenant model is documented in `docs/architecture/data-model.md`; administrative
+authentication is documented in `docs/architecture/authentication.md`.
 
 ## Repository layout
 

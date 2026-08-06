@@ -13,20 +13,26 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.7.1",
+    "@pratto/contracts": "workspace:*",
     "@pratto/ui": "workspace:*",
+    "@pratto/validation": "workspace:*",
+    "@tanstack/react-query": "^5.101.4",
     "next": "^15.4.6",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-hook-form": "^7.84.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@playwright/test": "^1.54.1",
+    "@pratto/eslint-config": "workspace:*",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^22.16.5",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^4.7.0",
-    "@pratto/eslint-config": "workspace:*",
     "autoprefixer": "^10.4.21",
     "jsdom": "^26.1.0",
     "postcss": "^8.5.6",

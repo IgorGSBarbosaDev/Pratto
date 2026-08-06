@@ -20,6 +20,10 @@ const environmentSchema = z.object({
   MAILPIT_API_URL: z.string().url(),
   MAIL_FROM: z.string().email(),
   COOKIE_SECRET: z.string().min(32),
+  COOKIE_SECURE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

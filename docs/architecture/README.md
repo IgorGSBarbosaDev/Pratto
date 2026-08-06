@@ -10,12 +10,13 @@ persistência.
 - Regras de negócio pertencem aos módulos de domínio.
 - Prisma, MinIO e Mailpit são adapters de infraestrutura.
 - Contratos compartilhados não expõem entidades Prisma.
-- O contexto de tenant será derivado da sessão autenticada nas fases de domínio e autenticação.
+- O contexto de tenant é derivado da sessão e revalidado contra memberships ativas.
 
 ## Módulos previstos da API
 
 `identity`, `organizations`, `establishments`, `catalog`, `media`, `public-menu`, `analytics` e
-`audit`. A fundação cria apenas os módulos técnicos necessários para executar e observar a API.
+`audit`. Nesta fase, `identity` e `organizations` implementam autenticação e resolução do tenant;
+os demais módulos permanecem incrementais.
 
 ## Dependências locais
 
@@ -31,5 +32,5 @@ Mailpit sem alterar as regras de negócio.
 ## Persistência do domínio
 
 O primeiro schema multi-tenant e suas regras de integridade estão descritos em
-[`data-model.md`](./data-model.md). Ele cobre usuários, sessões, organizações, memberships,
-estabelecimentos e menus, sem antecipar autenticação ou catálogo.
+[`data-model.md`](./data-model.md). A estratégia de sessão, CSRF, recuperação e tenant está em
+[`authentication.md`](./authentication.md).

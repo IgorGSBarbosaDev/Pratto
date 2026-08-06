@@ -7,6 +7,7 @@ import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { ApiExceptionFilter } from './common/http/api-exception.filter';
 import { RequestIdInterceptor } from './common/http/request-id.interceptor';
+import { SESSION_COOKIE } from './modules/identity/domain/auth.constants';
 
 async function bootstrap(): Promise<void> {
   const environment = loadEnvironment();
@@ -25,6 +26,7 @@ async function bootstrap(): Promise<void> {
     .setTitle('Pratto API')
     .setDescription('REST API for the Pratto digital menu')
     .setVersion('0.1.0')
+    .addCookieAuth(SESSION_COOKIE)
     .build();
   SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swaggerConfig));
 

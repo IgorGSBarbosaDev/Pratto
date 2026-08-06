@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-import { seedDatabase } from '../../prisma/seed-data';
+import { seedDatabase, seedIds } from '../../prisma/seed-data';
 import {
   clearDatabase,
   createEstablishment,
@@ -99,6 +99,18 @@ describe('tenant domain schema', () => {
     ).rejects.toMatchObject({ code: 'P2002' });
   });
 
+  it('prevents a session from selecting another user membership at database level', async () => {
+    const tenantA = await createTenantFixture(database, { label: 'Session A' });
+    const tenantB = await createTenantFixture(database, { label: 'Session B' });
+
+    await expect(
+      createSession(database, {
+        userId: tenantA.user.id,
+        activeMembershipId: tenantB.membership.id,
+      }),
+    ).rejects.toMatchObject({ code: 'P2003' });
+  });
+
   it('enforces normalization, format and temporal checks in PostgreSQL', async () => {
     const user = await createUser(database);
     const organization = await createOrganization(database);
@@ -176,8 +188,12 @@ describe('tenant domain schema', () => {
   });
 
   it('can run the seed repeatedly without duplicating records', async () => {
-    await seedDatabase(database);
-    await seedDatabase(database);
+    await seedDatabase(database, 'integration-test-password');
+    const originalHash = await database.passwordCredential.findUniqueOrThrow({
+      where: { userId: seedIds.users.prattoOwner },
+      select: { passwordHash: true },
+    });
+    await seedDatabase(database, 'a-different-test-password');
 
     await expect(
       Promise.all([
@@ -187,8 +203,15 @@ describe('tenant domain schema', () => {
         database.establishment.count(),
         database.menu.count(),
         database.session.count(),
+        database.passwordCredential.count(),
       ]),
-    ).resolves.toEqual([2, 2, 2, 2, 2, 0]);
+    ).resolves.toEqual([2, 2, 2, 2, 2, 0, 2]);
+    await expect(
+      database.passwordCredential.findUniqueOrThrow({
+        where: { userId: seedIds.users.prattoOwner },
+        select: { passwordHash: true },
+      }),
+    ).resolves.toEqual(originalHash);
 
     const organizations = await database.organization.findMany({
       include: { memberships: true, establishments: { include: { menus: true } } },

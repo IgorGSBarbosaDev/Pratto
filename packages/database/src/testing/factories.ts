@@ -47,11 +47,13 @@ export function createUser(
 
 export function createSession(database: DatabaseClient, input: SessionFactoryInput) {
   const unique = uniqueValue();
+  const absoluteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   return database.session.create({
     data: {
       tokenHash: `token-hash-${unique}`,
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      absoluteExpiresAt,
       ...input,
     },
   });
@@ -142,6 +144,10 @@ export async function createTenantFixture(
 
 export async function clearDatabase(database: PrismaClient): Promise<void> {
   await database.$transaction([
+    database.authenticationEvent.deleteMany(),
+    database.authRateLimitBucket.deleteMany(),
+    database.passwordResetToken.deleteMany(),
+    database.passwordCredential.deleteMany(),
     database.menu.deleteMany(),
     database.establishment.deleteMany(),
     database.membership.deleteMany(),
