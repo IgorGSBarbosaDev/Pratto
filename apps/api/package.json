@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "nest build",
-    "dev": "NODE_OPTIONS=--conditions=development tsx watch src/main.ts",
+    "dev": "node --conditions=development ./node_modules/tsx/dist/cli.mjs watch src/main.ts",
     "lint": "eslint src",
     "start": "node dist/main.js",
     "test": "jest --runInBand",

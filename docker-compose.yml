@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: pratto
       POSTGRES_PASSWORD: pratto
     ports:
-      - '5432:5432'
+      - '${PRATTO_POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,8 +22,8 @@ services:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: miniosecret
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - '${PRATTO_MINIO_PORT:-9000}:9000'
+      - '${PRATTO_MINIO_CONSOLE_PORT:-9001}:9001'
     volumes:
       - minio_data:/data
     healthcheck:
@@ -35,8 +35,8 @@ services:
   mailpit:
     image: axllent/mailpit:v1.21.8
     ports:
-      - '1025:1025'
-      - '8025:8025'
+      - '${PRATTO_MAILPIT_SMTP_PORT:-1025}:1025'
+      - '${PRATTO_MAILPIT_HTTP_PORT:-8025}:8025'
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:8025/api/v1/info']
       interval: 5s

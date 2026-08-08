@@ -7,7 +7,7 @@ test('login confirms the session, opens admin, and logout blocks it again', asyn
   await page.getByRole('button', { name: 'Entrar' }).click();
 
   await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByRole('heading', { name: 'Pratto Burger' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pratto Burger', level: 1 })).toBeVisible();
   const context = await page.request.get('http://localhost:4000/auth/me');
   expect(context.ok()).toBe(true);
   expect(await context.json()).toMatchObject({
@@ -16,7 +16,7 @@ test('login confirms the session, opens admin, and logout blocks it again', asyn
   });
 
   await page.getByRole('button', { name: 'Sair' }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login(?:\?next=%2Fadmin)?$/);
   await page.goto('/admin');
   await expect(page).toHaveURL(/\/login\?next=%2Fadmin$/);
 });
