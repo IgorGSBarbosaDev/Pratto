@@ -54,7 +54,7 @@ nunca troca o tenant informado pelos guards.
 | DELETE | `/admin/establishments/:establishmentId/assets/:assetKind` | Remove a referência de logo ou capa.                             |
 
 `assetKind` aceita `logo` ou `cover`. Logo e capa são referências de asset do estabelecimento e
-usam o `StorageService` existente; não há ainda entidade ou fluxo de mídia de produtos.
+usam o `StorageService` existente.
 
 ## Categorias do cardápio
 
@@ -97,3 +97,27 @@ o preço e o preço promocional são strings decimais na API e `DECIMAL(10,2)` n
 Produtos arquivados permanecem no catálogo editável e não podem ser alterados. A publicação inclui
 produtos ativos e não arquivados associados a categorias ativas; publicações anteriores não são
 reescritas.
+
+## Mídias dos produtos
+
+As rotas de mídia exigem sessão autenticada, organização ativa e CSRF nas mutações. A API valida
+MIME, extensão, assinatura básica do conteúdo e tamanho antes de gravar no MinIO. Imagens JPEG,
+PNG e WebP têm limite de 5 MB; vídeos MP4, WebM e MOV têm limite de 50 MB.
+
+| Método | Rota                                                              | Resultado                                |
+| ------ | ----------------------------------------------------------------- | ---------------------------------------- |
+| GET    | `/admin/menus/:menuId/products/:productId/media`                  | Lista as mídias do produto no tenant.    |
+| POST   | `/admin/menus/:menuId/products/:productId/media`                  | Faz upload multipart no campo `file`.    |
+| POST   | `/admin/menus/:menuId/products/:productId/media/:mediaId/primary` | Define a mídia principal.                |
+| PATCH  | `/admin/menus/:menuId/products/:productId/media/reorder`          | Recebe todos os IDs na nova ordem.       |
+| DELETE | `/admin/menus/:menuId/products/:productId/media/:mediaId`         | Remove a referência e o objeto do MinIO. |
+
+As chaves de armazenamento são aleatórias e escopadas por organização, menu e produto. Todas as
+consultas administrativas combinam esses três escopos; mídias de produtos arquivados não podem ser
+gerenciadas. O primeiro upload torna-se principal, e a remoção da principal promove a primeira
+mídia restante. O bucket MinIO permanece privado e o GET devolve URL de preview assinada e
+temporária.
+
+Uma nova publicação usa `schemaVersion: 2` e inclui a lista de mídias dos produtos ativos no
+snapshot usando `storageKey`, sem congelar uma URL assinada expirável. Publicações anteriores
+continuam imutáveis; o feed público permanece fora desta etapa.

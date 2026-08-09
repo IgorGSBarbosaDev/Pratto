@@ -6,6 +6,9 @@ import type {
   MenuListResponse,
   ProductCreateInput,
   ProductListResponse,
+  ProductMediaListResponse,
+  ProductMediaReorderInput,
+  ProductMediaResponse,
   ProductResponse,
   ProductReorderInput,
   ProductUpdateInput,
@@ -85,4 +88,30 @@ export const catalogApi = {
       body: JSON.stringify(input),
       csrf: true,
     }),
+  listProductMedia: (menuId: string, productId: string) =>
+    request<ProductMediaListResponse>(`/admin/menus/${menuId}/products/${productId}/media`),
+  uploadProductMedia: (menuId: string, productId: string, file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    return request<ProductMediaResponse>(`/admin/menus/${menuId}/products/${productId}/media`, {
+      method: 'POST',
+      body,
+      csrf: true,
+    });
+  },
+  setProductMediaPrimary: (menuId: string, productId: string, mediaId: string) =>
+    request<ProductMediaListResponse>(
+      `/admin/menus/${menuId}/products/${productId}/media/${mediaId}/primary`,
+      { method: 'POST', csrf: true },
+    ),
+  reorderProductMedia: (menuId: string, productId: string, input: ProductMediaReorderInput) =>
+    request<ProductMediaListResponse>(
+      `/admin/menus/${menuId}/products/${productId}/media/reorder`,
+      { method: 'PATCH', body: JSON.stringify(input), csrf: true },
+    ),
+  removeProductMedia: (menuId: string, productId: string, mediaId: string) =>
+    request<ProductMediaListResponse>(
+      `/admin/menus/${menuId}/products/${productId}/media/${mediaId}`,
+      { method: 'DELETE', csrf: true },
+    ),
 };

@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const catalogMenuIdSchema = z.string().uuid();
 export const categoryIdSchema = z.string().uuid();
 export const productIdSchema = z.string().uuid();
+export const productMediaIdSchema = z.string().uuid();
 
 const categoryNameSchema = z
   .string()
@@ -117,9 +118,14 @@ export const productReorderSchema = z
   .object({ productIds: z.array(productIdSchema).max(500) })
   .strict();
 
+export const productMediaReorderSchema = z
+  .object({ mediaIds: z.array(productMediaIdSchema).max(100) })
+  .strict();
+
 export type ProductCreateInput = z.infer<typeof productCreateSchema>;
 export type ProductUpdateInput = z.infer<typeof productUpdateSchema>;
 export type ProductReorderInput = z.infer<typeof productReorderSchema>;
+export type ProductMediaReorderInput = z.infer<typeof productMediaReorderSchema>;
 
 function normalizeMoney(value: string): string {
   const [integer, decimals = ''] = value.split('.');

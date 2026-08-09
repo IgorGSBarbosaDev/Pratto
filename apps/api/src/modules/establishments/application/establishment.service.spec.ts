@@ -51,6 +51,7 @@ function createService() {
     upload: jest.fn(),
     delete: jest.fn().mockResolvedValue(undefined),
     getPublicUrl: jest.fn((key: string) => `http://storage.test/${key}`),
+    getReadUrl: jest.fn((key: string) => Promise.resolve(`http://storage.test/signed/${key}`)),
     health: jest.fn(),
   };
   return { service: new EstablishmentService(storage), storage };

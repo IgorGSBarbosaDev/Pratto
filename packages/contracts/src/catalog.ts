@@ -2,6 +2,7 @@ export type CategoryStatus = 'ACTIVE' | 'INACTIVE';
 export type EditableMenuStatus = 'DRAFT' | 'ACTIVE';
 export type ProductStatus = 'ACTIVE' | 'INACTIVE';
 export type ProductAvailability = 'AVAILABLE' | 'TEMPORARILY_UNAVAILABLE' | 'HIDDEN';
+export type ProductMediaType = 'IMAGE' | 'VIDEO';
 
 export interface MenuSummaryResponse {
   id: string;
@@ -90,4 +91,27 @@ export interface ProductUpdateInput {
 
 export interface ProductReorderInput {
   productIds: string[];
+}
+
+export interface ProductMediaResponse {
+  id: string;
+  productId: string;
+  mediaType: ProductMediaType;
+  contentType: string;
+  originalName: string;
+  url: string;
+  sizeBytes: number;
+  displayOrder: number;
+  isPrimary: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductMediaListResponse {
+  productId: string;
+  media: ProductMediaResponse[];
+}
+
+export interface ProductMediaReorderInput {
+  mediaIds: string[];
 }

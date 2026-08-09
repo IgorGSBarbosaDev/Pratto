@@ -16,6 +16,7 @@ export interface StorageService {
   upload(input: UploadInput): Promise<StoredFile>;
   delete(key: string): Promise<void>;
   getPublicUrl(key: string): string;
+  getReadUrl(key: string, expiresInSeconds?: number): Promise<string>;
   health(): Promise<void>;
 }
 

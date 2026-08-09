@@ -38,6 +38,13 @@ enum ProductAvailability {
   @@map("product_availability")
 }
 
+enum ProductMediaType {
+  IMAGE
+  VIDEO
+
+  @@map("product_media_type")
+}
+
 model User {
   id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                String                @unique(map: "users_email_key") @db.VarChar(320)
@@ -258,11 +265,35 @@ model Product {
   updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   menu              Menu               @relation(fields: [menuId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
   category          Category           @relation(fields: [categoryId, organizationId, menuId], references: [id, organizationId, menuId], onDelete: Restrict, onUpdate: Cascade)
+  media             ProductMedia[]
 
   @@unique([id, organizationId], map: "products_id_organization_id_key")
+  @@unique([id, organizationId, menuId], map: "products_id_organization_id_menu_id_key")
   @@index([organizationId, menuId, archivedAt, displayOrder], map: "products_org_menu_archived_order_idx")
   @@index([organizationId, menuId, categoryId], map: "products_org_menu_category_idx")
   @@map("products")
+}
+
+model ProductMedia {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String          @map("organization_id") @db.Uuid
+  menuId         String          @map("menu_id") @db.Uuid
+  productId      String          @map("product_id") @db.Uuid
+  mediaType      ProductMediaType @map("media_type")
+  contentType    String          @map("content_type") @db.VarChar(100)
+  originalName   String          @map("original_name") @db.VarChar(255)
+  storageKey     String          @unique(map: "product_media_storage_key_key") @map("storage_key") @db.VarChar(512)
+  sizeBytes      Int             @map("size_bytes")
+  displayOrder   Int             @default(0) @map("display_order")
+  isPrimary      Boolean         @default(false) @map("is_primary")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  product        Product         @relation(fields: [productId, organizationId, menuId], references: [id, organizationId, menuId], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([id, organizationId], map: "product_media_id_organization_id_key")
+  @@index([organizationId, menuId, productId, displayOrder], map: "product_media_org_menu_product_order_idx")
+  @@index([organizationId, menuId, productId, isPrimary], map: "product_media_org_menu_product_primary_idx")
+  @@map("product_media")
 }
 
 model MenuPublication {

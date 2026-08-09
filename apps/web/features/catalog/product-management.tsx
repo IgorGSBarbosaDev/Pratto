@@ -11,6 +11,7 @@ import { useForm, type Resolver } from 'react-hook-form';
 import { ApiClientError } from '../auth/api-client';
 
 import { catalogApi } from './api-client';
+import { ProductMediaManagement } from './product-media-management';
 
 type ProductFormValues = {
   categoryId: string;
@@ -42,6 +43,7 @@ export function ProductManagement({ establishmentId }: { establishmentId: string
   const queryClient = useQueryClient();
   const [menuId, setMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [mediaProductId, setMediaProductId] = useState<string | null>(null);
   const menusQuery = useQuery({
     queryKey: ['catalog-product-menus', establishmentId],
     queryFn: () => catalogApi.listMenusForEstablishment(establishmentId),
@@ -76,6 +78,7 @@ export function ProductManagement({ establishmentId }: { establishmentId: string
     if (!menusQuery.data.menus.some((menu) => menu.id === menuId)) {
       setMenuId(null);
       setEditingId(null);
+      setMediaProductId(null);
     }
   }, [menuId, menusQuery.data]);
 
@@ -173,6 +176,7 @@ export function ProductManagement({ establishmentId }: { establishmentId: string
             onChange={(event) => {
               setMenuId(event.target.value || null);
               setEditingId(null);
+              setMediaProductId(null);
             }}
           >
             <option value="">Selecione um menu</option>
@@ -214,6 +218,10 @@ export function ProductManagement({ establishmentId }: { establishmentId: string
           reorderError={reorder.error}
           onArchive={(product) => archive.mutate(product)}
           onEdit={(product) => setEditingId(product.id)}
+          mediaProductId={mediaProductId}
+          onToggleMedia={(product) =>
+            setMediaProductId((current) => (current === product.id ? null : product.id))
+          }
           onMove={(product, direction) => {
             const visibleProducts = products.filter((item) => !item.archivedAt);
             const currentIndex = visibleProducts.findIndex((item) => item.id === product.id);
@@ -250,6 +258,8 @@ function ProductEditor({
   reorderError,
   onArchive,
   onEdit,
+  mediaProductId,
+  onToggleMedia,
   onMove,
   onSubmit,
   onToggle,
@@ -266,6 +276,8 @@ function ProductEditor({
   reorderError: unknown;
   onArchive: (product: ProductResponse) => void;
   onEdit: (product: ProductResponse) => void;
+  mediaProductId: string | null;
+  onToggleMedia: (product: ProductResponse) => void;
   onMove: (product: ProductResponse, direction: -1 | 1) => void;
   onSubmit: (values: ProductFormValues) => void;
   onToggle: (product: ProductResponse) => void;
@@ -411,6 +423,8 @@ function ProductEditor({
                 total={visibleProducts.length}
                 busy={isBusy}
                 onEdit={() => onEdit(product)}
+                mediaOpen={mediaProductId === product.id}
+                onToggleMedia={() => onToggleMedia(product)}
                 onMove={(direction) => onMove(product, direction)}
                 onToggle={() => onToggle(product)}
                 onArchive={() => onArchive(product)}
@@ -435,6 +449,8 @@ function ProductRow({
   total,
   busy,
   onEdit,
+  mediaOpen,
+  onToggleMedia,
   onMove,
   onToggle,
   onArchive,
@@ -445,6 +461,8 @@ function ProductRow({
   total: number;
   busy: boolean;
   onEdit: () => void;
+  mediaOpen: boolean;
+  onToggleMedia: () => void;
   onMove: (direction: -1 | 1) => void;
   onToggle: () => void;
   onArchive: () => void;
@@ -504,6 +522,13 @@ function ProductRow({
               ↓
             </button>
             <button
+              className="rounded border border-slate-700 px-2 py-1 text-xs hover:border-emerald-400"
+              type="button"
+              onClick={onToggleMedia}
+            >
+              {mediaOpen ? 'Fechar mídias' : 'Mídias'}
+            </button>
+            <button
               className="rounded border border-slate-700 px-3 py-1 text-xs hover:border-emerald-400 disabled:opacity-50"
               type="button"
               disabled={busy}
@@ -530,6 +555,9 @@ function ProductRow({
           </div>
         )}
       </div>
+      {mediaOpen && !archived && (
+        <ProductMediaManagement menuId={product.menuId} productId={product.id} />
+      )}
     </article>
   );
 }
