@@ -29,6 +29,32 @@ export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
         displayOrder: true,
       },
     });
+    const products = await input.transaction.product.findMany({
+      where: {
+        menuId: input.menuId,
+        organizationId: input.organizationId,
+        status: 'ACTIVE',
+        archivedAt: null,
+        category: {
+          status: 'ACTIVE',
+          archivedAt: null,
+        },
+      },
+      orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        categoryId: true,
+        name: true,
+        description: true,
+        price: true,
+        promotionalPrice: true,
+        ingredients: true,
+        allergens: true,
+        availability: true,
+        featured: true,
+        displayOrder: true,
+      },
+    });
 
     return {
       schemaVersion: 1,
@@ -37,8 +63,25 @@ export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
         name: menu.name,
       },
       categories,
-      products: [],
+      products: products.map((product) => ({
+        id: product.id,
+        categoryId: product.categoryId,
+        name: product.name,
+        description: product.description,
+        price: formatSnapshotMoney(product.price),
+        promotionalPrice:
+          product.promotionalPrice === null ? null : formatSnapshotMoney(product.promotionalPrice),
+        ingredients: product.ingredients,
+        allergens: product.allergens,
+        availability: product.availability,
+        featured: product.featured,
+        displayOrder: product.displayOrder,
+      })),
       media: [],
     };
   }
+}
+
+function formatSnapshotMoney(value: { toFixed: (digits: number) => string } | string): string {
+  return typeof value === 'string' ? value : value.toFixed(2);
 }

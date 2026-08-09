@@ -63,17 +63,37 @@ O menu é sempre consultado junto do `organizationId` resolvido pela sessão. A 
 lista os menus editáveis e exige que o usuário selecione explicitamente o `menuId` alvo antes de
 carregar ou alterar categorias.
 
-| Método | Rota | Resultado |
-| ------ | ---- | --------- |
-| GET | `/admin/establishments/:establishmentId/menus` | Lista menus editáveis disponíveis para seleção. |
-| GET | `/admin/menus/:menuId/categories` | Lista categorias de um menu do tenant. |
-| POST | `/admin/menus/:menuId/categories` | Cria categoria ao final da ordem. |
-| PATCH | `/admin/menus/:menuId/categories/:categoryId` | Edita nome e descrição. |
-| POST | `/admin/menus/:menuId/categories/:categoryId/activate` | Ativa categoria. |
-| POST | `/admin/menus/:menuId/categories/:categoryId/deactivate` | Desativa categoria. |
-| POST | `/admin/menus/:menuId/categories/:categoryId/archive` | Arquiva sem exclusão destrutiva. |
-| PATCH | `/admin/menus/:menuId/categories/reorder` | Recebe todos os IDs não arquivados na nova ordem. |
+| Método | Rota                                                     | Resultado                                         |
+| ------ | -------------------------------------------------------- | ------------------------------------------------- |
+| GET    | `/admin/establishments/:establishmentId/menus`           | Lista menus editáveis disponíveis para seleção.   |
+| GET    | `/admin/menus/:menuId/categories`                        | Lista categorias de um menu do tenant.            |
+| POST   | `/admin/menus/:menuId/categories`                        | Cria categoria ao final da ordem.                 |
+| PATCH  | `/admin/menus/:menuId/categories/:categoryId`            | Edita nome e descrição.                           |
+| POST   | `/admin/menus/:menuId/categories/:categoryId/activate`   | Ativa categoria.                                  |
+| POST   | `/admin/menus/:menuId/categories/:categoryId/deactivate` | Desativa categoria.                               |
+| POST   | `/admin/menus/:menuId/categories/:categoryId/archive`    | Arquiva sem exclusão destrutiva.                  |
+| PATCH  | `/admin/menus/:menuId/categories/reorder`                | Recebe todos os IDs não arquivados na nova ordem. |
 
 Categorias arquivadas permanecem na listagem para preservar histórico e não podem ser alteradas.
 Snapshots já publicados permanecem imutáveis; somente uma nova publicação lê as categorias ativas
 do catálogo editável.
+
+## Produtos do cardápio
+
+As rotas de produto usam o mesmo menu alvo explícito, sessão autenticada, organização ativa e
+CSRF nas mutações. Cada produto pertence ao menu e a uma categoria não arquivada do mesmo tenant;
+o preço e o preço promocional são strings decimais na API e `DECIMAL(10,2)` no PostgreSQL.
+
+| Método | Rota                                                  | Resultado                                                    |
+| ------ | ----------------------------------------------------- | ------------------------------------------------------------ |
+| GET    | `/admin/menus/:menuId/products`                       | Lista produtos do menu, incluindo arquivados para histórico. |
+| POST   | `/admin/menus/:menuId/products`                       | Cria produto ao final da ordem.                              |
+| PATCH  | `/admin/menus/:menuId/products/:productId`            | Edita dados, categoria, preços e disponibilidade.            |
+| POST   | `/admin/menus/:menuId/products/:productId/activate`   | Ativa produto.                                               |
+| POST   | `/admin/menus/:menuId/products/:productId/deactivate` | Desativa produto.                                            |
+| POST   | `/admin/menus/:menuId/products/:productId/archive`    | Arquiva sem exclusão destrutiva.                             |
+| PATCH  | `/admin/menus/:menuId/products/reorder`               | Recebe todos os IDs não arquivados na nova ordem.            |
+
+Produtos arquivados permanecem no catálogo editável e não podem ser alterados. A publicação inclui
+produtos ativos e não arquivados associados a categorias ativas; publicações anteriores não são
+reescritas.

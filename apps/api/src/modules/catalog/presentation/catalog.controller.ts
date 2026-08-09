@@ -12,7 +12,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import type { CategoryListResponse, CategoryResponse, MenuListResponse } from '@pratto/contracts';
+import type {
+  CategoryListResponse,
+  CategoryResponse,
+  MenuListResponse,
+  ProductListResponse,
+  ProductResponse,
+} from '@pratto/contracts';
 import {
   catalogMenuIdSchema,
   categoryCreateSchema,
@@ -20,6 +26,10 @@ import {
   categoryReorderSchema,
   categoryUpdateSchema,
   establishmentIdSchema,
+  productCreateSchema,
+  productIdSchema,
+  productReorderSchema,
+  productUpdateSchema,
 } from '@pratto/validation';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
@@ -44,6 +54,16 @@ export class CatalogController {
     @Req() request: AuthenticatedRequest,
   ): Promise<CategoryListResponse> {
     return this.service.listCategories(request.tenant!, this.parseId(menuId, catalogMenuIdSchema));
+  }
+
+  @Get('menus/:menuId/products')
+  @ApiOperation({ summary: 'List menu products for the active organization' })
+  @ApiParam({ name: 'menuId', format: 'uuid' })
+  listProducts(
+    @Param('menuId') menuId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductListResponse> {
+    return this.service.listProducts(request.tenant!, this.parseId(menuId, catalogMenuIdSchema));
   }
 
   @Get('establishments/:establishmentId/menus')
@@ -72,6 +92,25 @@ export class CatalogController {
     const input = categoryCreateSchema.safeParse(body);
     if (!input.success) this.invalidBody(input.error.flatten());
     return this.service.createCategory(
+      request.tenant!,
+      this.parseId(menuId, catalogMenuIdSchema),
+      input.data,
+    );
+  }
+
+  @Post('menus/:menuId/products')
+  @UseGuards(CsrfGuard)
+  @ApiOperation({ summary: 'Create a menu product' })
+  @ApiParam({ name: 'menuId', format: 'uuid' })
+  @ApiBody({ description: 'Validated product data', required: true })
+  createProduct(
+    @Param('menuId') menuId: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductResponse> {
+    const input = productCreateSchema.safeParse(body);
+    if (!input.success) this.invalidBody(input.error.flatten());
+    return this.service.createProduct(
       request.tenant!,
       this.parseId(menuId, catalogMenuIdSchema),
       input.data,
@@ -163,6 +202,94 @@ export class CatalogController {
       request.tenant!,
       this.parseId(menuId, catalogMenuIdSchema),
       this.parseId(categoryId, categoryIdSchema),
+    );
+  }
+
+  @Post('menus/:menuId/products/:productId/activate')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(CsrfGuard)
+  @ApiOperation({ summary: 'Activate a menu product' })
+  activateProduct(
+    @Param('menuId') menuId: string,
+    @Param('productId') productId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductResponse> {
+    return this.service.activateProduct(
+      request.tenant!,
+      this.parseId(menuId, catalogMenuIdSchema),
+      this.parseId(productId, productIdSchema),
+    );
+  }
+
+  @Post('menus/:menuId/products/:productId/deactivate')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(CsrfGuard)
+  @ApiOperation({ summary: 'Deactivate a menu product' })
+  deactivateProduct(
+    @Param('menuId') menuId: string,
+    @Param('productId') productId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductResponse> {
+    return this.service.deactivateProduct(
+      request.tenant!,
+      this.parseId(menuId, catalogMenuIdSchema),
+      this.parseId(productId, productIdSchema),
+    );
+  }
+
+  @Post('menus/:menuId/products/:productId/archive')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(CsrfGuard)
+  @ApiOperation({ summary: 'Archive a menu product without destructive deletion' })
+  archiveProduct(
+    @Param('menuId') menuId: string,
+    @Param('productId') productId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductResponse> {
+    return this.service.archiveProduct(
+      request.tenant!,
+      this.parseId(menuId, catalogMenuIdSchema),
+      this.parseId(productId, productIdSchema),
+    );
+  }
+
+  @Patch('menus/:menuId/products/reorder')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(CsrfGuard)
+  @ApiOperation({ summary: 'Reorder all non-archived menu products' })
+  @ApiParam({ name: 'menuId', format: 'uuid' })
+  reorderProducts(
+    @Param('menuId') menuId: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductListResponse> {
+    const input = productReorderSchema.safeParse(body);
+    if (!input.success) this.invalidBody(input.error.flatten());
+    return this.service.reorderProducts(
+      request.tenant!,
+      this.parseId(menuId, catalogMenuIdSchema),
+      input.data,
+    );
+  }
+
+  @Patch('menus/:menuId/products/:productId')
+  @UseGuards(CsrfGuard)
+  @ApiOperation({ summary: 'Edit a menu product' })
+  @ApiParam({ name: 'menuId', format: 'uuid' })
+  @ApiParam({ name: 'productId', format: 'uuid' })
+  updateProduct(
+    @Param('menuId') menuId: string,
+    @Param('productId') productId: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProductResponse> {
+    const input = productUpdateSchema.safeParse(body);
+    if (!input.success) this.invalidBody(input.error.flatten());
+    return this.service.updateProduct(
+      request.tenant!,
+      this.parseId(menuId, catalogMenuIdSchema),
+      this.parseId(productId, productIdSchema),
+      input.data,
     );
   }
 

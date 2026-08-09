@@ -4,6 +4,11 @@ import type {
   CategoryReorderInput,
   CategoryResponse,
   MenuListResponse,
+  ProductCreateInput,
+  ProductListResponse,
+  ProductResponse,
+  ProductReorderInput,
+  ProductUpdateInput,
 } from '@pratto/contracts';
 
 import { request } from '../auth/api-client';
@@ -42,6 +47,40 @@ export const catalogApi = {
     }),
   reorderCategories: (menuId: string, input: CategoryReorderInput) =>
     request<CategoryListResponse>(`/admin/menus/${menuId}/categories/reorder`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+      csrf: true,
+    }),
+  listProducts: (menuId: string) => request<ProductListResponse>(`/admin/menus/${menuId}/products`),
+  createProduct: (menuId: string, input: ProductCreateInput) =>
+    request<ProductResponse>(`/admin/menus/${menuId}/products`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+      csrf: true,
+    }),
+  updateProduct: (menuId: string, productId: string, input: ProductUpdateInput) =>
+    request<ProductResponse>(`/admin/menus/${menuId}/products/${productId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+      csrf: true,
+    }),
+  activateProduct: (menuId: string, productId: string) =>
+    request<ProductResponse>(`/admin/menus/${menuId}/products/${productId}/activate`, {
+      method: 'POST',
+      csrf: true,
+    }),
+  deactivateProduct: (menuId: string, productId: string) =>
+    request<ProductResponse>(`/admin/menus/${menuId}/products/${productId}/deactivate`, {
+      method: 'POST',
+      csrf: true,
+    }),
+  archiveProduct: (menuId: string, productId: string) =>
+    request<ProductResponse>(`/admin/menus/${menuId}/products/${productId}/archive`, {
+      method: 'POST',
+      csrf: true,
+    }),
+  reorderProducts: (menuId: string, input: ProductReorderInput) =>
+    request<ProductListResponse>(`/admin/menus/${menuId}/products/reorder`, {
       method: 'PATCH',
       body: JSON.stringify(input),
       csrf: true,

@@ -30,6 +30,14 @@ enum MenuStatus {
   @@map("menu_status")
 }
 
+enum ProductAvailability {
+  AVAILABLE
+  TEMPORARILY_UNAVAILABLE
+  HIDDEN
+
+  @@map("product_availability")
+}
+
 model User {
   id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                String                @unique(map: "users_email_key") @db.VarChar(320)
@@ -199,6 +207,7 @@ model Menu {
   activePublication MenuPublication? @relation("MenuActivePublication", fields: [activePublicationId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
   publications      MenuPublication[] @relation("MenuPublications")
   categories        Category[]
+  products          Product[]
 
   @@unique([establishmentId, name], map: "menus_establishment_id_name_key")
   @@unique([id, organizationId], map: "menus_id_organization_id_key")
@@ -220,11 +229,40 @@ model Category {
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
   menu           Menu            @relation(fields: [menuId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  products       Product[]
 
   @@unique([id, organizationId], map: "categories_id_organization_id_key")
+  @@unique([id, organizationId, menuId], map: "categories_id_organization_id_menu_id_key")
   @@index([menuId, normalizedName], map: "categories_menu_id_normalized_name_idx")
   @@index([organizationId, menuId, archivedAt, displayOrder], map: "categories_org_menu_archived_order_idx")
   @@map("categories")
+}
+
+model Product {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String             @map("organization_id") @db.Uuid
+  menuId            String             @map("menu_id") @db.Uuid
+  categoryId        String             @map("category_id") @db.Uuid
+  name              String             @db.VarChar(180)
+  description       String?            @db.Text
+  price             Decimal            @db.Decimal(10, 2)
+  promotionalPrice  Decimal?           @map("promotional_price") @db.Decimal(10, 2)
+  ingredients       String?            @db.Text
+  allergens         String?            @db.Text
+  availability      ProductAvailability @default(AVAILABLE)
+  featured          Boolean            @default(false)
+  status            LifecycleStatus    @default(ACTIVE)
+  archivedAt        DateTime?          @map("archived_at") @db.Timestamptz(3)
+  displayOrder      Int                @default(0) @map("display_order")
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  menu              Menu               @relation(fields: [menuId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  category          Category           @relation(fields: [categoryId, organizationId, menuId], references: [id, organizationId, menuId], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([id, organizationId], map: "products_id_organization_id_key")
+  @@index([organizationId, menuId, archivedAt, displayOrder], map: "products_org_menu_archived_order_idx")
+  @@index([organizationId, menuId, categoryId], map: "products_org_menu_category_idx")
+  @@map("products")
 }
 
 model MenuPublication {
