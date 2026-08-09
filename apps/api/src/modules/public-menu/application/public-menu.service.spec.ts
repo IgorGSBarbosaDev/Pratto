@@ -122,7 +122,11 @@ describe('PublicMenuService', () => {
         slug: 'casa-aurora',
         logo: { url: 'signed:logo.png', contentType: 'image/png' },
       },
-      menu: { name: 'Menu principal', version: 4 },
+      menu: {
+        name: 'Menu principal',
+        publicationId,
+        version: 4,
+      },
       products: [
         { id: 'product-1', availability: 'AVAILABLE', media: [{ url: 'signed:product-1.png' }] },
         { id: 'product-2', availability: 'TEMPORARILY_UNAVAILABLE', media: [] },

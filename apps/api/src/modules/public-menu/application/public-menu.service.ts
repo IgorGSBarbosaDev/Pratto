@@ -183,6 +183,7 @@ export class PublicMenuService {
       establishment: await this.toEstablishment(publicId, snapshot.establishment),
       menu: {
         name: snapshot.menu.name,
+        publicationId: publication.id,
         version: publication.version,
         publishedAt: publication.publishedAt.toISOString(),
       },

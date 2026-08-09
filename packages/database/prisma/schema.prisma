@@ -45,6 +45,16 @@ enum ProductMediaType {
   @@map("product_media_type")
 }
 
+enum AnalyticsEventType {
+  MENU_OPENED
+  PRODUCT_IMPRESSION
+  PRODUCT_VIEWED
+  PRODUCT_INTERACTION
+  CATEGORY_SELECTED
+
+  @@map("analytics_event_type")
+}
+
 model User {
   id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                String                @unique(map: "users_email_key") @db.VarChar(320)
@@ -194,6 +204,8 @@ model Establishment {
   updatedAt             DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
   organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   menus                 Menu[]
+  analyticsSessions     AnalyticsSession[]
+  analyticsEvents       AnalyticsEvent[]
 
   @@unique([organizationId, slug], map: "establishments_organization_id_slug_key")
   @@unique([id, organizationId], map: "establishments_id_organization_id_key")
@@ -215,9 +227,11 @@ model Menu {
   publications      MenuPublication[] @relation("MenuPublications")
   categories        Category[]
   products          Product[]
+  analyticsEvents   AnalyticsEvent[]
 
   @@unique([establishmentId, name], map: "menus_establishment_id_name_key")
   @@unique([id, organizationId], map: "menus_id_organization_id_key")
+  @@unique([id, organizationId, establishmentId], map: "menus_id_organization_id_establishment_id_key")
   @@unique([activePublicationId, organizationId], map: "menus_active_publication_id_organization_id_key")
   @@index([organizationId, establishmentId, status], map: "menus_organization_id_establishment_id_status_idx")
   @@map("menus")
@@ -309,11 +323,77 @@ model MenuPublication {
   publisher        User         @relation("MenuPublicationPublisher", fields: [publishedBy], references: [id], onDelete: Restrict, onUpdate: Cascade)
   publisherMembership Membership @relation("MenuPublicationPublisherMembership", fields: [organizationId, publishedBy], references: [organizationId, userId], onDelete: Restrict, onUpdate: Cascade)
   activeMenu       Menu?        @relation("MenuActivePublication")
+  analyticsEvents  AnalyticsEvent[]
 
   @@unique([id, organizationId], map: "menu_publications_id_organization_id_key")
+  @@unique([id, organizationId, menuId], map: "menu_publications_id_organization_id_menu_id_key")
   @@unique([menuId, version], map: "menu_publications_menu_id_version_key")
   @@unique([menuId, idempotencyKey], map: "menu_publications_menu_id_idempotency_key_key")
   @@index([organizationId, menuId, publishedAt], map: "menu_publications_organization_id_menu_id_published_at_idx")
   @@index([organizationId, publishedAt], map: "menu_publications_organization_id_published_at_idx")
   @@map("menu_publications")
+}
+
+model AnalyticsSession {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  establishmentId String      @map("establishment_id") @db.Uuid
+  firstSeenAt    DateTime     @default(now()) @map("first_seen_at") @db.Timestamptz(3)
+  lastSeenAt     DateTime     @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  expiresAt      DateTime     @map("expires_at") @db.Timestamptz(3)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  establishment  Establishment @relation(fields: [establishmentId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  events         AnalyticsEvent[]
+
+  @@unique([id, organizationId, establishmentId], map: "analytics_sessions_id_organization_id_establishment_id_key")
+  @@index([organizationId, establishmentId, lastSeenAt], map: "analytics_sessions_org_establishment_last_seen_idx")
+  @@index([expiresAt], map: "analytics_sessions_expires_at_idx")
+  @@map("analytics_sessions")
+}
+
+model AnalyticsEvent {
+  id                String             @id @db.Uuid
+  organizationId    String             @map("organization_id") @db.Uuid
+  establishmentId   String             @map("establishment_id") @db.Uuid
+  menuId            String             @map("menu_id") @db.Uuid
+  publicationId     String             @map("publication_id") @db.Uuid
+  sessionId         String             @map("session_id") @db.Uuid
+  eventType         AnalyticsEventType @map("event_type")
+  productId         String?            @map("product_id") @db.Uuid
+  categoryId        String?            @map("category_id") @db.Uuid
+  interactionType   String?            @map("interaction_type") @db.VarChar(40)
+  intersectionRatio Decimal?           @map("intersection_ratio") @db.Decimal(4, 3)
+  durationMs        Int?               @map("duration_ms")
+  occurredAt        DateTime           @map("occurred_at") @db.Timestamptz(3)
+  receivedAt        DateTime           @default(now()) @map("received_at") @db.Timestamptz(3)
+  payloadHash       String             @map("payload_hash") @db.VarChar(64)
+  dedupeKey         String             @unique(map: "analytics_events_dedupe_key_key") @map("dedupe_key") @db.VarChar(512)
+  establishment     Establishment     @relation(fields: [establishmentId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  menu              Menu               @relation(fields: [menuId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  publication       MenuPublication    @relation(fields: [publicationId, organizationId, menuId], references: [id, organizationId, menuId], onDelete: Restrict, onUpdate: Cascade)
+  session           AnalyticsSession   @relation(fields: [sessionId, organizationId, establishmentId], references: [id, organizationId, establishmentId], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([organizationId, establishmentId, occurredAt], map: "analytics_events_org_establishment_occurred_idx")
+  @@index([organizationId, publicationId, eventType, occurredAt], map: "analytics_events_publication_type_occurred_idx")
+  @@index([organizationId, menuId, eventType, occurredAt], map: "analytics_events_menu_type_occurred_idx")
+  @@index([organizationId, productId, eventType, occurredAt], map: "analytics_events_product_type_occurred_idx")
+  @@index([organizationId, categoryId, eventType, occurredAt], map: "analytics_events_category_type_occurred_idx")
+  @@index([organizationId, sessionId, occurredAt], map: "analytics_events_session_occurred_idx")
+  @@map("analytics_events")
+}
+
+model AnalyticsRateLimitBucket {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  action          String    @db.VarChar(64)
+  trackerHash     String    @map("tracker_hash") @db.VarChar(128)
+  windowStartedAt DateTime  @map("window_started_at") @db.Timestamptz(3)
+  count           Int       @default(0)
+  blockedUntil    DateTime? @map("blocked_until") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([action, trackerHash], map: "analytics_rate_limit_buckets_action_tracker_hash_key")
+  @@index([blockedUntil], map: "analytics_rate_limit_buckets_blocked_until_idx")
+  @@map("analytics_rate_limit_buckets")
 }

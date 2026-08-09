@@ -19,7 +19,12 @@ const result: PublicMenuPageResponse = {
     coverImage: null,
     theme: { mode: 'LIGHT', primaryColor: '#166534' },
   },
-  menu: { name: 'Menu principal', version: 1, publishedAt: '2026-08-09T12:00:00.000Z' },
+  menu: {
+    name: 'Menu principal',
+    publicationId: '22222222-2222-4222-8222-222222222222',
+    version: 1,
+    publishedAt: '2026-08-09T12:00:00.000Z',
+  },
   categories: [],
   products: [],
   nextCursor: null,

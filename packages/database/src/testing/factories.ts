@@ -29,6 +29,11 @@ type MenuPublicationFactoryInput = Pick<
   'organizationId' | 'menuId' | 'publishedBy'
 > &
   Partial<Prisma.MenuPublicationUncheckedCreateInput>;
+type AnalyticsSessionFactoryInput = Pick<
+  Prisma.AnalyticsSessionUncheckedCreateInput,
+  'organizationId' | 'establishmentId'
+> &
+  Partial<Prisma.AnalyticsSessionUncheckedCreateInput>;
 
 function uniqueValue(): string {
   return randomUUID().replaceAll('-', '').slice(0, 12);
@@ -131,6 +136,21 @@ export function createMenuPublication(
   });
 }
 
+export function createAnalyticsSession(
+  database: DatabaseClient,
+  input: AnalyticsSessionFactoryInput,
+) {
+  const now = new Date();
+  return database.analyticsSession.create({
+    data: {
+      firstSeenAt: now,
+      lastSeenAt: now,
+      expiresAt: new Date(now.getTime() + 30 * 60 * 1000),
+      ...input,
+    },
+  });
+}
+
 export async function createTenantFixture(
   database: PrismaClient,
   options: { label?: string; userId?: string } = {},
@@ -167,6 +187,9 @@ export async function clearDatabase(database: PrismaClient): Promise<void> {
   await database.$executeRaw`
     TRUNCATE TABLE
       "menu_publications",
+      "analytics_events",
+      "analytics_sessions",
+      "analytics_rate_limit_buckets",
       "product_media",
       "products",
       "categories",
