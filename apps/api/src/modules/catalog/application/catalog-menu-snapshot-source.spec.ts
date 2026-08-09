@@ -8,8 +8,17 @@ describe('CatalogMenuSnapshotSource', () => {
       id: 'menu-id',
       name: 'Menu principal',
     });
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'category-id',
+        name: 'Entradas',
+        description: 'Para começar',
+        displayOrder: 0,
+      },
+    ]);
     const transaction = {
       menu: { findFirstOrThrow },
+      category: { findMany },
     } as unknown as MenuSnapshotInput['transaction'];
 
     const snapshot = await new CatalogMenuSnapshotSource().buildSnapshot({
@@ -22,10 +31,22 @@ describe('CatalogMenuSnapshotSource', () => {
       where: { id: 'menu-id', organizationId: 'organization-id' },
       select: { id: true, name: true },
     });
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        menuId: 'menu-id',
+        organizationId: 'organization-id',
+        status: 'ACTIVE',
+        archivedAt: null,
+      },
+      orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+      select: { id: true, name: true, description: true, displayOrder: true },
+    });
     expect(snapshot).toEqual({
       schemaVersion: 1,
       menu: { id: 'menu-id', name: 'Menu principal' },
-      categories: [],
+      categories: [
+        { id: 'category-id', name: 'Entradas', description: 'Para começar', displayOrder: 0 },
+      ],
       products: [],
       media: [],
     });
