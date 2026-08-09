@@ -55,9 +55,43 @@ export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
         displayOrder: true,
       },
     });
+    const productIds = products.map((product) => product.id);
+    const media =
+      productIds.length === 0
+        ? []
+        : await input.transaction.productMedia.findMany({
+            where: {
+              menuId: input.menuId,
+              organizationId: input.organizationId,
+              productId: { in: productIds },
+            },
+            orderBy: [
+              { productId: 'asc' },
+              { displayOrder: 'asc' },
+              { createdAt: 'asc' },
+              { id: 'asc' },
+            ],
+            select: {
+              id: true,
+              productId: true,
+              mediaType: true,
+              contentType: true,
+              storageKey: true,
+              displayOrder: true,
+              isPrimary: true,
+            },
+          });
+    const productOrder = new Map(products.map((product, index) => [product.id, index]));
+    media.sort(
+      (left, right) =>
+        (productOrder.get(left.productId) ?? Number.MAX_SAFE_INTEGER) -
+          (productOrder.get(right.productId) ?? Number.MAX_SAFE_INTEGER) ||
+        left.displayOrder - right.displayOrder ||
+        left.id.localeCompare(right.id),
+    );
 
     return {
-      schemaVersion: 1,
+      schemaVersion: 2,
       menu: {
         id: menu.id,
         name: menu.name,
@@ -77,7 +111,15 @@ export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
         featured: product.featured,
         displayOrder: product.displayOrder,
       })),
-      media: [],
+      media: media.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        mediaType: item.mediaType,
+        contentType: item.contentType,
+        storageKey: item.storageKey,
+        displayOrder: item.displayOrder,
+        isPrimary: item.isPrimary,
+      })),
     };
   }
 }

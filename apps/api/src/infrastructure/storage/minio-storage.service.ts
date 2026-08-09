@@ -1,10 +1,12 @@
 import {
   CreateBucketCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable } from '@nestjs/common';
 import { loadEnvironment } from '@pratto/config';
 import type { StoredFile, StorageService, UploadInput } from '@pratto/contracts';
@@ -49,6 +51,14 @@ export class MinioStorageService implements StorageService {
 
   getPublicUrl(key: string): string {
     return `${this.environment.MINIO_PUBLIC_URL}/${encodeURIComponent(key)}`;
+  }
+
+  getReadUrl(key: string, expiresInSeconds = 3600): Promise<string> {
+    return getSignedUrl(
+      this.client,
+      new GetObjectCommand({ Bucket: this.environment.MINIO_BUCKET, Key: key }),
+      { expiresIn: expiresInSeconds },
+    );
   }
 
   async health(): Promise<void> {

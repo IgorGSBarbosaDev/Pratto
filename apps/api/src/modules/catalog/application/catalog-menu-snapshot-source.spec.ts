@@ -31,10 +31,12 @@ describe('CatalogMenuSnapshotSource', () => {
         displayOrder: 0,
       },
     ]);
+    const mediaFindMany = jest.fn().mockResolvedValue([]);
     const transaction = {
       menu: { findFirstOrThrow },
       category: { findMany },
       product: { findMany: productFindMany },
+      productMedia: { findMany: mediaFindMany },
     } as unknown as MenuSnapshotInput['transaction'];
 
     const snapshot = await new CatalogMenuSnapshotSource().buildSnapshot({
@@ -80,8 +82,25 @@ describe('CatalogMenuSnapshotSource', () => {
         displayOrder: true,
       },
     });
+    expect(mediaFindMany).toHaveBeenCalledWith({
+      where: {
+        menuId: 'menu-id',
+        organizationId: 'organization-id',
+        productId: { in: ['product-id'] },
+      },
+      orderBy: [{ productId: 'asc' }, { displayOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        productId: true,
+        mediaType: true,
+        contentType: true,
+        storageKey: true,
+        displayOrder: true,
+        isPrimary: true,
+      },
+    });
     expect(snapshot).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       menu: { id: 'menu-id', name: 'Menu principal' },
       categories: [
         { id: 'category-id', name: 'Entradas', description: 'Para começar', displayOrder: 0 },
@@ -102,6 +121,65 @@ describe('CatalogMenuSnapshotSource', () => {
         },
       ],
       media: [],
+    });
+  });
+
+  it('includes product media in a new snapshot using the immutable storage key', async () => {
+    const transaction = {
+      menu: {
+        findFirstOrThrow: jest.fn().mockResolvedValue({ id: 'menu-id', name: 'Menu principal' }),
+      },
+      category: { findMany: jest.fn().mockResolvedValue([]) },
+      product: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'product-id',
+            categoryId: 'category-id',
+            name: 'Produto',
+            description: null,
+            price: '10.00',
+            promotionalPrice: null,
+            ingredients: null,
+            allergens: null,
+            availability: 'AVAILABLE',
+            featured: false,
+            displayOrder: 0,
+          },
+        ]),
+      },
+      productMedia: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'media-id',
+            productId: 'product-id',
+            mediaType: 'IMAGE',
+            contentType: 'image/png',
+            storageKey: 'product-media/organization-id/menu-id/product-id/image.png',
+            displayOrder: 0,
+            isPrimary: true,
+          },
+        ]),
+      },
+    } as unknown as MenuSnapshotInput['transaction'];
+    const snapshot = await new CatalogMenuSnapshotSource().buildSnapshot({
+      transaction,
+      menuId: 'menu-id',
+      organizationId: 'organization-id',
+    });
+
+    expect(snapshot).toMatchObject({
+      schemaVersion: 2,
+      media: [
+        {
+          id: 'media-id',
+          productId: 'product-id',
+          mediaType: 'IMAGE',
+          contentType: 'image/png',
+          storageKey: 'product-media/organization-id/menu-id/product-id/image.png',
+          displayOrder: 0,
+          isPrimary: true,
+        },
+      ],
     });
   });
 });

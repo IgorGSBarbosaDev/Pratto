@@ -11,6 +11,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { EstablishmentsModule } from './modules/establishments/establishments.module';
 import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
+import { MediaModule } from './modules/media/media.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 
 const environment = loadEnvironment();
@@ -36,6 +37,7 @@ const environment = loadEnvironment();
     CatalogModule,
     EstablishmentsModule,
     IdentityModule,
+    MediaModule,
     OrganizationsModule,
     HealthModule,
   ],
