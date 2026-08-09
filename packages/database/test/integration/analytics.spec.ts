@@ -15,7 +15,10 @@ import { clearDatabase, createAnalyticsSession, createTenantFixture } from '../.
 
 const database = new PrismaClient();
 
-async function createPublishedAnalyticsFixture(label: string) {
+async function createPublishedAnalyticsFixture(
+  label: string,
+  options: { includeSecondProduct?: boolean } = {},
+) {
   const tenant = await createTenantFixture(database, { label });
   const category = await database.category.create({
     data: {
@@ -35,6 +38,28 @@ async function createPublishedAnalyticsFixture(label: string) {
       availability: ProductAvailability.AVAILABLE,
     },
   });
+  const secondCategory = options.includeSecondProduct
+    ? await database.category.create({
+        data: {
+          organizationId: tenant.organization.id,
+          menuId: tenant.menu.id,
+          name: 'Bebidas',
+          normalizedName: `bebidas-${label.toLowerCase().replaceAll(' ', '-')}`,
+        },
+      })
+    : undefined;
+  const secondProduct = secondCategory
+    ? await database.product.create({
+        data: {
+          organizationId: tenant.organization.id,
+          menuId: tenant.menu.id,
+          categoryId: secondCategory.id,
+          name: 'Segundo produto público',
+          price: '9.90',
+          availability: ProductAvailability.AVAILABLE,
+        },
+      })
+    : undefined;
   const publication = await new MenuPublicationService(
     database,
     new CatalogMenuSnapshotSource(),
@@ -43,7 +68,7 @@ async function createPublishedAnalyticsFixture(label: string) {
     tenant: { organizationId: tenant.organization.id, userId: tenant.user.id },
     idempotencyKey: `analytics-${label}`,
   });
-  return { tenant, category, product, publication };
+  return { tenant, category, product, secondCategory, secondProduct, publication };
 }
 
 function eventBase(publicationId: string) {
@@ -292,8 +317,10 @@ describe('public menu analytics integration', () => {
     ]);
   });
 
-  it('prepares tenant-scoped summary and breakdown queries for the future dashboard', async () => {
-    const fixture = await createPublishedAnalyticsFixture('Aggregates');
+  it('aggregates dashboard metrics with tenant, category and product filters', async () => {
+    const fixture = await createPublishedAnalyticsFixture('Aggregates', {
+      includeSecondProduct: true,
+    });
     const other = await createPublishedAnalyticsFixture('Other aggregate tenant');
     const service = new AnalyticsService(new AnalyticsRateLimitService());
     const session = await service.createOrReuseSession(
@@ -328,9 +355,58 @@ describe('public menu analytics integration', () => {
             categoryId: fixture.category.id,
             ...eventBase(fixture.publication.id),
           },
+          {
+            eventId: randomUUID(),
+            eventType: 'product_impression',
+            productId: fixture.secondProduct!.id,
+            intersectionRatio: 0.5,
+            durationMs: 500,
+            ...eventBase(fixture.publication.id),
+          },
+          {
+            eventId: randomUUID(),
+            eventType: 'product_viewed',
+            productId: fixture.secondProduct!.id,
+            intersectionRatio: 0.7,
+            durationMs: 2_000,
+            ...eventBase(fixture.publication.id),
+          },
+          {
+            eventId: randomUUID(),
+            eventType: 'category_selected',
+            categoryId: fixture.secondCategory!.id,
+            ...eventBase(fixture.publication.id),
+          },
         ],
       },
       'aggregate-ip',
+    );
+    const secondSession = await service.createOrReuseSession(
+      { establishmentPublicId: fixture.tenant.establishment.publicId },
+      'aggregate-ip-second',
+    );
+    await service.ingest(
+      {
+        establishmentPublicId: fixture.tenant.establishment.publicId,
+        sessionId: secondSession.sessionId,
+        events: [
+          {
+            eventId: randomUUID(),
+            eventType: 'product_viewed',
+            productId: fixture.secondProduct!.id,
+            intersectionRatio: 0.7,
+            durationMs: 2_000,
+            ...eventBase(fixture.publication.id),
+          },
+          {
+            eventId: randomUUID(),
+            eventType: 'category_selected',
+            categoryId: fixture.secondCategory!.id,
+            ...eventBase(fixture.publication.id),
+          },
+        ],
+      },
+      'aggregate-ip-second',
     );
 
     const queryService = new AnalyticsQueryService();
@@ -341,18 +417,53 @@ describe('public menu analytics integration', () => {
       to: new Date(Date.now() + 60 * 60 * 1000),
     };
     await expect(queryService.summary(scope)).resolves.toEqual({
-      sessions: 1,
-      impressions: 1,
-      qualifiedViews: 1,
+      sessions: 2,
+      menuAccesses: 1,
+      impressions: 2,
+      qualifiedViews: 3,
       interactions: 0,
-      categoryViews: 1,
+      categoryViews: 3,
     });
     await expect(queryService.products(scope)).resolves.toEqual([
+      {
+        productId: fixture.secondProduct!.id,
+        impressions: 1,
+        qualifiedViews: 2,
+        interactions: 0,
+      },
       { productId: fixture.product.id, impressions: 1, qualifiedViews: 1, interactions: 0 },
     ]);
     await expect(queryService.categories(scope)).resolves.toEqual([
+      { categoryId: fixture.secondCategory!.id, views: 2 },
       { categoryId: fixture.category.id, views: 1 },
     ]);
+    await expect(
+      queryService.summary({ ...scope, categoryId: fixture.secondCategory!.id }),
+    ).resolves.toEqual({
+      sessions: 2,
+      menuAccesses: 1,
+      impressions: 1,
+      qualifiedViews: 2,
+      interactions: 0,
+      categoryViews: 2,
+    });
+    await expect(
+      queryService.summary({ ...scope, productId: fixture.product.id }),
+    ).resolves.toEqual({
+      sessions: 2,
+      menuAccesses: 1,
+      impressions: 1,
+      qualifiedViews: 1,
+      interactions: 0,
+      categoryViews: 0,
+    });
+    const daily = await queryService.daily({
+      ...scope,
+      from: new Date('2026-08-01T00:00:00.000Z'),
+      to: new Date('2026-08-04T00:00:00.000Z'),
+    });
+    expect(daily).toHaveLength(3);
+    expect(daily.every((day) => day.impressions === 0 && day.menuAccesses === 0)).toBe(true);
     await expect(
       queryService.summary({
         ...scope,
@@ -361,6 +472,7 @@ describe('public menu analytics integration', () => {
       }),
     ).resolves.toEqual({
       sessions: 0,
+      menuAccesses: 0,
       impressions: 0,
       qualifiedViews: 0,
       interactions: 0,
