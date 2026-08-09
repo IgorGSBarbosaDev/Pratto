@@ -47,7 +47,14 @@ when demo data is required. Integration tests use the isolated `pratto_test` Pos
 `.env.test` and reset only that schema.
 
 Before the authentication E2E suite, run `pnpm db:test:reset && pnpm db:test:seed`. The suite starts
-the API and web app with `.env.test`; Mailpit and PostgreSQL must be available.
+the API and web app with `.env.test`; Mailpit and PostgreSQL must be available. To start the isolated
+test PostgreSQL service locally without colliding with another PostgreSQL on port 5432, run:
+
+```bash
+docker compose --profile test up -d postgres-test mailpit
+pnpm db:test:reset
+pnpm db:test:seed
+```
 
 Set `SEED_ADMIN_PASSWORD` before seeding. The seed creates `owner@pratto.local` and
 `owner@cafe-aurora.local` without replacing a password that was already changed.
