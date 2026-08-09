@@ -24,6 +24,12 @@ Todas as entidades usam UUIDs internos gerados pelo PostgreSQL. Somente `Establi
 O `publicId` é globalmente único e imutável no banco. O `slug` é mutável, validado e único somente
 dentro da organização; ele não é usado como chave estrangeira nem identidade permanente.
 
+`Establishment` também mantém a descrição, telefone, WhatsApp, endereço estruturado, horários de
+funcionamento e configurações básicas de tema em JSONB validado no limite da API. Logo e capa são
+referências compostas por chave e tipo MIME, armazenadas no próprio estabelecimento e materializadas
+como URL pelo `StorageService`. Isso prepara a identidade visual sem antecipar o módulo de mídia de
+produtos.
+
 ## Isolamento e integridade
 
 `Menu` mantém `organizationId` e `establishmentId`. A FK composta referencia
