@@ -248,7 +248,7 @@ describe('product media management', () => {
     });
 
     expect(first.snapshot).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       media: [expect.objectContaining({ id: image.id, productId: product.id, isPrimary: true })],
     });
     expect(second.snapshot).toMatchObject({

@@ -7,6 +7,22 @@ describe('CatalogMenuSnapshotSource', () => {
     const findFirstOrThrow = jest.fn().mockResolvedValue({
       id: 'menu-id',
       name: 'Menu principal',
+      establishment: {
+        id: 'establishment-id',
+        publicId: 'establishment-public-id',
+        name: 'Estabelecimento principal',
+        slug: 'estabelecimento-principal',
+        description: 'Descrição pública',
+        phone: '3133334444',
+        whatsapp: '5531999999999',
+        address: { city: 'Belo Horizonte' },
+        operatingHours: { monday: { closed: false, open: '08:00', close: '18:00' } },
+        logoKey: 'establishments/logo.png',
+        logoContentType: 'image/png',
+        coverImageKey: 'establishments/cover.webp',
+        coverImageContentType: 'image/webp',
+        themeSettings: { mode: 'LIGHT', primaryColor: '#166534' },
+      },
     });
     const findMany = jest.fn().mockResolvedValue([
       {
@@ -47,7 +63,28 @@ describe('CatalogMenuSnapshotSource', () => {
 
     expect(findFirstOrThrow).toHaveBeenCalledWith({
       where: { id: 'menu-id', organizationId: 'organization-id' },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        establishment: {
+          select: {
+            id: true,
+            publicId: true,
+            name: true,
+            slug: true,
+            description: true,
+            phone: true,
+            whatsapp: true,
+            address: true,
+            operatingHours: true,
+            logoKey: true,
+            logoContentType: true,
+            coverImageKey: true,
+            coverImageContentType: true,
+            themeSettings: true,
+          },
+        },
+      },
     });
     expect(findMany).toHaveBeenCalledWith({
       where: {
@@ -100,7 +137,24 @@ describe('CatalogMenuSnapshotSource', () => {
       },
     });
     expect(snapshot).toEqual({
-      schemaVersion: 2,
+      schemaVersion: 3,
+      establishment: {
+        id: 'establishment-id',
+        publicId: 'establishment-public-id',
+        name: 'Estabelecimento principal',
+        slug: 'estabelecimento-principal',
+        description: 'Descrição pública',
+        phone: '3133334444',
+        whatsapp: '5531999999999',
+        address: { city: 'Belo Horizonte' },
+        operatingHours: { monday: { closed: false, open: '08:00', close: '18:00' } },
+        logo: { storageKey: 'establishments/logo.png', contentType: 'image/png' },
+        coverImage: {
+          storageKey: 'establishments/cover.webp',
+          contentType: 'image/webp',
+        },
+        theme: { mode: 'LIGHT', primaryColor: '#166534' },
+      },
       menu: { id: 'menu-id', name: 'Menu principal' },
       categories: [
         { id: 'category-id', name: 'Entradas', description: 'Para começar', displayOrder: 0 },
@@ -127,7 +181,26 @@ describe('CatalogMenuSnapshotSource', () => {
   it('includes product media in a new snapshot using the immutable storage key', async () => {
     const transaction = {
       menu: {
-        findFirstOrThrow: jest.fn().mockResolvedValue({ id: 'menu-id', name: 'Menu principal' }),
+        findFirstOrThrow: jest.fn().mockResolvedValue({
+          id: 'menu-id',
+          name: 'Menu principal',
+          establishment: {
+            id: 'establishment-id',
+            publicId: 'establishment-public-id',
+            name: 'Estabelecimento principal',
+            slug: 'estabelecimento-principal',
+            description: null,
+            phone: null,
+            whatsapp: null,
+            address: null,
+            operatingHours: {},
+            logoKey: null,
+            logoContentType: null,
+            coverImageKey: null,
+            coverImageContentType: null,
+            themeSettings: { mode: 'LIGHT', primaryColor: '#166534' },
+          },
+        }),
       },
       category: { findMany: jest.fn().mockResolvedValue([]) },
       product: {
@@ -168,7 +241,7 @@ describe('CatalogMenuSnapshotSource', () => {
     });
 
     expect(snapshot).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       media: [
         {
           id: 'media-id',

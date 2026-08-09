@@ -8,6 +8,7 @@ import { AuthBoundary } from '../../features/auth/auth-boundary';
 import { authErrorMessage } from '../../features/auth/error-message';
 import { CategoryManagement } from '../../features/catalog/category-management';
 import { ProductManagement } from '../../features/catalog/product-management';
+import { PublicationManagement } from '../../features/catalog/publication-management';
 import { EstablishmentSettingsForm } from '../../features/establishments/settings-form';
 
 export default function AdminPage() {
@@ -80,6 +81,16 @@ export default function AdminPage() {
                       </p>
                       <div className="mt-7">
                         <ProductManagement establishmentId={context.establishments[0]!.id} />
+                      </div>
+                    </section>
+                    <section className="mt-10">
+                      <h2 className="text-xl font-semibold">Publicação do cardápio</h2>
+                      <p className="mt-2 max-w-2xl text-slate-400">
+                        Publique uma versão imutável do catálogo editável para preparar o consumo
+                        pelo futuro cardápio público.
+                      </p>
+                      <div className="mt-7">
+                        <PublicationManagement establishmentId={context.establishments[0]!.id} />
                       </div>
                     </section>
                   </div>

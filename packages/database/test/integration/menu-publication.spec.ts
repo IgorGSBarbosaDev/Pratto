@@ -1,5 +1,6 @@
 import { type Prisma, PrismaClient, MenuStatus, MembershipRole } from '@prisma/client';
 
+import { CatalogMenuSnapshotSource } from '../../../../apps/api/src/modules/catalog/application/catalog-menu-snapshot-source';
 import {
   MenuPublicationService as PublicationService,
   type MenuSnapshotSource,
@@ -108,6 +109,99 @@ describe('versioned menu publications', () => {
     ).resolves.toBe(1);
   });
 
+  it('returns the active publication and bounded version history within the tenant', async () => {
+    const tenant = await createTenantFixture(database, { label: 'Publication queries' });
+    const service = createService();
+    const context = {
+      organizationId: tenant.organization.id,
+      userId: tenant.user.id,
+      establishmentIds: [tenant.establishment.id],
+    };
+
+    const first = await service.publish({
+      menuId: tenant.menu.id,
+      tenant: context,
+      idempotencyKey: 'query-1',
+    });
+    const second = await service.publish({
+      menuId: tenant.menu.id,
+      tenant: context,
+      idempotencyKey: 'query-2',
+    });
+
+    await expect(
+      service.getActive({ menuId: tenant.menu.id, tenant: context }),
+    ).resolves.toMatchObject({
+      id: second.id,
+      version: 2,
+    });
+    await expect(service.listHistory({ menuId: tenant.menu.id, tenant: context })).resolves.toEqual(
+      [
+        expect.objectContaining({ id: second.id, version: 2 }),
+        expect.objectContaining({ id: first.id, version: 1 }),
+      ],
+    );
+  });
+
+  it('freezes establishment assets and settings in each complete snapshot', async () => {
+    const tenant = await createTenantFixture(database, { label: 'Complete snapshot' });
+    await database.establishment.update({
+      where: { id: tenant.establishment.id },
+      data: {
+        description: 'Descrição original',
+        logoKey: 'establishments/original-logo.png',
+        logoContentType: 'image/png',
+      },
+    });
+    const service = new PublicationService(database, new CatalogMenuSnapshotSource());
+    const context = { organizationId: tenant.organization.id, userId: tenant.user.id };
+
+    const first = await service.publish({
+      menuId: tenant.menu.id,
+      tenant: context,
+      idempotencyKey: 'complete-snapshot-1',
+    });
+
+    await database.establishment.update({
+      where: { id: tenant.establishment.id },
+      data: {
+        description: 'Descrição atualizada',
+        logoKey: 'establishments/updated-logo.webp',
+        logoContentType: 'image/webp',
+      },
+    });
+    const second = await service.publish({
+      menuId: tenant.menu.id,
+      tenant: context,
+      idempotencyKey: 'complete-snapshot-2',
+    });
+
+    expect(first.snapshot).toMatchObject({
+      schemaVersion: 3,
+      establishment: {
+        id: tenant.establishment.id,
+        description: 'Descrição original',
+        logo: { storageKey: 'establishments/original-logo.png', contentType: 'image/png' },
+      },
+      menu: { id: tenant.menu.id },
+      categories: [],
+      products: [],
+      media: [],
+    });
+    expect(second.snapshot).toMatchObject({
+      establishment: {
+        description: 'Descrição atualizada',
+        logo: { storageKey: 'establishments/updated-logo.webp', contentType: 'image/webp' },
+      },
+    });
+    expect(first.snapshot).toMatchObject({
+      establishment: {
+        description: 'Descrição original',
+        logo: { storageKey: 'establishments/original-logo.png' },
+      },
+    });
+  });
+
   it('serializes concurrent publications for the same menu', async () => {
     const tenant = await createTenantFixture(database, { label: 'Concurrency' });
     const service = createService();
@@ -161,6 +255,12 @@ describe('versioned menu publications', () => {
         idempotencyKey: 'cross-user',
       }),
     ).rejects.toMatchObject({ code: 'PUBLICATION_ACCESS_DENIED' });
+    await expect(
+      service.getActive({
+        menuId: tenantB.menu.id,
+        tenant: { organizationId: tenantA.organization.id, userId: tenantA.user.id },
+      }),
+    ).rejects.toMatchObject({ code: 'MENU_NOT_FOUND' });
     await expect(
       service.publish({
         menuId: member.menu.id,

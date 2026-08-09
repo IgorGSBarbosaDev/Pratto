@@ -118,6 +118,23 @@ gerenciadas. O primeiro upload torna-se principal, e a remoção da principal pr
 mídia restante. O bucket MinIO permanece privado e o GET devolve URL de preview assinada e
 temporária.
 
-Uma nova publicação usa `schemaVersion: 2` e inclui a lista de mídias dos produtos ativos no
+Uma nova publicação usa `schemaVersion: 3` e inclui a lista de mídias dos produtos ativos no
 snapshot usando `storageKey`, sem congelar uma URL assinada expirável. Publicações anteriores
 continuam imutáveis; o feed público permanece fora desta etapa.
+
+## Publicação administrativa
+
+As rotas abaixo usam o `menuId` explícito, a organização resolvida pela sessão e exigem CSRF na
+publicação. A publicação aceita a chave `Idempotency-Key` (1 a 128 caracteres); repetir a mesma
+chave devolve a mesma versão sem criar outra publicação.
+
+| Método | Rota                                | Resultado                                                        |
+| ------ | ----------------------------------- | ---------------------------------------------------------------- |
+| POST   | `/admin/menus/:menuId/publications` | Cria e ativa atomicamente um novo snapshot.                      |
+| GET    | `/admin/menus/:menuId/publication`  | Consulta a publicação ativa, incluindo o snapshot.               |
+| GET    | `/admin/menus/:menuId/publications` | Lista até 100 versões históricas, da mais recente à mais antiga. |
+
+O snapshot administrativo usa `schemaVersion: 3` e congela estabelecimento, menu, categorias,
+produtos e mídias. Referências de mídia usam `storageKey`, nunca URL assinada temporária. A troca
+da publicação ativa e a criação da versão acontecem na mesma transação serializável; falhas
+descartam o snapshot e a ativação. Rollback ainda não é exposto.

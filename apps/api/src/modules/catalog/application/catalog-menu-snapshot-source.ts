@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { MenuSnapshot, MenuSnapshotInput, MenuSnapshotSource } from '@pratto/database';
+import type { MenuSnapshot, MenuSnapshotInput, MenuSnapshotSource, Prisma } from '@pratto/database';
 
 @Injectable()
 export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
@@ -12,6 +12,24 @@ export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
       select: {
         id: true,
         name: true,
+        establishment: {
+          select: {
+            id: true,
+            publicId: true,
+            name: true,
+            slug: true,
+            description: true,
+            phone: true,
+            whatsapp: true,
+            address: true,
+            operatingHours: true,
+            logoKey: true,
+            logoContentType: true,
+            coverImageKey: true,
+            coverImageContentType: true,
+            themeSettings: true,
+          },
+        },
       },
     });
     const categories = await input.transaction.category.findMany({
@@ -91,7 +109,31 @@ export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
     );
 
     return {
-      schemaVersion: 2,
+      schemaVersion: 3,
+      establishment: {
+        id: menu.establishment.id,
+        publicId: menu.establishment.publicId,
+        name: menu.establishment.name,
+        slug: menu.establishment.slug,
+        description: menu.establishment.description,
+        phone: menu.establishment.phone,
+        whatsapp: menu.establishment.whatsapp,
+        address: menu.establishment.address as Prisma.InputJsonValue | null,
+        operatingHours: menu.establishment.operatingHours as Prisma.InputJsonValue,
+        logo: menu.establishment.logoKey
+          ? {
+              storageKey: menu.establishment.logoKey,
+              contentType: menu.establishment.logoContentType,
+            }
+          : null,
+        coverImage: menu.establishment.coverImageKey
+          ? {
+              storageKey: menu.establishment.coverImageKey,
+              contentType: menu.establishment.coverImageContentType,
+            }
+          : null,
+        theme: menu.establishment.themeSettings as Prisma.InputJsonValue,
+      },
       menu: {
         id: menu.id,
         name: menu.name,
