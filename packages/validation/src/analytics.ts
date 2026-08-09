@@ -66,3 +66,36 @@ export const analyticsIngestSchema = z
 export type AnalyticsEventInput = z.infer<typeof analyticsEventSchema>;
 export type AnalyticsSessionInput = z.infer<typeof analyticsSessionSchema>;
 export type AnalyticsIngestInput = z.infer<typeof analyticsIngestSchema>;
+
+const analyticsDashboardDateSchema = z.string().datetime({ offset: true });
+
+export const analyticsDashboardQuerySchema = z
+  .object({
+    from: analyticsDashboardDateSchema,
+    to: analyticsDashboardDateSchema,
+    categoryId: categoryIdSchema.optional(),
+    productId: productIdSchema.optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const from = new Date(value.from);
+    const to = new Date(value.to);
+    const durationMs = to.getTime() - from.getTime();
+
+    if (durationMs <= 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['to'],
+        message: 'O fim do período deve ser posterior ao início.',
+      });
+    }
+    if (durationMs > 366 * 24 * 60 * 60 * 1000) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['to'],
+        message: 'O período não pode ultrapassar 366 dias.',
+      });
+    }
+  });
+
+export type AnalyticsDashboardQueryInput = z.infer<typeof analyticsDashboardQuerySchema>;

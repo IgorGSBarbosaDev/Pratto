@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 
+import { AnalyticsDashboard } from '../../features/analytics/analytics-dashboard';
 import { authApi } from '../../features/auth/api-client';
 import { AuthBoundary } from '../../features/auth/auth-boundary';
 import { authErrorMessage } from '../../features/auth/error-message';
@@ -62,6 +63,7 @@ export default function AdminPage() {
                       Editando:{' '}
                       <span className="text-slate-300">{context.establishments[0]?.name}</span>
                     </p>
+                    <AnalyticsDashboard establishmentId={context.establishments[0]!.id} />
                     <EstablishmentSettingsForm establishmentId={context.establishments[0]!.id} />
                     <section className="mt-10">
                       <h2 className="text-xl font-semibold">Categorias do cardápio</h2>

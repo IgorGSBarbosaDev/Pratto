@@ -72,6 +72,7 @@ export interface AnalyticsIngestResponse {
 
 export interface AnalyticsSummary {
   sessions: number;
+  menuAccesses: number;
   impressions: number;
   qualifiedViews: number;
   interactions: number;
@@ -92,4 +93,48 @@ export interface AnalyticsProductMetric {
 export interface AnalyticsCategoryMetric {
   categoryId: string;
   views: number;
+}
+
+export interface AnalyticsDashboardQuery {
+  from: string;
+  to: string;
+  categoryId?: string;
+  productId?: string;
+}
+
+export interface AnalyticsDashboardProductMetric extends AnalyticsProductMetric {
+  name: string;
+  categoryId: string;
+  categoryName: string;
+}
+
+export interface AnalyticsDashboardCategoryMetric extends AnalyticsCategoryMetric {
+  name: string;
+}
+
+export interface AnalyticsDashboardCategoryOption {
+  id: string;
+  name: string;
+}
+
+export interface AnalyticsDashboardProductOption {
+  id: string;
+  name: string;
+  categoryId: string;
+  categoryName: string;
+}
+
+export interface AnalyticsDashboardResponse {
+  period: {
+    from: string;
+    to: string;
+  };
+  summary: AnalyticsSummary;
+  daily: AnalyticsDailyMetric[];
+  products: AnalyticsDashboardProductMetric[];
+  categories: AnalyticsDashboardCategoryMetric[];
+  filters: {
+    categories: AnalyticsDashboardCategoryOption[];
+    products: AnalyticsDashboardProductOption[];
+  };
 }
