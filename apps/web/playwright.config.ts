@@ -24,6 +24,10 @@ export default defineConfig({
       command: withTestEnvironment(`pnpm --filter @pratto/web exec next dev --port ${e2eWebPort}`),
       url: e2eBaseUrl,
       reuseExistingServer: true,
+      env: {
+        PUBLIC_MENU_BASE_URL: e2eBaseUrl,
+        WEB_URL: e2eBaseUrl,
+      },
     },
   ],
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

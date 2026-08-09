@@ -1,73 +1,21 @@
 import { expect, test } from '@playwright/test';
 
-test('opens the public menu without login or administrative requests', async ({ page }) => {
+test('shows the real unpublished menu state without administrative requests', async ({ page }) => {
   const administrativeRequests: string[] = [];
   page.on('request', (request) => {
     if (request.url().includes('/admin/')) administrativeRequests.push(request.url());
   });
-  await page.route('**/public/analytics/sessions', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        sessionId: '44444444-4444-4444-8444-444444444444',
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      }),
-    });
-  });
-  await page.route('**/public/analytics/events', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ results: [] }),
-    });
-  });
-  await page.route('**/public/establishments/establishment-public-id/menu*', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        establishment: {
-          publicId: 'establishment-public-id',
-          name: 'Casa Aurora',
-          slug: 'casa-aurora',
-          description: 'Comida feita na hora',
-          phone: null,
-          whatsapp: null,
-          address: null,
-          operatingHours: {},
-          logo: null,
-          coverImage: null,
-          theme: { mode: 'DARK', primaryColor: '#166534' },
-        },
-        menu: {
-          name: 'Menu principal',
-          publicationId: '33333333-3333-4333-8333-333333333333',
-          version: 1,
-          publishedAt: '2026-08-09T12:00:00.000Z',
-        },
-        categories: [],
-        products: [
-          {
-            id: 'product-1',
-            categoryId: 'category-1',
-            name: 'Prato público',
-            description: 'Disponível no cardápio publicado.',
-            price: '25.00',
-            promotionalPrice: null,
-            ingredients: null,
-            allergens: null,
-            availability: 'AVAILABLE',
-            featured: false,
-            media: [],
-          },
-        ],
-        nextCursor: null,
-      }),
-    });
-  });
 
-  await page.goto('/menu/establishment-public-id/casa-aurora');
-  await expect(page.getByRole('heading', { name: 'Prato público' })).toBeVisible();
+  const response = await page.goto('/menu/pratto-burger-local/pratto-burger');
+
+  expect(response?.ok()).toBe(true);
+  await expect(page.getByRole('heading', { name: 'Cardápio ainda não publicado' })).toBeVisible();
   expect(administrativeRequests).toEqual([]);
+});
+
+test('returns a real 404 for an unknown public establishment', async ({ page }) => {
+  const response = await page.goto('/menu/estabelecimento-inexistente/menu');
+
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole('heading', { name: 'Cardápio não encontrado' })).toBeVisible();
 });

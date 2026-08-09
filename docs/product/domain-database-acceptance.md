@@ -19,4 +19,8 @@
 - O cardápio público lê somente a publicação ativa e não expõe dados do catálogo editável.
 - Produtos ocultos não aparecem no feed público; produtos temporariamente indisponíveis permanecem identificados.
 - A rota pública por `publicId` não exige autenticação e rejeita configuração ambígua com múltiplos menus publicados.
+- Estabelecimento inexistente, suspenso, sem publicação e snapshot inválido produzem estados públicos estáveis;
+  slug antigo redireciona para o slug canônico sem alterar o `publicId`.
+- QR Code administrativo deriva do link público estável e permite PNG, SVG, download e compartilhamento/fallback de cópia.
+- O fluxo E2E real comprova configuração, catálogo, mídias, publicação, acesso público, analytics e dashboard.
 - Migration, seed, testes de integração, lint, typecheck e build são reproduzíveis pela raiz.
