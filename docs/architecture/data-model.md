@@ -9,6 +9,8 @@ User 1 ── 0..1 PasswordResetToken
 User 1 ── * Membership * ── 1 Organization
 Organization 1 ── * Establishment
 Establishment 1 ── * Menu
+Menu 1 ── * MenuPublication
+Menu 1 ── 0..1 MenuPublication (active)
 ```
 
 `Membership` é a única ligação de autorização entre usuário e organização. Não existe relação
@@ -26,14 +28,17 @@ dentro da organização; ele não é usado como chave estrangeira nem identidade
 
 `Menu` mantém `organizationId` e `establishmentId`. A FK composta referencia
 `Establishment(id, organizationId)`, impedindo que um menu seja gravado com o tenant de outro
-estabelecimento. Consultas administrativas filtram explicitamente pelo contexto de organização
-derivado da sessão. A FK composta da seleção ativa também garante que a membership pertença ao
-usuário da sessão.
+estabelecimento. `MenuPublication` repete `organizationId` e usa FKs compostas para o menu e para
+a membership do publisher. Consultas administrativas filtram explicitamente pelo contexto de
+organização derivado da sessão. A FK composta da seleção ativa também garante que a membership
+pertença ao usuário da sessão.
 
 As constraints também garantem e-mails normalizados, textos obrigatórios não vazios, slugs em
 formato canônico, coerência temporal das sessões e unicidades de memberships e identificadores.
+Publicações têm versão e chave de idempotência únicas por menu, guardam snapshot como objeto JSONB
+e são append-only por trigger. O menu só pode apontar para uma publicação do mesmo menu e tenant.
 Organizações com estabelecimentos e estabelecimentos com menus não podem ser excluídos por
-cascade. Sessões e memberships, por serem registros dependentes, acompanham a exclusão do usuário.
+cascade. Sessões, memberships e publicações preservam as referências necessárias ao histórico.
 
 ## Estados
 

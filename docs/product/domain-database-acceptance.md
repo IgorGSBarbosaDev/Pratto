@@ -8,4 +8,7 @@
 - Public ID do estabelecimento é estável; slug não é identidade permanente.
 - Seed cria dois tenants demonstrativos e pode ser executado repetidamente sem duplicação.
 - Factories reutilizáveis permitem montar tenants e relações em testes.
+- Publicação cria snapshot JSON imutável, com versão sequencial e publisher pertencente ao tenant.
+- O menu só expõe publicação ativa após a transação de publicação concluir.
+- Repetições com a mesma chave de idempotência não criam uma nova versão.
 - Migration, seed, testes de integração, lint, typecheck e build são reproduzíveis pela raiz.

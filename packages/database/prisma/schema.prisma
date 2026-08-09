@@ -42,6 +42,7 @@ model User {
   credential           PasswordCredential?
   passwordResetToken   PasswordResetToken?
   authenticationEvents AuthenticationEvent[]
+  publishedPublications MenuPublication[] @relation("MenuPublicationPublisher")
 
   @@map("users")
 }
@@ -148,6 +149,7 @@ model Membership {
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   activeSessions Session[]       @relation("ActiveMembership")
+  publishedPublications MenuPublication[] @relation("MenuPublicationPublisherMembership")
 
   @@unique([organizationId, userId], map: "memberships_organization_id_user_id_key")
   @@unique([id, userId], map: "memberships_id_user_id_key")
@@ -180,11 +182,38 @@ model Menu {
   establishmentId String        @map("establishment_id") @db.Uuid
   name            String        @db.VarChar(120)
   status          MenuStatus    @default(DRAFT)
+  activePublicationId String?    @map("active_publication_id") @db.Uuid
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   establishment   Establishment @relation(fields: [establishmentId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  activePublication MenuPublication? @relation("MenuActivePublication", fields: [activePublicationId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  publications      MenuPublication[] @relation("MenuPublications")
 
   @@unique([establishmentId, name], map: "menus_establishment_id_name_key")
+  @@unique([id, organizationId], map: "menus_id_organization_id_key")
+  @@unique([activePublicationId, organizationId], map: "menus_active_publication_id_organization_id_key")
   @@index([organizationId, establishmentId, status], map: "menus_organization_id_establishment_id_status_idx")
   @@map("menus")
+}
+
+model MenuPublication {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String       @map("organization_id") @db.Uuid
+  menuId           String       @map("menu_id") @db.Uuid
+  version          Int
+  snapshot         Json
+  publishedAt      DateTime     @default(now()) @map("published_at") @db.Timestamptz(3)
+  publishedBy      String       @map("published_by") @db.Uuid
+  idempotencyKey   String       @map("idempotency_key") @db.VarChar(128)
+  menu             Menu         @relation("MenuPublications", fields: [menuId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  publisher        User         @relation("MenuPublicationPublisher", fields: [publishedBy], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  publisherMembership Membership @relation("MenuPublicationPublisherMembership", fields: [organizationId, publishedBy], references: [organizationId, userId], onDelete: Restrict, onUpdate: Cascade)
+  activeMenu       Menu?        @relation("MenuActivePublication")
+
+  @@unique([id, organizationId], map: "menu_publications_id_organization_id_key")
+  @@unique([menuId, version], map: "menu_publications_menu_id_version_key")
+  @@unique([menuId, idempotencyKey], map: "menu_publications_menu_id_idempotency_key_key")
+  @@index([organizationId, menuId, publishedAt], map: "menu_publications_organization_id_menu_id_published_at_idx")
+  @@index([organizationId, publishedAt], map: "menu_publications_organization_id_published_at_idx")
+  @@map("menu_publications")
 }

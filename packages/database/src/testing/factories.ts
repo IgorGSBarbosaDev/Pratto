@@ -24,6 +24,11 @@ type MenuFactoryInput = Pick<
   'organizationId' | 'establishmentId'
 > &
   Partial<Prisma.MenuUncheckedCreateInput>;
+type MenuPublicationFactoryInput = Pick<
+  Prisma.MenuPublicationUncheckedCreateInput,
+  'organizationId' | 'menuId' | 'publishedBy'
+> &
+  Partial<Prisma.MenuPublicationUncheckedCreateInput>;
 
 function uniqueValue(): string {
   return randomUUID().replaceAll('-', '').slice(0, 12);
@@ -110,6 +115,22 @@ export function createMenu(database: DatabaseClient, input: MenuFactoryInput) {
   });
 }
 
+export function createMenuPublication(
+  database: DatabaseClient,
+  input: MenuPublicationFactoryInput,
+) {
+  const unique = uniqueValue();
+
+  return database.menuPublication.create({
+    data: {
+      version: 1,
+      snapshot: {},
+      idempotencyKey: `publication-${unique}`,
+      ...input,
+    },
+  });
+}
+
 export async function createTenantFixture(
   database: PrismaClient,
   options: { label?: string; userId?: string } = {},
@@ -143,16 +164,19 @@ export async function createTenantFixture(
 }
 
 export async function clearDatabase(database: PrismaClient): Promise<void> {
-  await database.$transaction([
-    database.authenticationEvent.deleteMany(),
-    database.authRateLimitBucket.deleteMany(),
-    database.passwordResetToken.deleteMany(),
-    database.passwordCredential.deleteMany(),
-    database.menu.deleteMany(),
-    database.establishment.deleteMany(),
-    database.membership.deleteMany(),
-    database.session.deleteMany(),
-    database.organization.deleteMany(),
-    database.user.deleteMany(),
-  ]);
+  await database.$executeRaw`
+    TRUNCATE TABLE
+      "menu_publications",
+      "menus",
+      "establishments",
+      "memberships",
+      "organizations",
+      "authentication_events",
+      "auth_rate_limit_buckets",
+      "password_reset_tokens",
+      "password_credentials",
+      "sessions",
+      "users"
+    CASCADE
+  `;
 }
