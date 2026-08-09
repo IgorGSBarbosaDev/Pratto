@@ -18,7 +18,10 @@ function renderWithQueryClient() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <PublicationManagement establishmentId="11111111-1111-4111-8111-111111111111" />
+      <PublicationManagement
+        establishmentId="11111111-1111-4111-8111-111111111111"
+        publicMenuBaseUrl="http://localhost:3100"
+      />
     </QueryClientProvider>,
   );
 }
@@ -28,6 +31,27 @@ describe('PublicationManagement', () => {
     document.cookie = 'pratto_csrf=test-csrf';
     let published = false;
     const fetchMock = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
+      if (url.endsWith('/settings')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              id: '11111111-1111-4111-8111-111111111111',
+              publicId: 'pratto-public-id',
+              name: 'Pratto Burger',
+              slug: 'pratto-burger',
+              description: null,
+              phone: null,
+              whatsapp: null,
+              address: null,
+              operatingHours: {},
+              logo: null,
+              coverImage: null,
+              theme: { mode: 'LIGHT', primaryColor: '#166534' },
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          ),
+        );
+      }
       if (url.includes('/establishments/')) {
         return Promise.resolve(
           new Response(

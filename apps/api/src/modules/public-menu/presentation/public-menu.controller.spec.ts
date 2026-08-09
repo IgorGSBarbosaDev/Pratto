@@ -67,4 +67,21 @@ describe('PublicMenuController', () => {
       status: 404,
     });
   });
+
+  it('maps a suspended establishment to a stable not-found response', async () => {
+    const getPage = jest
+      .fn()
+      .mockRejectedValue(
+        new PublicMenuServiceError(
+          'PUBLIC_MENU_SUSPENDED',
+          'Este cardápio está temporariamente indisponível.',
+        ),
+      );
+    const controller = new PublicMenuController({ getPage } as unknown as PublicMenuService);
+
+    await expect(controller.getPage('public-id', {})).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'PUBLIC_MENU_SUSPENDED' }),
+      status: 404,
+    });
+  });
 });

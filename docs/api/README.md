@@ -120,7 +120,7 @@ temporária.
 
 Uma nova publicação usa `schemaVersion: 3` e inclui a lista de mídias dos produtos ativos no
 snapshot usando `storageKey`, sem congelar uma URL assinada expirável. Publicações anteriores
-continuam imutáveis; o feed público permanece fora desta etapa.
+continuam imutáveis; o feed público materializa URLs assinadas somente para a publicação ativa.
 
 ## Publicação administrativa
 
@@ -156,9 +156,18 @@ assinadas temporárias para as mídias solicitadas, sem expor `storageKey`, `pub
 administrativos.
 
 O endereço amigável do frontend é `/menu/{publicId}/{slug}`. O `publicId` é a identidade estável e
-o slug é canônico apenas para apresentação. Se houver mais de um menu publicado para o mesmo
-estabelecimento, a API retorna `PUBLIC_MENU_CONFIGURATION_INVALID` em vez de escolher um menu
-implicitamente.
+o slug é canônico apenas para apresentação. O frontend renderiza a primeira página no servidor,
+gera canonical/Open Graph/Twitter metadata e redireciona um slug antigo para o slug atual. Um
+estabelecimento inexistente retorna `PUBLIC_MENU_NOT_FOUND` (404); um estabelecimento inativo
+retorna `PUBLIC_MENU_SUSPENDED` (404); ausência de publicação retorna
+`PUBLIC_MENU_NOT_PUBLISHED` (404); snapshots inválidos e falhas temporárias retornam erro estável
+sem expor detalhes internos. Se houver mais de um menu publicado para o mesmo estabelecimento, a
+API retorna `PUBLIC_MENU_CONFIGURATION_INVALID` em vez de escolher um menu implicitamente.
+
+O card administrativo constrói o link sem novo endpoint ou tabela usando
+`PUBLIC_MENU_BASE_URL`, `publicId` e o slug atual. O QR Code é gerado localmente no navegador em
+PNG e SVG, com download e compartilhamento do link pela Web Share API; navegadores sem Web Share
+usam a área de transferência como fallback.
 
 ## Analytics público
 
@@ -186,3 +195,16 @@ A limpeza operacional roda a cada hora em lotes de até 500 registros. Sessões 
 eventos permanecem para preservar o histórico. Buckets de rate limit sem atualização há 2 horas
 são removidos. A limpeza usa `SKIP LOCKED`, evita execução concorrente no mesmo processo e nunca
 remove registros de `analytics_events`.
+
+## Prova final do MVP
+
+O teste E2E `apps/web/test/e2e/11-mvp-flow.spec.ts` cobre o fluxo real de login, configuração,
+categoria, produto, upload de imagem e vídeo, publicação, QR, feed público, analytics e dashboard.
+Para executá-lo localmente, mantenha PostgreSQL de teste, MinIO e Mailpit disponíveis:
+
+```bash
+docker compose --profile test up -d postgres-test minio mailpit
+pnpm db:test:reset
+pnpm db:test:seed
+pnpm test:e2e
+```

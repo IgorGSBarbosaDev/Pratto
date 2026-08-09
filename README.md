@@ -44,14 +44,15 @@ pnpm db:test:seed
 
 `pnpm db:reset` reapplies every migration without running the seed. Run `pnpm db:seed` afterwards
 when demo data is required. Integration tests use the isolated `pratto_test` PostgreSQL schema from
-`.env.test` and reset only that schema.
+`.env.test` and reset only that schema. The public QR link uses `PUBLIC_MENU_BASE_URL`; it falls
+back to the local web URL when the variable is absent.
 
 Before the authentication E2E suite, run `pnpm db:test:reset && pnpm db:test:seed`. The suite starts
 the API and web app with `.env.test`; Mailpit and PostgreSQL must be available. To start the isolated
 test PostgreSQL service locally without colliding with another PostgreSQL on port 5432, run:
 
 ```bash
-docker compose --profile test up -d postgres-test mailpit
+docker compose --profile test up -d postgres-test minio mailpit
 pnpm db:test:reset
 pnpm db:test:seed
 ```
@@ -59,8 +60,8 @@ pnpm db:test:seed
 Set `SEED_ADMIN_PASSWORD` before seeding. The seed creates `owner@pratto.local` and
 `owner@cafe-aurora.local` without replacing a password that was already changed.
 
-The catalog, publication, public feed, analytics, and dashboard will be delivered incrementally following the implementation plan in
-`docs/Pratto-Plano-de-Implementacao-e-Arquitetura.md`.
+The MVP flow covers catalog, publication, public feed, analytics, dashboard, and QR sharing. It
+does not include orders, cart, checkout, payments, or other post-MVP commerce features.
 
 The multi-tenant model is documented in `docs/architecture/data-model.md`; administrative
 authentication is documented in `docs/architecture/authentication.md`.

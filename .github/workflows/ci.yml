@@ -49,6 +49,17 @@ jobs:
           - 8025:8025
     steps:
       - uses: actions/checkout@v4
+      - name: Start MinIO for media integration and E2E
+        run: docker compose up -d minio
+      - name: Wait for MinIO
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:9000/minio/health/live > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
       - uses: pnpm/action-setup@v4
         with:
           version: 10.12.4
