@@ -159,16 +159,26 @@ model Membership {
 }
 
 model Establishment {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId String          @map("organization_id") @db.Uuid
-  publicId       String          @unique(map: "establishments_public_id_key") @default(cuid()) @map("public_id") @db.VarChar(30)
-  name           String          @db.VarChar(120)
-  slug           String          @db.VarChar(80)
-  status         LifecycleStatus @default(ACTIVE)
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  menus          Menu[]
+  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String          @map("organization_id") @db.Uuid
+  publicId              String          @unique(map: "establishments_public_id_key") @default(cuid()) @map("public_id") @db.VarChar(30)
+  name                  String          @db.VarChar(120)
+  slug                  String          @db.VarChar(80)
+  description           String?         @db.Text
+  phone                 String?         @db.VarChar(30)
+  whatsapp              String?         @db.VarChar(30)
+  address               Json?
+  operatingHours        Json            @default("{}") @map("operating_hours")
+  logoKey               String?         @map("logo_key") @db.VarChar(512)
+  logoContentType       String?         @map("logo_content_type") @db.VarChar(100)
+  coverImageKey         String?         @map("cover_image_key") @db.VarChar(512)
+  coverImageContentType String?         @map("cover_image_content_type") @db.VarChar(100)
+  themeSettings         Json            @default("{\"mode\":\"LIGHT\",\"primaryColor\":\"#166534\"}") @map("theme_settings")
+  status                LifecycleStatus @default(ACTIVE)
+  createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  menus                 Menu[]
 
   @@unique([organizationId, slug], map: "establishments_organization_id_slug_key")
   @@unique([id, organizationId], map: "establishments_id_organization_id_key")
