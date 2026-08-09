@@ -13,6 +13,7 @@ import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { MediaModule } from './modules/media/media.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { PublicMenuModule } from './modules/public-menu/public-menu.module';
 import { PublicationModule } from './modules/publication/publication.module';
 
 const environment = loadEnvironment();
@@ -41,6 +42,7 @@ const environment = loadEnvironment();
     MediaModule,
     OrganizationsModule,
     PublicationModule,
+    PublicMenuModule,
     HealthModule,
   ],
 })
