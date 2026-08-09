@@ -9,6 +9,7 @@ User 1 ── 0..1 PasswordResetToken
 User 1 ── * Membership * ── 1 Organization
 Organization 1 ── * Establishment
 Establishment 1 ── * Menu
+Menu 1 ── * Category
 Menu 1 ── * MenuPublication
 Menu 1 ── 0..1 MenuPublication (active)
 ```
@@ -34,7 +35,9 @@ produtos.
 
 `Menu` mantém `organizationId` e `establishmentId`. A FK composta referencia
 `Establishment(id, organizationId)`, impedindo que um menu seja gravado com o tenant de outro
-estabelecimento. `MenuPublication` repete `organizationId` e usa FKs compostas para o menu e para
+estabelecimento. `Category` repete `organizationId` e usa FK composta para o menu, preparando a
+futura associação de produtos pelo par `(id, organizationId)`. O nome normalizado é único entre
+categorias não arquivadas do mesmo menu. `MenuPublication` repete `organizationId` e usa FKs compostas para o menu e para
 a membership do publisher. Consultas administrativas filtram explicitamente pelo contexto de
 organização derivado da sessão. A FK composta da seleção ativa também garante que a membership
 pertença ao usuário da sessão.
@@ -51,6 +54,7 @@ cascade. Sessões, memberships e publicações preservam as referências necess�
 - `LifecycleStatus`: `ACTIVE`, `INACTIVE`.
 - `MembershipRole`: `OWNER`, `ADMIN`, `MEMBER`.
 - `MenuStatus`: `DRAFT`, `ACTIVE`, `ARCHIVED`.
+- `Category`: `ACTIVE` ou `INACTIVE`; o arquivamento preenche `archivedAt` e mantém o registro.
 
 Sessões derivam validade de `expiresAt` (inatividade), `absoluteExpiresAt` e `revokedAt`, sem estado
 duplicado. Credenciais, tokens de recuperação, buckets de limite e eventos de autenticação são

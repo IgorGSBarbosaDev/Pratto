@@ -55,3 +55,25 @@ nunca troca o tenant informado pelos guards.
 
 `assetKind` aceita `logo` ou `cover`. Logo e capa são referências de asset do estabelecimento e
 usam o `StorageService` existente; não há ainda entidade ou fluxo de mídia de produtos.
+
+## Categorias do cardápio
+
+As rotas de categoria exigem sessão autenticada, organização ativa e prova CSRF nas mutações.
+O menu é sempre consultado junto do `organizationId` resolvido pela sessão. A tela administrativa
+lista os menus editáveis e exige que o usuário selecione explicitamente o `menuId` alvo antes de
+carregar ou alterar categorias.
+
+| Método | Rota | Resultado |
+| ------ | ---- | --------- |
+| GET | `/admin/establishments/:establishmentId/menus` | Lista menus editáveis disponíveis para seleção. |
+| GET | `/admin/menus/:menuId/categories` | Lista categorias de um menu do tenant. |
+| POST | `/admin/menus/:menuId/categories` | Cria categoria ao final da ordem. |
+| PATCH | `/admin/menus/:menuId/categories/:categoryId` | Edita nome e descrição. |
+| POST | `/admin/menus/:menuId/categories/:categoryId/activate` | Ativa categoria. |
+| POST | `/admin/menus/:menuId/categories/:categoryId/deactivate` | Desativa categoria. |
+| POST | `/admin/menus/:menuId/categories/:categoryId/archive` | Arquiva sem exclusão destrutiva. |
+| PATCH | `/admin/menus/:menuId/categories/reorder` | Recebe todos os IDs não arquivados na nova ordem. |
+
+Categorias arquivadas permanecem na listagem para preservar histórico e não podem ser alteradas.
+Snapshots já publicados permanecem imutáveis; somente uma nova publicação lê as categorias ativas
+do catálogo editável.

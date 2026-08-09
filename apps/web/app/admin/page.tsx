@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { authApi } from '../../features/auth/api-client';
 import { AuthBoundary } from '../../features/auth/auth-boundary';
 import { authErrorMessage } from '../../features/auth/error-message';
+import { CategoryManagement } from '../../features/catalog/category-management';
 import { EstablishmentSettingsForm } from '../../features/establishments/settings-form';
 
 export default function AdminPage() {
@@ -60,6 +61,15 @@ export default function AdminPage() {
                       <span className="text-slate-300">{context.establishments[0]?.name}</span>
                     </p>
                     <EstablishmentSettingsForm establishmentId={context.establishments[0]!.id} />
+                    <section className="mt-10">
+                      <h2 className="text-xl font-semibold">Categorias do cardápio</h2>
+                      <p className="mt-2 max-w-2xl text-slate-400">
+                        Organize as seções do menu editável. As alterações não mudam publicações anteriores.
+                      </p>
+                      <div className="mt-7">
+                        <CategoryManagement establishmentId={context.establishments[0]!.id} />
+                      </div>
+                    </section>
                   </div>
                 )}
                 <div aria-live="polite" className="mt-4 text-sm text-rose-300">
