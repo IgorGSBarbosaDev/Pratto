@@ -138,3 +138,24 @@ O snapshot administrativo usa `schemaVersion: 3` e congela estabelecimento, menu
 produtos e mídias. Referências de mídia usam `storageKey`, nunca URL assinada temporária. A troca
 da publicação ativa e a criação da versão acontecem na mesma transação serializável; falhas
 descartam o snapshot e a ativação. Rollback ainda não é exposto.
+
+## Cardápio público
+
+A rota pública não exige sessão, organização ativa ou CSRF. Ela consulta exclusivamente o menu e a
+`MenuPublication` apontada por `activePublicationId`; nunca lê produtos, categorias ou mídias do
+catálogo editável.
+
+| Método | Rota                                    | Resultado                            |
+| ------ | --------------------------------------- | ------------------------------------ |
+| GET    | `/public/establishments/:publicId/menu` | Página paginada da publicação ativa. |
+
+Os parâmetros opcionais são `cursor`, `categoryId` e `limit` (6 por padrão, máximo 12). O cursor é
+opaco e vinculado à publicação ativa. Produtos `HIDDEN` não são retornados; produtos
+`TEMPORARILY_UNAVAILABLE` permanecem visíveis com sua indisponibilidade. O retorno materializa URLs
+assinadas temporárias para as mídias solicitadas, sem expor `storageKey`, `publishedBy` ou metadados
+administrativos.
+
+O endereço amigável do frontend é `/menu/{publicId}/{slug}`. O `publicId` é a identidade estável e
+o slug é canônico apenas para apresentação. Se houver mais de um menu publicado para o mesmo
+estabelecimento, a API retorna `PUBLIC_MENU_CONFIGURATION_INVALID` em vez de escolher um menu
+implicitamente.

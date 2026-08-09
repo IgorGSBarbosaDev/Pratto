@@ -16,4 +16,7 @@
 - Repetições com a mesma chave de idempotência não criam uma nova versão.
 - A API administrativa permite publicar, consultar a versão ativa e listar o histórico do menu.
 - A publicação congela estabelecimento, categorias, produtos e mídias em um snapshot serializável.
+- O cardápio público lê somente a publicação ativa e não expõe dados do catálogo editável.
+- Produtos ocultos não aparecem no feed público; produtos temporariamente indisponíveis permanecem identificados.
+- A rota pública por `publicId` não exige autenticação e rejeita configuração ambígua com múltiplos menus publicados.
 - Migration, seed, testes de integração, lint, typecheck e build são reproduzíveis pela raiz.
