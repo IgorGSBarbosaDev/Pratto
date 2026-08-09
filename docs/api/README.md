@@ -1,7 +1,7 @@
 # API
 
-A API REST usa NestJS e OpenAPI. O contrato inicial contém apenas endpoints técnicos; endpoints de
-identidade, catálogo e menu público serão adicionados com suas respectivas fases verticais.
+A API REST usa NestJS e OpenAPI. O contrato evolui por fatias verticais e documenta endpoints
+administrativos, públicos e técnicos conforme cada módulo é entregue.
 
 ## Erros
 
@@ -159,3 +159,30 @@ O endereço amigável do frontend é `/menu/{publicId}/{slug}`. O `publicId` é 
 o slug é canônico apenas para apresentação. Se houver mais de um menu publicado para o mesmo
 estabelecimento, a API retorna `PUBLIC_MENU_CONFIGURATION_INVALID` em vez de escolher um menu
 implicitamente.
+
+## Analytics público
+
+Analytics não exige login e não participa do carregamento do feed. O retorno do cardápio inclui
+`menu.publicationId`, usado pelo cliente para atribuir cada evento à publicação imutável correta.
+
+| Método | Rota                         | Resultado                                                 |
+| ------ | ---------------------------- | --------------------------------------------------------- |
+| POST   | `/public/analytics/sessions` | Cria ou retoma uma sessão anônima do estabelecimento.     |
+| POST   | `/public/analytics/events`   | Ingere até 50 eventos e retorna o resultado de cada item. |
+
+Os eventos aceitos são `menu_opened`, `product_impression`, `product_viewed`,
+`product_interaction` e `category_selected`. Uma impressão exige 50% da viewport por 500 ms;
+uma visualização qualificada exige 70% por 2 segundos. Sessões expiram após 30 minutos sem
+atividade. Timestamps devem estar entre 15 minutos no passado e 2 minutos no futuro.
+
+O servidor valida publicação, sessão, produto e categoria contra o snapshot e o estabelecimento
+resolvido pelo `publicId`. Repetições de `eventId` são idempotentes; impressões, visualizações,
+categorias e abertura do menu também são deduplicadas por sessão/publicação/alvo. O lote pode ter
+sucessos e rejeições simultaneamente. Rate limits são persistidos com hashes keyed e nenhum IP,
+user-agent ou dado pessoal é armazenado.
+
+A limpeza operacional roda a cada hora em lotes de até 500 registros. Sessões expiradas há mais de
+7 dias são removidas somente quando não possuem eventos vinculados; sessões referenciadas por
+eventos permanecem para preservar o histórico. Buckets de rate limit sem atualização há 2 horas
+são removidos. A limpeza usa `SKIP LOCKED`, evita execução concorrente no mesmo processo e nunca
+remove registros de `analytics_events`.
