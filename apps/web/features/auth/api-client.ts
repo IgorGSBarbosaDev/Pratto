@@ -22,19 +22,23 @@ function readCookie(name: string): string | undefined {
   return undefined;
 }
 
-async function request<T>(
+export async function request<T>(
   path: string,
   options: RequestInit & { csrf?: boolean } = {},
 ): Promise<T> {
   const headers = new Headers(options.headers);
-  if (options.body) headers.set('content-type', 'application/json');
+  if (options.body && !(typeof FormData !== 'undefined' && options.body instanceof FormData)) {
+    headers.set('content-type', 'application/json');
+  }
   if (options.csrf) {
     let token = readCookie('pratto_csrf');
     if (!token) token = (await request<CsrfResponse>('/auth/csrf')).csrfToken;
     headers.set('x-csrf-token', token);
   }
+  const fetchOptions = { ...options };
+  delete fetchOptions.csrf;
   const response = await fetch(`${API_URL}${path}`, {
-    ...options,
+    ...fetchOptions,
     headers,
     credentials: 'include',
     cache: 'no-store',

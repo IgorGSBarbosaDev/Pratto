@@ -99,6 +99,41 @@ describe('tenant domain schema', () => {
     ).rejects.toMatchObject({ code: 'P2002' });
   });
 
+  it('persists structured establishment settings and visual asset references', async () => {
+    const organization = await createOrganization(database, { name: 'Settings Organization' });
+    const establishment = await createEstablishment(database, {
+      organizationId: organization.id,
+      description: 'Café de bairro',
+      phone: '(31) 3333-4444',
+      whatsapp: '+5531999999999',
+      address: {
+        street: 'Rua Central',
+        number: '10',
+        complement: '',
+        neighborhood: 'Centro',
+        city: 'Belo Horizonte',
+        state: 'MG',
+        postalCode: '30110-000',
+      },
+      operatingHours: {
+        monday: { closed: false, open: '08:00', close: '18:00' },
+      },
+      logoKey: `establishments/${organization.id}/logo/logo.png`,
+      logoContentType: 'image/png',
+      themeSettings: { mode: 'DARK', primaryColor: '#0f766e' },
+    });
+
+    await expect(
+      database.establishment.findUniqueOrThrow({ where: { id: establishment.id } }),
+    ).resolves.toMatchObject({
+      organizationId: organization.id,
+      description: 'Café de bairro',
+      address: expect.objectContaining({ city: 'Belo Horizonte' }),
+      logoKey: `establishments/${organization.id}/logo/logo.png`,
+      themeSettings: { mode: 'DARK', primaryColor: '#0f766e' },
+    });
+  });
+
   it('prevents a session from selecting another user membership at database level', async () => {
     const tenantA = await createTenantFixture(database, { label: 'Session A' });
     const tenantB = await createTenantFixture(database, { label: 'Session B' });

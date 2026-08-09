@@ -39,3 +39,19 @@ Swagger fica disponível em `http://localhost:4000/docs`. A autenticação usa o
 Mutações autenticadas exigem `X-CSRF-Token` com o mesmo valor de `pratto_csrf`. Erros seguem
 `{ statusCode, code, message, requestId?, details? }` e preservam códigos estáveis documentados em
 [`authentication.md`](../architecture/authentication.md).
+
+## Configuração do estabelecimento
+
+As rotas administrativas abaixo exigem sessão autenticada, organização ativa e prova CSRF nas
+mutações. O `establishmentId` é sempre combinado com o `organizationId` resolvido pela sessão; ele
+nunca troca o tenant informado pelos guards.
+
+| Método | Rota                                                       | Resultado                                                        |
+| ------ | ---------------------------------------------------------- | ---------------------------------------------------------------- |
+| GET    | `/admin/establishments/:establishmentId/settings`          | Consulta os dados públicos do estabelecimento.                   |
+| PATCH  | `/admin/establishments/:establishmentId/settings`          | Atualiza nome, slug, contatos, endereço, horários e tema.        |
+| POST   | `/admin/establishments/:establishmentId/assets/:assetKind` | Substitui logo ou capa com imagem JPEG, PNG ou WebP de até 5 MB. |
+| DELETE | `/admin/establishments/:establishmentId/assets/:assetKind` | Remove a referência de logo ou capa.                             |
+
+`assetKind` aceita `logo` ou `cover`. Logo e capa são referências de asset do estabelecimento e
+usam o `StorageService` existente; não há ainda entidade ou fluxo de mídia de produtos.
