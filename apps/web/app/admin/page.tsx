@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { authApi } from '../../features/auth/api-client';
 import { AuthBoundary } from '../../features/auth/auth-boundary';
 import { authErrorMessage } from '../../features/auth/error-message';
+import { EstablishmentSettingsForm } from '../../features/establishments/settings-form';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -43,22 +44,24 @@ export default function AdminPage() {
                 </button>
               </header>
               <section className="py-10">
-                <h2 className="text-xl font-semibold">Olá, {context.user.name}</h2>
+                <h2 className="text-xl font-semibold">Configuração do estabelecimento</h2>
                 <p className="mt-2 max-w-2xl text-slate-400">
-                  A área administrativa está protegida e pronta para receber as próximas fatias do
-                  produto. O dashboard ainda não foi iniciado.
+                  Olá, {context.user.name}. Gerencie os dados públicos, horários e identidade visual
+                  do estabelecimento selecionado.
                 </p>
-                <div className="mt-7 grid gap-3 sm:grid-cols-2">
-                  {context.establishments.map((establishment) => (
-                    <article
-                      className="rounded-2xl border border-slate-800 bg-slate-900 p-5"
-                      key={establishment.id}
-                    >
-                      <h3 className="font-semibold">{establishment.name}</h3>
-                      <p className="mt-1 text-sm text-slate-400">/{establishment.slug}</p>
-                    </article>
-                  ))}
-                </div>
+                {context.establishments.length === 0 ? (
+                  <div className="mt-7 rounded-2xl border border-dashed border-slate-700 p-6 text-sm text-slate-400">
+                    Nenhum estabelecimento ativo está disponível para esta organização.
+                  </div>
+                ) : (
+                  <div className="mt-7">
+                    <p className="mb-4 text-sm text-slate-500">
+                      Editando:{' '}
+                      <span className="text-slate-300">{context.establishments[0]?.name}</span>
+                    </p>
+                    <EstablishmentSettingsForm establishmentId={context.establishments[0]!.id} />
+                  </div>
+                )}
                 <div aria-live="polite" className="mt-4 text-sm text-rose-300">
                   {logout.error ? authErrorMessage(logout.error) : null}
                 </div>
