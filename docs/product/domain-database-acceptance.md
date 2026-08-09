@@ -14,4 +14,6 @@
 - Publicação cria snapshot JSON imutável, com versão sequencial e publisher pertencente ao tenant.
 - O menu só expõe publicação ativa após a transação de publicação concluir.
 - Repetições com a mesma chave de idempotência não criam uma nova versão.
+- A API administrativa permite publicar, consultar a versão ativa e listar o histórico do menu.
+- A publicação congela estabelecimento, categorias, produtos e mídias em um snapshot serializável.
 - Migration, seed, testes de integração, lint, typecheck e build são reproduzíveis pela raiz.
