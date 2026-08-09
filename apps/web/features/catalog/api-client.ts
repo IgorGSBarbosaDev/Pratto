@@ -3,6 +3,9 @@ import type {
   CategoryMutationInput,
   CategoryReorderInput,
   CategoryResponse,
+  ActiveMenuPublicationResponse,
+  MenuPublicationHistoryResponse,
+  MenuPublicationResponse,
   MenuListResponse,
   ProductCreateInput,
   ProductListResponse,
@@ -19,6 +22,16 @@ import { request } from '../auth/api-client';
 export const catalogApi = {
   listMenusForEstablishment: (establishmentId: string) =>
     request<MenuListResponse>(`/admin/establishments/${establishmentId}/menus`),
+  getActivePublication: (menuId: string) =>
+    request<ActiveMenuPublicationResponse>(`/admin/menus/${menuId}/publication`),
+  listPublicationHistory: (menuId: string) =>
+    request<MenuPublicationHistoryResponse>(`/admin/menus/${menuId}/publications`),
+  publishMenu: (menuId: string, idempotencyKey: string) =>
+    request<MenuPublicationResponse>(`/admin/menus/${menuId}/publications`, {
+      method: 'POST',
+      headers: { 'idempotency-key': idempotencyKey },
+      csrf: true,
+    }),
   listCategories: (menuId: string) =>
     request<CategoryListResponse>(`/admin/menus/${menuId}/categories`),
   createCategory: (menuId: string, input: CategoryMutationInput) =>
