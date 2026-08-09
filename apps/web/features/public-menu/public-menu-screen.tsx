@@ -1,12 +1,17 @@
 'use client';
 
-import type { PublicMenuMediaResponse, PublicMenuProductResponse } from '@pratto/contracts';
+import type {
+  AnalyticsInteractionType,
+  PublicMenuMediaResponse,
+  PublicMenuProductResponse,
+} from '@pratto/contracts';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiClientError } from '../auth/api-client';
 
+import { PublicMenuAnalyticsClient } from './analytics-client';
 import { publicMenuApi } from './api-client';
 
 const PAGE_SIZE = 6;
@@ -17,6 +22,12 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [detailsProduct, setDetailsProduct] = useState<PublicMenuProductResponse | null>(null);
+  const analyticsRef = useRef<PublicMenuAnalyticsClient | null>(null);
+  const impressionTimersRef = useRef(new Map<string, number>());
+  const qualifiedTimersRef = useRef(new Map<string, number>());
+  const trackedImpressionsRef = useRef(new Set<string>());
+  const trackedQualifiedViewsRef = useRef(new Set<string>());
+  if (!analyticsRef.current) analyticsRef.current = new PublicMenuAnalyticsClient();
   const query = useInfiniteQuery({
     queryKey: ['public-menu', publicId, categoryId ?? 'all'],
     initialPageParam: undefined as string | undefined,
@@ -42,6 +53,21 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
       router.replace(`/menu/${encodeURIComponent(publicId)}/${firstPage.establishment.slug}`);
     }
   }, [firstPage, publicId, router, slug]);
+
+  useEffect(() => {
+    if (!firstPage) return;
+    analyticsRef.current?.start({
+      establishmentPublicId: publicId,
+      publicationId: firstPage.menu.publicationId,
+    });
+    analyticsRef.current?.track({ eventType: 'menu_opened' });
+  }, [firstPage, publicId]);
+
+  useEffect(() => {
+    return () => {
+      analyticsRef.current?.stop();
+    };
+  }, []);
 
   useEffect(() => {
     setActiveProductId(firstProductId);
@@ -77,12 +103,83 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
     return () => observer.disconnect();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage, products]);
 
+  useEffect(() => {
+    const feed = feedRef.current;
+    if (!feed || products.length === 0) return;
+    const impressionTimers = impressionTimersRef.current;
+    const qualifiedTimers = qualifiedTimersRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const productId = entry.target.getAttribute('data-product-id');
+          const product = products.find((item) => item.id === productId);
+          if (!productId || !product) continue;
+          const ratio = entry.intersectionRatio;
+
+          if (ratio >= 0.5 && !trackedImpressionsRef.current.has(productId)) {
+            if (!impressionTimersRef.current.has(productId)) {
+              const timer = window.setTimeout(() => {
+                impressionTimersRef.current.delete(productId);
+                trackedImpressionsRef.current.add(productId);
+                analyticsRef.current?.track({
+                  eventType: 'product_impression',
+                  productId: product.id,
+                  intersectionRatio: Math.max(0.5, ratio),
+                  durationMs: 500,
+                });
+              }, 500);
+              impressionTimersRef.current.set(productId, timer);
+            }
+          } else if (ratio < 0.5) {
+            const timer = impressionTimersRef.current.get(productId);
+            if (timer) window.clearTimeout(timer);
+            impressionTimersRef.current.delete(productId);
+          }
+
+          if (ratio >= 0.7 && !trackedQualifiedViewsRef.current.has(productId)) {
+            if (!qualifiedTimersRef.current.has(productId)) {
+              const timer = window.setTimeout(() => {
+                qualifiedTimersRef.current.delete(productId);
+                trackedQualifiedViewsRef.current.add(productId);
+                analyticsRef.current?.track({
+                  eventType: 'product_viewed',
+                  productId: product.id,
+                  intersectionRatio: Math.max(0.7, ratio),
+                  durationMs: 2_000,
+                });
+              }, 2_000);
+              qualifiedTimersRef.current.set(productId, timer);
+            }
+          } else if (ratio < 0.7) {
+            const timer = qualifiedTimersRef.current.get(productId);
+            if (timer) window.clearTimeout(timer);
+            qualifiedTimersRef.current.delete(productId);
+          }
+        }
+      },
+      { root: feed, threshold: [0, 0.5, 0.7] },
+    );
+    feed
+      .querySelectorAll<HTMLElement>('[data-product-id]')
+      .forEach((element) => observer.observe(element));
+    return () => {
+      observer.disconnect();
+      for (const timer of impressionTimers.values()) window.clearTimeout(timer);
+      for (const timer of qualifiedTimers.values()) window.clearTimeout(timer);
+      impressionTimers.clear();
+      qualifiedTimers.clear();
+    };
+  }, [products]);
+
   if (query.isPending) return <PublicMenuLoading />;
   if (query.error)
     return <PublicMenuError error={query.error} onRetry={() => void query.refetch()} />;
   if (!firstPage) return <PublicMenuError onRetry={() => void query.refetch()} />;
 
   const selectCategory = (nextCategoryId: string | undefined) => {
+    if (nextCategoryId) {
+      analyticsRef.current?.track({ eventType: 'category_selected', categoryId: nextCategoryId });
+    }
     setCategoryId(nextCategoryId);
     if (feedRef.current && typeof feedRef.current.scrollTo === 'function') {
       feedRef.current.scrollTo({ top: 0, behavior: 'smooth' });
@@ -159,7 +256,21 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
               near={
                 Math.abs(index - products.findIndex((item) => item.id === activeProductId)) <= 2
               }
-              onOpenDetails={() => setDetailsProduct(product)}
+              onOpenDetails={() => {
+                analyticsRef.current?.track({
+                  eventType: 'product_interaction',
+                  productId: product.id,
+                  interactionType: 'details_opened',
+                });
+                setDetailsProduct(product);
+              }}
+              onInteraction={(interactionType) =>
+                analyticsRef.current?.track({
+                  eventType: 'product_interaction',
+                  productId: product.id,
+                  interactionType,
+                })
+              }
             />
           ))}
           {isFetchingNextPage && <FeedLoadingCard />}
@@ -203,11 +314,13 @@ function ProductCard({
   active,
   near,
   onOpenDetails,
+  onInteraction,
 }: {
   product: PublicMenuProductResponse;
   active: boolean;
   near: boolean;
   onOpenDetails: () => void;
+  onInteraction: (interactionType: AnalyticsInteractionType) => void;
 }) {
   return (
     <article
@@ -215,7 +328,12 @@ function ProductCard({
       data-product-id={product.id}
     >
       <div className="absolute inset-0">
-        <MediaGallery product={product} active={active} loadMedia={near} />
+        <MediaGallery
+          product={product}
+          active={active}
+          loadMedia={near}
+          onInteraction={onInteraction}
+        />
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent px-5 pb-8 pt-36 sm:px-8">
         <div className="pointer-events-auto mx-auto max-w-2xl">
@@ -264,10 +382,12 @@ function MediaGallery({
   product,
   active,
   loadMedia,
+  onInteraction,
 }: {
   product: PublicMenuProductResponse;
   active: boolean;
   loadMedia: boolean;
+  onInteraction: (interactionType: AnalyticsInteractionType) => void;
 }) {
   const [selectedMedia, setSelectedMedia] = useState(0);
   const galleryRef = useRef<HTMLDivElement>(null);
@@ -275,6 +395,7 @@ function MediaGallery({
   const selected = media[selectedMedia];
   const poster = media.find((item) => item.mediaType === 'IMAGE')?.url;
   const selectMedia = (index: number) => {
+    if (index !== selectedMedia) onInteraction('media_changed');
     setSelectedMedia(index);
     if (galleryRef.current && typeof galleryRef.current.scrollTo === 'function') {
       galleryRef.current.scrollTo({
@@ -300,6 +421,7 @@ function MediaGallery({
         onScroll={(event) => {
           const element = event.currentTarget;
           const nextIndex = Math.round(element.scrollLeft / element.clientWidth);
+          if (nextIndex !== selectedMedia) onInteraction('media_changed');
           setSelectedMedia(Math.max(0, Math.min(nextIndex, media.length - 1)));
         }}
       >
@@ -311,6 +433,7 @@ function MediaGallery({
                   item={item}
                   active={active && index === selectedMedia}
                   poster={poster}
+                  onInteraction={() => onInteraction('video_sound_toggled')}
                 />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -354,10 +477,12 @@ function VideoMedia({
   item,
   active,
   poster,
+  onInteraction,
 }: {
   item: PublicMenuMediaResponse;
   active: boolean;
   poster?: string;
+  onInteraction: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
@@ -401,7 +526,10 @@ function VideoMedia({
         type="button"
         aria-label={muted ? 'Ativar som do vídeo' : 'Desativar som do vídeo'}
         aria-pressed={!muted}
-        onClick={() => setMuted((value) => !value)}
+        onClick={() => {
+          onInteraction();
+          setMuted((value) => !value);
+        }}
       >
         {muted ? 'Som desligado' : 'Som ligado'}
       </button>

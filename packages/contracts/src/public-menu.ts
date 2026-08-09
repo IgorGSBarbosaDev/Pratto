@@ -52,6 +52,7 @@ export interface PublicMenuPageResponse {
   establishment: PublicEstablishmentResponse;
   menu: {
     name: string;
+    publicationId: string;
     version: number;
     publishedAt: string;
   };

@@ -5,6 +5,23 @@ test('opens the public menu without login or administrative requests', async ({ 
   page.on('request', (request) => {
     if (request.url().includes('/admin/')) administrativeRequests.push(request.url());
   });
+  await page.route('**/public/analytics/sessions', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        sessionId: '44444444-4444-4444-8444-444444444444',
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      }),
+    });
+  });
+  await page.route('**/public/analytics/events', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ results: [] }),
+    });
+  });
   await page.route('**/public/establishments/establishment-public-id/menu*', async (route) => {
     await route.fulfill({
       status: 200,
@@ -23,7 +40,12 @@ test('opens the public menu without login or administrative requests', async ({ 
           coverImage: null,
           theme: { mode: 'DARK', primaryColor: '#166534' },
         },
-        menu: { name: 'Menu principal', version: 1, publishedAt: '2026-08-09T12:00:00.000Z' },
+        menu: {
+          name: 'Menu principal',
+          publicationId: '33333333-3333-4333-8333-333333333333',
+          version: 1,
+          publishedAt: '2026-08-09T12:00:00.000Z',
+        },
         categories: [],
         products: [
           {

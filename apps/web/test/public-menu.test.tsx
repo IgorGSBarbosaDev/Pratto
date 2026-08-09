@@ -12,6 +12,10 @@ vi.mock('next/navigation', () => ({
 const publicId = 'establishment-public-id';
 const categoryId = '11111111-1111-4111-8111-111111111111';
 const dessertCategoryId = '22222222-2222-4222-8222-222222222222';
+const intersectionObservers: Array<{
+  callback: IntersectionObserverCallback;
+  elements: Element[];
+}> = [];
 
 function page(overrides: Partial<PublicMenuPageResponse> = {}): PublicMenuPageResponse {
   return {
@@ -28,7 +32,12 @@ function page(overrides: Partial<PublicMenuPageResponse> = {}): PublicMenuPageRe
       coverImage: null,
       theme: { mode: 'DARK', primaryColor: '#166534' },
     },
-    menu: { name: 'Menu principal', version: 1, publishedAt: '2026-08-09T12:00:00.000Z' },
+    menu: {
+      name: 'Menu principal',
+      publicationId: '33333333-3333-4333-8333-333333333333',
+      version: 1,
+      publishedAt: '2026-08-09T12:00:00.000Z',
+    },
     categories: [
       { id: categoryId, name: 'Pratos', description: null },
       { id: dessertCategoryId, name: 'Sobremesas', description: null },
@@ -74,11 +83,37 @@ function response(value: unknown, status = 200) {
   );
 }
 
+function analyticsResponse(input: RequestInfo | URL, status = 200) {
+  const url = String(input);
+  if (url.includes('/public/analytics/sessions')) {
+    return response(
+      {
+        sessionId: '44444444-4444-4444-8444-444444444444',
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      },
+      status,
+    );
+  }
+  return response({ results: [] }, status);
+}
+
 beforeEach(() => {
+  intersectionObservers.length = 0;
   vi.stubGlobal(
     'IntersectionObserver',
     class {
-      observe() {}
+      callback: IntersectionObserverCallback;
+      elements: Element[] = [];
+
+      constructor(callback: IntersectionObserverCallback) {
+        this.callback = callback;
+        intersectionObservers.push(this);
+      }
+
+      observe(element: Element) {
+        this.elements.push(element);
+      }
+
       disconnect() {}
     },
   );
@@ -100,6 +135,7 @@ describe('PublicMenuScreen', () => {
       .fn()
       .mockImplementation((input: RequestInfo | URL, options?: RequestInit) => {
         const url = String(input);
+        if (url.includes('/public/analytics/')) return analyticsResponse(input);
         expect(url).toContain('/public/establishments/establishment-public-id/menu');
         expect(url).not.toContain('/admin/');
         expect(options?.credentials).toBe('omit');
@@ -112,7 +148,9 @@ describe('PublicMenuScreen', () => {
     expect(await screen.findByRole('heading', { name: 'Prato da casa' })).toBeInTheDocument();
     expect(screen.getByText('R$ 24,90')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pratos' })).toHaveAttribute('aria-pressed', 'false');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/menu')).length).toBe(
+      1,
+    );
   });
 
   it('filters categories, supports media details, and shows temporary unavailability', async () => {
@@ -130,6 +168,7 @@ describe('PublicMenuScreen', () => {
     });
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
       const url = new URL(String(input));
+      if (url.pathname.includes('/public/analytics/')) return analyticsResponse(input);
       return response(url.searchParams.get('categoryId') === dessertCategoryId ? filtered : page());
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -144,11 +183,22 @@ describe('PublicMenuScreen', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent('Torta da casa');
     fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/menu')).length).toBe(
+      2,
+    );
   });
 
   it('renders empty and not-published states', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockReturnValue(response(page({ products: [] }))));
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          String(input).includes('/public/analytics/')
+            ? analyticsResponse(input)
+            : response(page({ products: [] })),
+        ),
+    );
     renderScreen();
     expect(
       await screen.findByRole('heading', { name: 'Nenhum produto disponível' }),
@@ -157,18 +207,73 @@ describe('PublicMenuScreen', () => {
     cleanup();
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockReturnValue(
-          response(
-            { statusCode: 404, code: 'PUBLIC_MENU_NOT_PUBLISHED', message: 'Ainda não publicado.' },
-            404,
-          ),
-        ),
+      vi.fn().mockImplementation((input: RequestInfo | URL) =>
+        String(input).includes('/public/analytics/')
+          ? analyticsResponse(input)
+          : response(
+              {
+                statusCode: 404,
+                code: 'PUBLIC_MENU_NOT_PUBLISHED',
+                message: 'Ainda não publicado.',
+              },
+              404,
+            ),
+      ),
     );
     renderScreen();
     expect(
       await screen.findByRole('heading', { name: 'Cardápio ainda não publicado' }),
     ).toBeInTheDocument();
+  });
+
+  it('counts impression and qualified view only after their visibility timers', async () => {
+    const sendBeacon = vi.fn().mockReturnValue(true);
+    Object.defineProperty(navigator, 'sendBeacon', {
+      configurable: true,
+      value: sendBeacon,
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((input: RequestInfo | URL) => {
+        if (String(input).includes('/public/analytics/sessions')) {
+          return response({
+            sessionId: '55555555-5555-4555-8555-555555555555',
+            expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          });
+        }
+        if (String(input).includes('/public/analytics/events')) return response({ results: [] });
+        return response(page());
+      }),
+    );
+
+    renderScreen();
+    expect(await screen.findByRole('heading', { name: 'Prato da casa' })).toBeInTheDocument();
+    vi.useFakeTimers();
+    const target = screen.getByRole('heading', { name: 'Prato da casa' }).closest('article');
+    const analyticsObserver = intersectionObservers.at(-1);
+    expect(target).not.toBeNull();
+    expect(analyticsObserver).toBeDefined();
+
+    analyticsObserver?.callback(
+      [{ target, intersectionRatio: 0.6 } as unknown as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
+    vi.advanceTimersByTime(499);
+    expect(sendBeacon).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+
+    analyticsObserver?.callback(
+      [{ target, intersectionRatio: 0.8 } as unknown as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
+    vi.advanceTimersByTime(1_999);
+    expect(sendBeacon).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    window.dispatchEvent(new Event('pagehide'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(sendBeacon).toHaveBeenCalledTimes(1);
+    expect(sendBeacon.mock.calls[0]?.[0]).toContain('/public/analytics/events');
+    vi.useRealTimers();
   });
 });
