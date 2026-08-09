@@ -97,6 +97,7 @@ describe('PublicMenuService', () => {
     jest.spyOn(prisma.establishment, 'findFirst').mockResolvedValue({
       id: 'establishment-id',
       organizationId: 'organization-id',
+      status: 'ACTIVE',
     } as never);
     jest.spyOn(prisma.menu, 'findMany').mockResolvedValue([
       {
@@ -142,6 +143,7 @@ describe('PublicMenuService', () => {
     jest.spyOn(prisma.establishment, 'findFirst').mockResolvedValue({
       id: 'establishment-id',
       organizationId: 'organization-id',
+      status: 'ACTIVE',
     } as never);
     const menuFindMany = jest.spyOn(prisma.menu, 'findMany').mockResolvedValue([
       {
@@ -207,6 +209,7 @@ describe('PublicMenuService', () => {
     jest.spyOn(prisma.establishment, 'findFirst').mockResolvedValue({
       id: 'establishment-id',
       organizationId: 'organization-id',
+      status: 'ACTIVE',
     } as never);
     jest.spyOn(prisma.menu, 'findMany').mockResolvedValue(menus as never);
 

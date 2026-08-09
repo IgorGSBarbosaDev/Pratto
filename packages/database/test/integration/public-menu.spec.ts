@@ -1,5 +1,5 @@
 import type { StorageService } from '@pratto/contracts';
-import { MenuStatus, PrismaClient, ProductAvailability } from '@prisma/client';
+import { LifecycleStatus, MenuStatus, PrismaClient, ProductAvailability } from '@prisma/client';
 
 import { CatalogMenuSnapshotSource } from '../../../../apps/api/src/modules/catalog/application/catalog-menu-snapshot-source';
 import { PublicMenuService } from '../../../../apps/api/src/modules/public-menu/application/public-menu.service';
@@ -76,6 +76,12 @@ describe('public menu integration', () => {
     await database.$disconnect();
   });
 
+  it('returns not found for an unknown public identity', async () => {
+    await expect(
+      new PublicMenuService(createStorage()).getPage('public-id-does-not-exist', { limit: 6 }),
+    ).rejects.toMatchObject({ code: 'PUBLIC_MENU_NOT_FOUND' });
+  });
+
   it('serves only the active immutable publication and filters hidden products', async () => {
     const { tenant } = await createPublishedCatalog(database);
     const service = new PublicMenuService(createStorage());
@@ -105,6 +111,35 @@ describe('public menu integration', () => {
     await expect(
       new PublicMenuService(createStorage()).getPage(tenant.establishment.publicId, { limit: 6 }),
     ).rejects.toMatchObject({ code: 'PUBLIC_MENU_NOT_PUBLISHED' });
+  });
+
+  it('does not expose suspended establishments or invalid publication snapshots', async () => {
+    const { tenant, publication } = await createPublishedCatalog(database);
+    const service = new PublicMenuService(createStorage());
+
+    await database.establishment.update({
+      where: { id: tenant.establishment.id },
+      data: { status: LifecycleStatus.INACTIVE },
+    });
+    await expect(
+      service.getPage(tenant.establishment.publicId, { limit: 6 }),
+    ).rejects.toMatchObject({
+      code: 'PUBLIC_MENU_SUSPENDED',
+    });
+
+    await database.establishment.update({
+      where: { id: tenant.establishment.id },
+      data: { status: LifecycleStatus.ACTIVE },
+    });
+    await database.menuPublication.update({
+      where: { id: publication.id },
+      data: { snapshot: { schemaVersion: 2 } },
+    });
+    await expect(
+      service.getPage(tenant.establishment.publicId, { limit: 6 }),
+    ).rejects.toMatchObject({
+      code: 'PUBLIC_MENU_SNAPSHOT_INVALID',
+    });
   });
 
   it('rejects ambiguous public configuration instead of selecting a menu implicitly', async () => {

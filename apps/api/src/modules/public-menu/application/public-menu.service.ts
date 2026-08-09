@@ -31,7 +31,10 @@ const publicSnapshotSchema = z.object({
     operatingHours: z.unknown(),
     logo: z.object({ storageKey: z.string(), contentType: z.string().nullable() }).nullable(),
     coverImage: z.object({ storageKey: z.string(), contentType: z.string().nullable() }).nullable(),
-    theme: z.unknown(),
+    theme: z.object({
+      mode: z.enum(['LIGHT', 'DARK']),
+      primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    }),
   }),
   menu: z.object({ name: z.string() }),
   categories: z.array(
@@ -72,6 +75,7 @@ const publicSnapshotSchema = z.object({
 type PublicSnapshot = z.infer<typeof publicSnapshotSchema>;
 type PublicMenuErrorCode =
   | 'PUBLIC_MENU_NOT_FOUND'
+  | 'PUBLIC_MENU_SUSPENDED'
   | 'PUBLIC_MENU_NOT_PUBLISHED'
   | 'PUBLIC_MENU_CONFIGURATION_INVALID'
   | 'PUBLIC_MENU_CATEGORY_NOT_FOUND'
@@ -100,10 +104,13 @@ export class PublicMenuService {
 
   async getPage(publicId: string, query: PublicMenuQuery): Promise<PublicMenuPageResponse> {
     const establishment = await prisma.establishment.findFirst({
-      where: { publicId, status: 'ACTIVE' },
-      select: { id: true, organizationId: true },
+      where: { publicId },
+      select: { id: true, organizationId: true, status: true },
     });
     if (!establishment) this.fail('PUBLIC_MENU_NOT_FOUND', 'Cardápio não encontrado.');
+    if (establishment.status !== 'ACTIVE') {
+      this.fail('PUBLIC_MENU_SUSPENDED', 'Este cardápio está temporariamente indisponível.');
+    }
 
     const menus = await prisma.menu.findMany({
       where: {
@@ -320,7 +327,7 @@ export function mapPublicMenuError(error: unknown): never {
       : error.code === 'PUBLIC_MENU_CONFIGURATION_INVALID' ||
           error.code === 'PUBLIC_MENU_CURSOR_STALE'
         ? HttpStatus.CONFLICT
-        : error.code === 'PUBLIC_MENU_CATEGORY_NOT_FOUND'
+        : error.code === 'PUBLIC_MENU_CATEGORY_NOT_FOUND' || error.code === 'PUBLIC_MENU_SUSPENDED'
           ? HttpStatus.NOT_FOUND
           : error.code === 'PUBLIC_MENU_CURSOR_INVALID'
             ? HttpStatus.BAD_REQUEST
