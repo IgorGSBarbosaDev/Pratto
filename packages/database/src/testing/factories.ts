@@ -167,6 +167,7 @@ export async function clearDatabase(database: PrismaClient): Promise<void> {
   await database.$executeRaw`
     TRUNCATE TABLE
       "menu_publications",
+      "product_media",
       "products",
       "categories",
       "menus",
