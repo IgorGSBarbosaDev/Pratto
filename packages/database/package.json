@@ -26,7 +26,7 @@
     "db:validate": "prisma validate",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force --skip-seed",
-    "db:test:reset": "dotenv -e ../../.env.test -o -- prisma migrate reset --force --skip-seed",
+    "db:test:reset": "dotenv -e ../../.env.test -o -- prisma migrate reset --force --skip-seed --skip-generate",
     "db:test:seed": "dotenv -e ../../.env.test -o -- tsx prisma/seed.ts",
     "lint": "eslint src prisma test",
     "test": "pnpm db:test:reset && dotenv -e ../../.env.test -o -- jest --config jest.config.cjs --runInBand",
