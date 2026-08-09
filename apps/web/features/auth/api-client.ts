@@ -56,6 +56,30 @@ export async function request<T>(
   return (await response.json()) as T;
 }
 
+export async function publicRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers);
+  if (options.body && !(typeof FormData !== 'undefined' && options.body instanceof FormData)) {
+    headers.set('content-type', 'application/json');
+  }
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: 'omit',
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    const error = (await response.json().catch(() => undefined)) as ApiError | undefined;
+    throw new ApiClientError(
+      response.status,
+      error?.code ?? 'REQUEST_ERROR',
+      error?.message ?? 'Não foi possível carregar o cardápio.',
+      error?.details,
+    );
+  }
+  if (response.status === 204) return undefined as T;
+  return (await response.json()) as T;
+}
+
 export const authApi = {
   login: (input: { email: string; password: string }) =>
     request<AuthContextResponse>('/auth/login', { method: 'POST', body: JSON.stringify(input) }),
