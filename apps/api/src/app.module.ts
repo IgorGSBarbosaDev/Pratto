@@ -7,6 +7,7 @@ import { LoggerModule } from 'nestjs-pino';
 
 import { EmailModule } from './infrastructure/email/email.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
@@ -31,6 +32,7 @@ const environment = loadEnvironment();
     }),
     StorageModule,
     EmailModule,
+    CatalogModule,
     IdentityModule,
     OrganizationsModule,
     HealthModule,
