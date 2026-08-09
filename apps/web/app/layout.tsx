@@ -4,9 +4,33 @@ import type { ReactNode } from 'react';
 import './globals.css';
 import { AppProviders } from '../features/auth/auth-provider';
 
+function metadataBase(): URL {
+  try {
+    return new URL(
+      process.env.PUBLIC_MENU_BASE_URL || process.env.WEB_URL || 'http://localhost:3000',
+    );
+  } catch {
+    return new URL('http://localhost:3000');
+  }
+}
+
 export const metadata: Metadata = {
-  title: 'Pratto',
+  metadataBase: metadataBase(),
+  title: { default: 'Pratto', template: '%s | Pratto' },
   description: 'Cardápio digital visual e mobile-first.',
+  applicationName: 'Pratto',
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: 'Pratto',
+    title: 'Pratto',
+    description: 'Cardápio digital visual e mobile-first.',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Pratto',
+    description: 'Cardápio digital visual e mobile-first.',
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

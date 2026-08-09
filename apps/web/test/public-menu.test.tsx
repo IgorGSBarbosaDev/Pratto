@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PublicMenuScreen } from '../features/public-menu/public-menu-screen';
+import type { PublicMenuServerError } from '../features/public-menu/server-api';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn() }),
@@ -65,11 +66,16 @@ function page(overrides: Partial<PublicMenuPageResponse> = {}): PublicMenuPageRe
   };
 }
 
-function renderScreen() {
+function renderScreen(
+  props: {
+    initialPage?: PublicMenuPageResponse;
+    initialError?: PublicMenuServerError;
+  } = {},
+) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <PublicMenuScreen publicId={publicId} slug="casa-aurora" />
+      <PublicMenuScreen publicId={publicId} slug="casa-aurora" {...props} />
     </QueryClientProvider>,
   );
 }
@@ -224,6 +230,55 @@ describe('PublicMenuScreen', () => {
     expect(
       await screen.findByRole('heading', { name: 'Cardápio ainda não publicado' }),
     ).toBeInTheDocument();
+  });
+
+  it('hydrates the server snapshot, applies the public theme, and closes details with Escape', async () => {
+    const serverPage = page({
+      establishment: {
+        ...page().establishment,
+        theme: { mode: 'LIGHT', primaryColor: '#b45309' },
+      },
+    });
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      if (String(input).includes('/public/analytics/sessions')) {
+        return analyticsResponse(input);
+      }
+      return response({ results: [] });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderScreen({ initialPage: serverPage });
+
+    expect(await screen.findByRole('heading', { name: 'Prato da casa' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toHaveClass('bg-stone-50');
+    expect(screen.getByRole('main')).toHaveStyle('--menu-primary: #b45309');
+    fireEvent.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(document.activeElement).toHaveAttribute('aria-label', 'Fechar');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/menu')).length).toBe(
+      0,
+    );
+  });
+
+  it('preserves a suspended state from the server without retrying automatically', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderScreen({
+      initialError: {
+        statusCode: 404,
+        code: 'PUBLIC_MENU_SUSPENDED',
+        message: 'Este cardápio está temporariamente indisponível.',
+      },
+    });
+
+    expect(
+      await screen.findByRole('heading', { name: 'Cardápio temporariamente indisponível' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('counts impression and qualified view only after their visibility timers', async () => {

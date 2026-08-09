@@ -3,25 +3,39 @@
 import type {
   AnalyticsInteractionType,
   PublicMenuMediaResponse,
+  PublicMenuPageResponse,
   PublicMenuProductResponse,
 } from '@pratto/contracts';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 import { ApiClientError } from '../auth/api-client';
 
 import { PublicMenuAnalyticsClient } from './analytics-client';
 import { publicMenuApi } from './api-client';
+import type { PublicMenuServerError } from './server-api';
 
 const PAGE_SIZE = 6;
 
-export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: string }) {
+export function PublicMenuScreen({
+  publicId,
+  slug,
+  initialPage,
+  initialError,
+}: {
+  publicId: string;
+  slug: string;
+  initialPage?: PublicMenuPageResponse;
+  initialError?: PublicMenuServerError;
+}) {
   const router = useRouter();
   const feedRef = useRef<HTMLDivElement>(null);
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [detailsProduct, setDetailsProduct] = useState<PublicMenuProductResponse | null>(null);
+  const [retryInitialError, setRetryInitialError] = useState(!initialError);
   const analyticsRef = useRef<PublicMenuAnalyticsClient | null>(null);
   const impressionTimersRef = useRef(new Map<string, number>());
   const qualifiedTimersRef = useRef(new Map<string, number>());
@@ -38,6 +52,13 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
         limit: PAGE_SIZE,
       }),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
+    enabled: retryInitialError,
+    initialData:
+      initialPage && !categoryId
+        ? { pages: [initialPage], pageParams: [undefined as string | undefined] }
+        : undefined,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 
   const firstPage = query.data?.pages[0];
@@ -171,10 +192,19 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
     };
   }, [products]);
 
+  if (initialError && !retryInitialError) {
+    return <PublicMenuError error={initialError} onRetry={() => setRetryInitialError(true)} />;
+  }
   if (query.isPending) return <PublicMenuLoading />;
-  if (query.error)
+  if (query.error && !firstPage)
     return <PublicMenuError error={query.error} onRetry={() => void query.refetch()} />;
   if (!firstPage) return <PublicMenuError onRetry={() => void query.refetch()} />;
+
+  const lightTheme = firstPage.establishment.theme.mode === 'LIGHT';
+  const themeStyle = {
+    '--menu-primary': firstPage.establishment.theme.primaryColor,
+    colorScheme: lightTheme ? 'light' : 'dark',
+  } as CSSProperties;
 
   const selectCategory = (nextCategoryId: string | undefined) => {
     if (nextCategoryId) {
@@ -182,33 +212,43 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
     }
     setCategoryId(nextCategoryId);
     if (feedRef.current && typeof feedRef.current.scrollTo === 'function') {
-      feedRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      feedRef.current.scrollTo({ top: 0, behavior: scrollBehavior() });
     }
   };
 
   return (
-    <main className="h-[100svh] overflow-hidden bg-slate-950 text-white">
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-slate-950 via-slate-950/90 to-transparent px-4 pb-8 pt-4 sm:px-6">
+    <main
+      className={`h-[100svh] overflow-hidden ${lightTheme ? 'bg-stone-50 text-slate-950' : 'bg-slate-950 text-white'}`}
+      style={themeStyle}
+    >
+      <header
+        className={`pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b px-4 pb-8 pt-4 sm:px-6 ${lightTheme ? 'from-stone-50 via-stone-50/95' : 'from-slate-950 via-slate-950/90'} to-transparent`}
+      >
         <div className="pointer-events-auto mx-auto max-w-2xl">
           <div className="flex items-center gap-3">
             {firstPage.establishment.logo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                className="h-10 w-10 rounded-full border border-white/20 object-cover"
+                className={`h-10 w-10 rounded-full border object-cover ${lightTheme ? 'border-slate-950/10' : 'border-white/20'}`}
                 src={firstPage.establishment.logo.url}
                 alt=""
                 width={40}
                 height={40}
               />
             ) : (
-              <span className="grid h-10 w-10 place-items-center rounded-full bg-emerald-700 font-bold">
+              <span
+                className="grid h-10 w-10 place-items-center rounded-full font-bold text-white"
+                style={{ backgroundColor: 'var(--menu-primary)' }}
+              >
                 {firstPage.establishment.name.slice(0, 1).toUpperCase()}
               </span>
             )}
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold">{firstPage.establishment.name}</h1>
               {firstPage.establishment.description && (
-                <p className="truncate text-xs text-slate-300">
+                <p
+                  className={`truncate text-xs ${lightTheme ? 'text-slate-600' : 'text-slate-300'}`}
+                >
                   {firstPage.establishment.description}
                 </p>
               )}
@@ -222,6 +262,7 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
               <CategoryButton
                 active={!categoryId}
                 label="Todos"
+                lightTheme={lightTheme}
                 onClick={() => selectCategory(undefined)}
               />
               {firstPage.categories.map((category) => (
@@ -229,6 +270,7 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
                   key={category.id}
                   active={categoryId === category.id}
                   label={category.name}
+                  lightTheme={lightTheme}
                   onClick={() => selectCategory(category.id)}
                 />
               ))}
@@ -240,13 +282,17 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
       {products.length === 0 ? (
         <PublicMenuEmpty
           categorySelected={Boolean(categoryId)}
+          lightTheme={lightTheme}
           onClear={() => selectCategory(undefined)}
         />
       ) : (
         <div
           ref={feedRef}
-          className="h-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain scroll-smooth"
+          className="h-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain"
+          role="feed"
+          tabIndex={0}
           aria-label="Produtos publicados"
+          aria-busy={isFetchingNextPage}
         >
           {products.map((product, index) => (
             <ProductCard
@@ -256,6 +302,7 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
               near={
                 Math.abs(index - products.findIndex((item) => item.id === activeProductId)) <= 2
               }
+              lightTheme={lightTheme}
               onOpenDetails={() => {
                 analyticsRef.current?.track({
                   eventType: 'product_interaction',
@@ -273,12 +320,19 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
               }
             />
           ))}
-          {isFetchingNextPage && <FeedLoadingCard />}
+          {isFetchingNextPage && <FeedLoadingCard lightTheme={lightTheme} />}
+          {query.error && (
+            <FeedError lightTheme={lightTheme} onRetry={() => void fetchNextPage()} />
+          )}
         </div>
       )}
 
       {detailsProduct && (
-        <ProductDetails product={detailsProduct} onClose={() => setDetailsProduct(null)} />
+        <ProductDetails
+          product={detailsProduct}
+          lightTheme={lightTheme}
+          onClose={() => setDetailsProduct(null)}
+        />
       )}
     </main>
   );
@@ -287,18 +341,22 @@ export function PublicMenuScreen({ publicId, slug }: { publicId: string; slug: s
 function CategoryButton({
   active,
   label,
+  lightTheme,
   onClick,
 }: {
   active: boolean;
   label: string;
+  lightTheme: boolean;
   onClick: () => void;
 }) {
   return (
     <button
-      className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+      className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)] ${
         active
-          ? 'border-emerald-400 bg-emerald-500 text-slate-950'
-          : 'border-white/20 bg-slate-950/60 text-slate-200 hover:border-white/50'
+          ? 'border-[var(--menu-primary)] bg-[var(--menu-primary)] text-white'
+          : lightTheme
+            ? 'border-slate-950/15 bg-white/80 text-slate-700 hover:border-slate-950/40'
+            : 'border-white/20 bg-slate-950/60 text-slate-200 hover:border-white/50'
       }`}
       type="button"
       aria-pressed={active}
@@ -313,31 +371,37 @@ function ProductCard({
   product,
   active,
   near,
+  lightTheme,
   onOpenDetails,
   onInteraction,
 }: {
   product: PublicMenuProductResponse;
   active: boolean;
   near: boolean;
+  lightTheme: boolean;
   onOpenDetails: () => void;
   onInteraction: (interactionType: AnalyticsInteractionType) => void;
 }) {
   return (
     <article
-      className="relative flex h-[100svh] snap-start items-end justify-center bg-slate-900 [contain-intrinsic-size:100svh] [content-visibility:auto]"
+      className={`relative flex h-[100svh] snap-start items-end justify-center [contain-intrinsic-size:100svh] [content-visibility:auto] ${lightTheme ? 'bg-slate-100' : 'bg-slate-900'}`}
       data-product-id={product.id}
+      aria-labelledby={`product-title-${product.id}`}
     >
       <div className="absolute inset-0">
         <MediaGallery
           product={product}
           active={active}
           loadMedia={near}
+          lightTheme={lightTheme}
           onInteraction={onInteraction}
         />
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent px-5 pb-8 pt-36 sm:px-8">
+      <div
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t px-5 pb-8 pt-36 sm:px-8 ${lightTheme ? 'from-white via-white/90' : 'from-slate-950 via-slate-950/80'} to-transparent`}
+      >
         <div className="pointer-events-auto mx-auto max-w-2xl">
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-emerald-300">
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-[var(--menu-primary)]">
             {product.featured && <span>Destaque</span>}
             {product.availability === 'TEMPORARILY_UNAVAILABLE' && (
               <span className="rounded-full bg-amber-400/20 px-2 py-1 text-amber-200">
@@ -345,14 +409,21 @@ function ProductCard({
               </span>
             )}
           </div>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">{product.name}</h2>
+          <h2
+            id={`product-title-${product.id}`}
+            className="text-3xl font-bold tracking-tight sm:text-5xl"
+          >
+            {product.name}
+          </h2>
           <div className="mt-3 flex items-baseline gap-3">
             {product.promotionalPrice ? (
               <>
-                <span className="text-2xl font-bold text-emerald-300">
+                <span className="text-2xl font-bold text-[var(--menu-primary)]">
                   {formatMoney(product.promotionalPrice)}
                 </span>
-                <span className="text-sm text-slate-400 line-through">
+                <span
+                  className={`text-sm line-through ${lightTheme ? 'text-slate-500' : 'text-slate-400'}`}
+                >
                   {formatMoney(product.price)}
                 </span>
               </>
@@ -361,12 +432,14 @@ function ProductCard({
             )}
           </div>
           {product.description && (
-            <p className="mt-3 line-clamp-2 max-w-xl text-sm leading-6 text-slate-200">
+            <p
+              className={`mt-3 line-clamp-2 max-w-xl text-sm leading-6 ${lightTheme ? 'text-slate-700' : 'text-slate-200'}`}
+            >
               {product.description}
             </p>
           )}
           <button
-            className="mt-5 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur hover:bg-white/20"
+            className={`mt-5 rounded-full border px-4 py-2 text-sm font-semibold backdrop-blur focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)] ${lightTheme ? 'border-slate-950/20 bg-slate-950/5 hover:bg-slate-950/10' : 'border-white/30 bg-white/10 hover:bg-white/20'}`}
             type="button"
             onClick={onOpenDetails}
           >
@@ -382,11 +455,13 @@ function MediaGallery({
   product,
   active,
   loadMedia,
+  lightTheme,
   onInteraction,
 }: {
   product: PublicMenuProductResponse;
   active: boolean;
   loadMedia: boolean;
+  lightTheme: boolean;
   onInteraction: (interactionType: AnalyticsInteractionType) => void;
 }) {
   const [selectedMedia, setSelectedMedia] = useState(0);
@@ -400,14 +475,16 @@ function MediaGallery({
     if (galleryRef.current && typeof galleryRef.current.scrollTo === 'function') {
       galleryRef.current.scrollTo({
         left: index * galleryRef.current.clientWidth,
-        behavior: 'smooth',
+        behavior: scrollBehavior(),
       });
     }
   };
 
   if (!loadMedia || media.length === 0 || !selected) {
     return (
-      <div className="grid h-full place-items-center bg-[radial-gradient(circle_at_top,#334155,#020617_70%)] px-8 text-center text-sm text-slate-400">
+      <div
+        className={`grid h-full place-items-center px-8 text-center text-sm ${lightTheme ? 'bg-[radial-gradient(circle_at_top,#e2e8f0,#f8fafc_70%)] text-slate-600' : 'bg-[radial-gradient(circle_at_top,#334155,#020617_70%)] text-slate-400'}`}
+      >
         {media.length === 0 ? 'Este produto ainda não possui uma imagem.' : 'Carregando mídia…'}
       </div>
     );
@@ -418,6 +495,9 @@ function MediaGallery({
       <div
         ref={galleryRef}
         className="h-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
+        role="region"
+        tabIndex={0}
+        aria-label={`Mídias de ${product.name}`}
         onScroll={(event) => {
           const element = event.currentTarget;
           const nextIndex = Math.round(element.scrollLeft / element.clientWidth);
@@ -432,7 +512,9 @@ function MediaGallery({
                 <VideoMedia
                   item={item}
                   active={active && index === selectedMedia}
+                  lightTheme={lightTheme}
                   poster={poster}
+                  productName={product.name}
                   onInteraction={() => onInteraction('video_sound_toggled')}
                 />
               ) : (
@@ -442,7 +524,9 @@ function MediaGallery({
                   src={item.url}
                   alt={`${product.name} — imagem ${index + 1}`}
                   loading={active && index === selectedMedia ? 'eager' : 'lazy'}
+                  fetchPriority={active && index === selectedMedia ? 'high' : 'auto'}
                   decoding="async"
+                  sizes="100vw"
                 />
               )}
               <div className="absolute inset-0 bg-slate-950/10" aria-hidden="true" />
@@ -451,11 +535,17 @@ function MediaGallery({
         </div>
       </div>
       {media.length > 1 && (
-        <div className="absolute bottom-28 left-1/2 z-10 flex -translate-x-1/2 gap-1.5 rounded-full bg-slate-950/60 px-2 py-1">
+        <div
+          className={`absolute bottom-28 left-1/2 z-10 flex -translate-x-1/2 gap-1.5 rounded-full px-2 py-1 ${lightTheme ? 'bg-white/80' : 'bg-slate-950/60'}`}
+        >
           {media.map((item, index) => (
             <button
               className={`h-1.5 rounded-full transition-all ${
-                index === selectedMedia ? 'w-5 bg-white' : 'w-1.5 bg-white/50'
+                index === selectedMedia
+                  ? 'w-5 bg-[var(--menu-primary)]'
+                  : lightTheme
+                    ? 'w-1.5 bg-slate-950/30'
+                    : 'w-1.5 bg-white/50'
               }`}
               key={item.id}
               type="button"
@@ -466,7 +556,9 @@ function MediaGallery({
           ))}
         </div>
       )}
-      <p className="absolute bottom-5 left-5 z-10 text-xs text-white/70">
+      <p
+        className={`absolute bottom-5 left-5 z-10 text-xs ${lightTheme ? 'text-slate-700/70' : 'text-white/70'}`}
+      >
         {media.length > 1 ? 'Deslize para ver mais mídias' : 'Mídia principal'}
       </p>
     </div>
@@ -476,12 +568,16 @@ function MediaGallery({
 function VideoMedia({
   item,
   active,
+  lightTheme,
   poster,
+  productName,
   onInteraction,
 }: {
   item: PublicMenuMediaResponse;
   active: boolean;
+  lightTheme: boolean;
   poster?: string;
+  productName: string;
   onInteraction: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -519,10 +615,10 @@ function VideoMedia({
         playsInline
         loop
         preload="none"
-        aria-label="Vídeo do produto"
+        aria-label={`Vídeo de ${productName}`}
       />
       <button
-        className="absolute right-5 top-24 rounded-full border border-white/30 bg-slate-950/60 px-3 py-2 text-xs font-semibold backdrop-blur"
+        className={`absolute right-5 top-24 rounded-full border px-3 py-2 text-xs font-semibold backdrop-blur focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)] ${lightTheme ? 'border-slate-950/20 bg-white/80 text-slate-950' : 'border-white/30 bg-slate-950/60 text-white'}`}
         type="button"
         aria-label={muted ? 'Ativar som do vídeo' : 'Desativar som do vídeo'}
         aria-pressed={!muted}
@@ -539,17 +635,53 @@ function VideoMedia({
 
 function ProductDetails({
   product,
+  lightTheme,
   onClose,
 }: {
   product: PublicMenuProductResponse;
+  lightTheme: boolean;
   onClose: () => void;
 }) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeButtonRef.current?.focus();
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => !element.hasAttribute('disabled'));
+      if (focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+      previousFocusRef.current?.focus();
+    };
   }, [onClose]);
 
   return (
@@ -559,7 +691,8 @@ function ProductDetails({
       onClick={onClose}
     >
       <section
-        className="max-h-[85svh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-slate-900 p-6 shadow-2xl sm:rounded-3xl"
+        ref={dialogRef}
+        className={`max-h-[85svh] w-full max-w-xl overflow-y-auto rounded-t-3xl p-6 shadow-2xl sm:rounded-3xl ${lightTheme ? 'bg-white text-slate-950' : 'bg-slate-900 text-white'}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="product-details-title"
@@ -567,7 +700,7 @@ function ProductDetails({
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--menu-primary)]">
               Detalhes
             </p>
             <h2 id="product-details-title" className="mt-2 text-2xl font-bold">
@@ -575,32 +708,40 @@ function ProductDetails({
             </h2>
           </div>
           <button
-            className="rounded-full border border-white/20 px-3 py-2 text-sm"
+            ref={closeButtonRef}
+            className={`rounded-full border px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)] ${lightTheme ? 'border-slate-950/20' : 'border-white/20'}`}
             type="button"
+            aria-label="Fechar"
             onClick={onClose}
           >
             Fechar
           </button>
         </div>
-        <div className="mt-6 space-y-5 text-sm leading-6 text-slate-200">
+        <div
+          className={`mt-6 space-y-5 text-sm leading-6 ${lightTheme ? 'text-slate-700' : 'text-slate-200'}`}
+        >
           {product.description && <p>{product.description}</p>}
           <div className="flex items-baseline gap-3">
-            <strong className="text-xl text-emerald-300">
+            <strong className="text-xl text-[var(--menu-primary)]">
               {formatMoney(product.promotionalPrice ?? product.price)}
             </strong>
             {product.promotionalPrice && (
-              <span className="text-slate-400 line-through">{formatMoney(product.price)}</span>
+              <span className="text-slate-500 line-through">{formatMoney(product.price)}</span>
             )}
           </div>
           {product.ingredients && (
             <div>
-              <h3 className="font-semibold text-white">Ingredientes</h3>
+              <h3 className={`font-semibold ${lightTheme ? 'text-slate-950' : 'text-white'}`}>
+                Ingredientes
+              </h3>
               <p>{product.ingredients}</p>
             </div>
           )}
           {product.allergens && (
             <div>
-              <h3 className="font-semibold text-white">Alergênicos</h3>
+              <h3 className={`font-semibold ${lightTheme ? 'text-slate-950' : 'text-white'}`}>
+                Alergênicos
+              </h3>
               <p>{product.allergens}</p>
             </div>
           )}
@@ -612,40 +753,73 @@ function ProductDetails({
 
 function PublicMenuLoading() {
   return (
-    <main className="grid h-[100svh] place-items-center bg-slate-950 px-6 text-white">
-      <div className="w-full max-w-md space-y-4" role="status" aria-label="Carregando cardápio">
-        <div className="h-10 w-44 animate-pulse rounded-full bg-slate-800" />
-        <div className="h-[60svh] animate-pulse rounded-3xl bg-slate-900" />
+    <main className="grid h-[100svh] place-items-center bg-stone-50 px-6 text-slate-950">
+      <div
+        className="w-full max-w-md space-y-4"
+        role="status"
+        aria-busy="true"
+        aria-label="Carregando cardápio"
+      >
+        <div className="h-10 w-44 animate-pulse rounded-full bg-slate-200" />
+        <div className="h-[60svh] animate-pulse rounded-3xl bg-slate-100" />
       </div>
     </main>
   );
 }
 
-function PublicMenuError({ error, onRetry }: { error?: unknown; onRetry: () => void }) {
+function PublicMenuError({ error, onRetry }: { error?: unknown; onRetry?: () => void }) {
   const clientError = error instanceof ApiClientError ? error : undefined;
-  const notPublished = clientError?.code === 'PUBLIC_MENU_NOT_PUBLISHED';
+  const serverCode =
+    error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
+      ? error.code
+      : undefined;
+  const code = clientError?.code ?? serverCode;
+  const notPublished = code === 'PUBLIC_MENU_NOT_PUBLISHED';
+  const suspended = code === 'PUBLIC_MENU_SUSPENDED';
+  const notFound = code === 'PUBLIC_MENU_NOT_FOUND';
+  const retryable = !notPublished && !suspended && !notFound;
+  const title = notPublished
+    ? 'Cardápio ainda não publicado'
+    : suspended
+      ? 'Cardápio temporariamente indisponível'
+      : notFound
+        ? 'Cardápio não encontrado'
+        : 'Não foi possível carregar este cardápio';
+  const message = notPublished
+    ? 'O estabelecimento ainda não disponibilizou uma versão pública.'
+    : suspended
+      ? 'Este cardápio está temporariamente indisponível.'
+      : notFound
+        ? 'Confira o endereço ou peça ao estabelecimento o link atualizado.'
+        : (clientError?.message ??
+          (error &&
+          typeof error === 'object' &&
+          'message' in error &&
+          typeof error.message === 'string'
+            ? error.message
+            : 'Verifique sua conexão e tente novamente.'));
   return (
-    <main className="grid min-h-[100svh] place-items-center bg-slate-950 px-6 text-center text-white">
+    <main className="grid min-h-[100svh] place-items-center bg-stone-50 px-6 text-center text-slate-950">
       <div className="max-w-md space-y-4">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">Pratto</p>
-        <h1 className="text-3xl font-bold">
-          {notPublished
-            ? 'Cardápio ainda não publicado'
-            : 'Não foi possível carregar este cardápio'}
-        </h1>
-        <p className="text-sm leading-6 text-slate-400">
-          {notPublished
-            ? 'O estabelecimento ainda não disponibilizou uma versão pública.'
-            : (clientError?.message ?? 'Verifique sua conexão e tente novamente.')}
-        </p>
-        {!notPublished && (
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">Pratto</p>
+        <h1 className="text-3xl font-bold">{title}</h1>
+        <p className="text-sm leading-6 text-slate-600">{message}</p>
+        {retryable && onRetry && (
           <button
-            className="rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950"
+            className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
             type="button"
             onClick={onRetry}
           >
             Tentar novamente
           </button>
+        )}
+        {(notPublished || suspended || notFound) && (
+          <Link
+            className="inline-flex rounded-full border border-slate-950/15 px-5 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+            href="/"
+          >
+            Ir para o início
+          </Link>
         )}
       </div>
     </main>
@@ -654,24 +828,30 @@ function PublicMenuError({ error, onRetry }: { error?: unknown; onRetry: () => v
 
 function PublicMenuEmpty({
   categorySelected,
+  lightTheme,
   onClear,
 }: {
   categorySelected: boolean;
+  lightTheme: boolean;
   onClear: () => void;
 }) {
   return (
-    <main className="grid h-[100svh] place-items-center bg-slate-950 px-6 text-center text-white">
+    <div
+      className={`grid h-[100svh] place-items-center px-6 text-center ${lightTheme ? 'bg-stone-50 text-slate-950' : 'bg-slate-950 text-white'}`}
+    >
       <div className="max-w-md space-y-4">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">Pratto</p>
-        <h1 className="text-3xl font-bold">Nenhum produto disponível</h1>
-        <p className="text-sm leading-6 text-slate-400">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--menu-primary)]">
+          Pratto
+        </p>
+        <h2 className="text-3xl font-bold">Nenhum produto disponível</h2>
+        <p className={`text-sm leading-6 ${lightTheme ? 'text-slate-600' : 'text-slate-400'}`}>
           {categorySelected
             ? 'Não há produtos publicados nesta categoria.'
             : 'Este cardápio ainda não possui produtos publicados.'}
         </p>
         {categorySelected && (
           <button
-            className="rounded-full border border-white/20 px-5 py-3 text-sm font-semibold"
+            className={`rounded-full border px-5 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)] ${lightTheme ? 'border-slate-950/15' : 'border-white/20'}`}
             type="button"
             onClick={onClear}
           >
@@ -679,16 +859,47 @@ function PublicMenuEmpty({
           </button>
         )}
       </div>
-    </main>
+    </div>
   );
 }
 
-function FeedLoadingCard() {
+function FeedLoadingCard({ lightTheme }: { lightTheme: boolean }) {
   return (
-    <div className="grid h-24 place-items-center bg-slate-950 text-sm text-slate-400" role="status">
+    <div
+      className={`grid h-24 place-items-center text-sm ${lightTheme ? 'bg-stone-50 text-slate-600' : 'bg-slate-950 text-slate-400'}`}
+      role="status"
+    >
       Carregando mais produtos…
     </div>
   );
+}
+
+function FeedError({ lightTheme, onRetry }: { lightTheme: boolean; onRetry: () => void }) {
+  return (
+    <div
+      className={`grid min-h-24 place-items-center gap-2 px-6 py-5 text-center text-sm ${lightTheme ? 'bg-stone-50 text-slate-600' : 'bg-slate-950 text-slate-300'}`}
+      role="alert"
+    >
+      <span>Não foi possível carregar mais produtos.</span>
+      <button
+        className="rounded-full border border-[var(--menu-primary)] px-4 py-2 font-semibold text-[var(--menu-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)]"
+        type="button"
+        onClick={onRetry}
+      >
+        Tentar novamente
+      </button>
+    </div>
+  );
+}
+
+function scrollBehavior(): ScrollBehavior {
+  if (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    return 'auto';
+  }
+  return 'smooth';
 }
 
 function formatMoney(value: string): string {

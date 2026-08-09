@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { ApiClientError } from '../auth/api-client';
+import { PublicMenuShare } from '../public-menu/public-menu-share';
 
 import { catalogApi } from './api-client';
 
@@ -28,7 +29,13 @@ function createIdempotencyKey(): string {
   return `publication-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function PublicationManagement({ establishmentId }: { establishmentId: string }) {
+export function PublicationManagement({
+  establishmentId,
+  publicMenuBaseUrl,
+}: {
+  establishmentId: string;
+  publicMenuBaseUrl: string;
+}) {
   const queryClient = useQueryClient();
   const [menuId, setMenuId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(
@@ -187,6 +194,13 @@ export function PublicationManagement({ establishmentId }: { establishmentId: st
               </p>
             )}
           </section>
+
+          {publication ? (
+            <PublicMenuShare
+              establishmentId={establishmentId}
+              publicMenuBaseUrl={publicMenuBaseUrl}
+            />
+          ) : null}
 
           <PublicationHistory publications={history} />
         </>
