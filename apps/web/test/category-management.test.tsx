@@ -37,18 +37,21 @@ describe('CategoryManagement', () => {
         }),
       );
     });
-    vi.stubGlobal(
-      'fetch',
-      fetchMock,
-    );
+    vi.stubGlobal('fetch', fetchMock);
 
     renderWithQueryClient();
 
-    expect(await screen.findByText('Selecione explicitamente o menu que deseja gerenciar.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Selecione explicitamente o menu que deseja gerenciar.'),
+    ).toBeInTheDocument();
     expect(screen.queryByText('Nenhuma categoria cadastrada.')).not.toBeInTheDocument();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Menu alvo' }), { target: { value: menuId } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Menu alvo' }), {
+      target: { value: menuId },
+    });
     expect(await screen.findByText('Nenhuma categoria cadastrada.')).toBeInTheDocument();
-    await screen.findByRole('button', { name: 'Adicionar categoria' }).then((button) => button.click());
+    await screen
+      .findByRole('button', { name: 'Adicionar categoria' })
+      .then((button) => button.click());
     expect(await screen.findByText(/informe o nome/i)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/admin/establishments/11111111-1111-4111-8111-111111111111/menus'),

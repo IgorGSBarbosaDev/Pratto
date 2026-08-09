@@ -2,11 +2,7 @@ import type { MembershipRole } from '@pratto/contracts';
 import { PrismaClient } from '@prisma/client';
 
 import { CatalogService } from '../../../../apps/api/src/modules/catalog/application/catalog.service';
-import {
-  clearDatabase,
-  createMenu,
-  createTenantFixture,
-} from '../../src/testing';
+import { clearDatabase, createMenu, createTenantFixture } from '../../src/testing';
 
 const database = new PrismaClient();
 
@@ -61,10 +57,14 @@ describe('category management', () => {
     });
     expect(updated).toMatchObject({ name: 'Petiscos', description: null });
 
-    await expect(service.deactivateCategory(context, tenant.menu.id, created.id)).resolves.toMatchObject({
+    await expect(
+      service.deactivateCategory(context, tenant.menu.id, created.id),
+    ).resolves.toMatchObject({
       status: 'INACTIVE',
     });
-    await expect(service.activateCategory(context, tenant.menu.id, created.id)).resolves.toMatchObject({
+    await expect(
+      service.activateCategory(context, tenant.menu.id, created.id),
+    ).resolves.toMatchObject({
       status: 'ACTIVE',
     });
 
@@ -82,7 +82,9 @@ describe('category management', () => {
       name: 'Menu secundário',
     });
 
-    await expect(service.listMenusForEstablishment(tenantContext(tenant), tenant.establishment.id)).resolves.toMatchObject({
+    await expect(
+      service.listMenusForEstablishment(tenantContext(tenant), tenant.establishment.id),
+    ).resolves.toMatchObject({
       establishmentId: tenant.establishment.id,
       menus: [
         expect.objectContaining({ id: tenant.menu.id }),
@@ -98,7 +100,9 @@ describe('category management', () => {
 
     await expect(
       service.createCategory(context, tenant.menu.id, { name: '  bebidas  ' }),
-    ).rejects.toMatchObject({ response: expect.objectContaining({ code: 'CATEGORY_NAME_ALREADY_IN_USE' }) });
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'CATEGORY_NAME_ALREADY_IN_USE' }),
+    });
   });
 
   it('keeps ordering contiguous after reorder and archive, while allowing the archived name to be reused', async () => {
@@ -111,7 +115,11 @@ describe('category management', () => {
     const reordered = await service.reorderCategories(context, tenant.menu.id, {
       categoryIds: [third.id, first.id, second.id],
     });
-    expect(reordered.categories.filter(({ archivedAt }) => !archivedAt).map(({ id, displayOrder }) => [id, displayOrder])).toEqual([
+    expect(
+      reordered.categories
+        .filter(({ archivedAt }) => !archivedAt)
+        .map(({ id, displayOrder }) => [id, displayOrder]),
+    ).toEqual([
       [third.id, 0],
       [first.id, 1],
       [second.id, 2],
@@ -121,7 +129,11 @@ describe('category management', () => {
     expect(archived).toMatchObject({ status: 'INACTIVE', archivedAt: expect.any(String) });
 
     const afterArchive = await service.listCategories(context, tenant.menu.id);
-    expect(afterArchive.categories.filter(({ archivedAt }) => !archivedAt).map(({ displayOrder }) => displayOrder)).toEqual([0, 1]);
+    expect(
+      afterArchive.categories
+        .filter(({ archivedAt }) => !archivedAt)
+        .map(({ displayOrder }) => displayOrder),
+    ).toEqual([0, 1]);
     expect(afterArchive.categories.find(({ id }) => id === first.id)).toMatchObject({
       status: 'INACTIVE',
       archivedAt: expect.any(String),
@@ -147,9 +159,13 @@ describe('category management', () => {
 
     await expect(
       service.reorderCategories(context, tenant.menu.id, { categoryIds: [] }),
-    ).rejects.toMatchObject({ response: expect.objectContaining({ code: 'CATEGORY_REORDER_INVALID' }) });
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'CATEGORY_REORDER_INVALID' }),
+    });
     await service.archiveCategory(context, tenant.menu.id, category.id);
-    await expect(service.updateCategory(context, tenant.menu.id, category.id, { name: 'Outra' })).rejects.toMatchObject({
+    await expect(
+      service.updateCategory(context, tenant.menu.id, category.id, { name: 'Outra' }),
+    ).rejects.toMatchObject({
       response: expect.objectContaining({ code: 'CATEGORY_ARCHIVED' }),
     });
   });
@@ -161,11 +177,15 @@ describe('category management', () => {
       name: 'Categoria B',
     });
 
-    await expect(service.listCategories(tenantContext(tenantA), tenantB.menu.id)).rejects.toMatchObject({
+    await expect(
+      service.listCategories(tenantContext(tenantA), tenantB.menu.id),
+    ).rejects.toMatchObject({
       response: expect.objectContaining({ code: 'MENU_NOT_FOUND' }),
     });
     await expect(
-      service.updateCategory(tenantContext(tenantA), tenantA.menu.id, categoryB.id, { name: 'Invasão' }),
+      service.updateCategory(tenantContext(tenantA), tenantA.menu.id, categoryB.id, {
+        name: 'Invasão',
+      }),
     ).rejects.toMatchObject({ response: expect.objectContaining({ code: 'CATEGORY_NOT_FOUND' }) });
 
     const memberContext = tenantContext(tenantA, 'MEMBER');
@@ -174,7 +194,9 @@ describe('category management', () => {
     ).rejects.toMatchObject({
       response: expect.objectContaining({ code: 'CATALOG_MANAGEMENT_ACCESS_DENIED' }),
     });
-    await expect(service.listCategories(tenantContext(tenantA), tenantA.menu.id)).resolves.toMatchObject({
+    await expect(
+      service.listCategories(tenantContext(tenantA), tenantA.menu.id),
+    ).resolves.toMatchObject({
       menuId: tenantA.menu.id,
     });
   });

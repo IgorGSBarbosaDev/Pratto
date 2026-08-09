@@ -10,6 +10,8 @@ User 1 ── * Membership * ── 1 Organization
 Organization 1 ── * Establishment
 Establishment 1 ── * Menu
 Menu 1 ── * Category
+Menu 1 ── * Product
+Category 1 ── * Product
 Menu 1 ── * MenuPublication
 Menu 1 ── 0..1 MenuPublication (active)
 ```
@@ -35,9 +37,10 @@ produtos.
 
 `Menu` mantém `organizationId` e `establishmentId`. A FK composta referencia
 `Establishment(id, organizationId)`, impedindo que um menu seja gravado com o tenant de outro
-estabelecimento. `Category` repete `organizationId` e usa FK composta para o menu, preparando a
-futura associação de produtos pelo par `(id, organizationId)`. O nome normalizado é único entre
-categorias não arquivadas do mesmo menu. `MenuPublication` repete `organizationId` e usa FKs compostas para o menu e para
+estabelecimento. `Category` repete `organizationId` e usa FK composta para o menu. `Product` repete
+o tenant e o menu, mantém uma categoria obrigatória e usa FKs compostas para impedir associação
+entre menus ou tenants diferentes. O nome normalizado é único entre categorias não arquivadas do
+mesmo menu. `MenuPublication` repete `organizationId` e usa FKs compostas para o menu e para
 a membership do publisher. Consultas administrativas filtram explicitamente pelo contexto de
 organização derivado da sessão. A FK composta da seleção ativa também garante que a membership
 pertença ao usuário da sessão.
@@ -55,6 +58,10 @@ cascade. Sessões, memberships e publicações preservam as referências necess�
 - `MembershipRole`: `OWNER`, `ADMIN`, `MEMBER`.
 - `MenuStatus`: `DRAFT`, `ACTIVE`, `ARCHIVED`.
 - `Category`: `ACTIVE` ou `INACTIVE`; o arquivamento preenche `archivedAt` e mantém o registro.
+- `Product`: `ACTIVE` ou `INACTIVE`, com `AVAILABLE`, `TEMPORARILY_UNAVAILABLE` ou `HIDDEN` para
+  disponibilidade; o arquivamento preenche `archivedAt` e mantém o registro.
+- `Product.price` e `Product.promotionalPrice` usam `DECIMAL(10,2)`; a API não aceita números
+  JavaScript para evitar conversões por ponto flutuante.
 
 Sessões derivam validade de `expiresAt` (inatividade), `absoluteExpiresAt` e `revokedAt`, sem estado
 duplicado. Credenciais, tokens de recuperação, buckets de limite e eventos de autenticação são

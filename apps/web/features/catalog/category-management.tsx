@@ -72,7 +72,13 @@ export function CategoryManagement({ establishmentId }: { establishmentId: strin
     },
   });
   const status = useMutation({
-    mutationFn: ({ category, action }: { category: CategoryResponse; action: 'activate' | 'deactivate' }) => {
+    mutationFn: ({
+      category,
+      action,
+    }: {
+      category: CategoryResponse;
+      action: 'activate' | 'deactivate';
+    }) => {
       if (!menuId) throw new Error('Menu não selecionado.');
       return action === 'activate'
         ? catalogApi.activateCategory(menuId, category.id)
@@ -107,7 +113,10 @@ export function CategoryManagement({ establishmentId }: { establishmentId: strin
   }
   if (menusQuery.error || !menusQuery.data) {
     return (
-      <div role="alert" className="rounded-xl border border-rose-900 bg-rose-950/40 p-4 text-sm text-rose-200">
+      <div
+        role="alert"
+        className="rounded-xl border border-rose-900 bg-rose-950/40 p-4 text-sm text-rose-200"
+      >
         {messageFor(menusQuery.error)}
       </div>
     );
@@ -153,7 +162,10 @@ export function CategoryManagement({ establishmentId }: { establishmentId: strin
           Carregando categorias…
         </p>
       ) : categoriesQuery.error || !categoriesQuery.data ? (
-        <div role="alert" className="rounded-xl border border-rose-900 bg-rose-950/40 p-4 text-sm text-rose-200">
+        <div
+          role="alert"
+          className="rounded-xl border border-rose-900 bg-rose-950/40 p-4 text-sm text-rose-200"
+        >
           {messageFor(categoriesQuery.error)}
         </div>
       ) : (
@@ -172,7 +184,8 @@ export function CategoryManagement({ establishmentId }: { establishmentId: strin
             const visibleCategories = categories.filter((item) => !item.archivedAt);
             const currentIndex = visibleCategories.findIndex((item) => item.id === category.id);
             const targetIndex = currentIndex + direction;
-            if (currentIndex < 0 || targetIndex < 0 || targetIndex >= visibleCategories.length) return;
+            if (currentIndex < 0 || targetIndex < 0 || targetIndex >= visibleCategories.length)
+              return;
             const next = visibleCategories.map((item) => item.id);
             [next[currentIndex], next[targetIndex]] = [next[targetIndex]!, next[currentIndex]!];
             reorder.mutate(next);
@@ -226,16 +239,26 @@ function CategoryEditor({
 
   return (
     <div className="space-y-6">
-      <form className="rounded-2xl border border-slate-800 bg-slate-900 p-5" onSubmit={form.handleSubmit(onSubmit)}>
+      <form
+        className="rounded-2xl border border-slate-800 bg-slate-900 p-5"
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold">{editing ? 'Editar categoria' : 'Nova categoria'}</h3>
+            <h3 className="text-lg font-semibold">
+              {editing ? 'Editar categoria' : 'Nova categoria'}
+            </h3>
             <p className="mt-1 text-sm text-slate-400">
-              Categorias fazem parte do rascunho editável e só aparecem publicamente após uma nova publicação.
+              Categorias fazem parte do rascunho editável e só aparecem publicamente após uma nova
+              publicação.
             </p>
           </div>
           {editing && (
-            <button className="text-sm text-slate-400 hover:text-white" type="button" onClick={onCancelEdit}>
+            <button
+              className="text-sm text-slate-400 hover:text-white"
+              type="button"
+              onClick={onCancelEdit}
+            >
               Cancelar edição
             </button>
           )}
@@ -244,12 +267,16 @@ function CategoryEditor({
           <label className="text-sm">
             Nome
             <input className={inputClass} {...form.register('name')} />
-            {form.formState.errors.name && <FieldError message={form.formState.errors.name.message} />}
+            {form.formState.errors.name && (
+              <FieldError message={form.formState.errors.name.message} />
+            )}
           </label>
           <label className="text-sm md:col-span-2">
             Descrição opcional
             <textarea className={inputClass} rows={3} {...form.register('description')} />
-            {form.formState.errors.description && <FieldError message={form.formState.errors.description.message} />}
+            {form.formState.errors.description && (
+              <FieldError message={form.formState.errors.description.message} />
+            )}
           </label>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-4">
@@ -260,7 +287,11 @@ function CategoryEditor({
           >
             {isBusy ? 'Salvando…' : editing ? 'Salvar categoria' : 'Adicionar categoria'}
           </button>
-          {Boolean(saveError) && <p className="text-sm text-rose-300" role="alert">{messageFor(saveError)}</p>}
+          {Boolean(saveError) && (
+            <p className="text-sm text-rose-300" role="alert">
+              {messageFor(saveError)}
+            </p>
+          )}
         </div>
       </form>
 
@@ -268,9 +299,13 @@ function CategoryEditor({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold">Categorias do cardápio</h3>
-            <p className="mt-1 text-sm text-slate-400">A ordem abaixo será usada no próximo snapshot publicado.</p>
+            <p className="mt-1 text-sm text-slate-400">
+              A ordem abaixo será usada no próximo snapshot publicado.
+            </p>
           </div>
-          <span className="text-sm text-slate-500">{visibleCategories.length} ativas ou inativas</span>
+          <span className="text-sm text-slate-500">
+            {visibleCategories.length} ativas ou inativas
+          </span>
         </div>
         {categories.length === 0 ? (
           <div className="mt-5 rounded-xl border border-dashed border-slate-700 p-6 text-sm text-slate-400">
@@ -324,32 +359,65 @@ function CategoryRow({
 }) {
   const archived = Boolean(category.archivedAt);
   return (
-    <article className={`rounded-xl border p-4 ${archived ? 'border-slate-800 bg-slate-950/50 opacity-70' : 'border-slate-800 bg-slate-950'}`}>
+    <article
+      className={`rounded-xl border p-4 ${archived ? 'border-slate-800 bg-slate-950/50 opacity-70' : 'border-slate-800 bg-slate-950'}`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h4 className="font-medium">{category.name}</h4>
-            <span className={`rounded-full px-2 py-0.5 text-xs ${archived ? 'bg-slate-800 text-slate-400' : category.status === 'ACTIVE' ? 'bg-emerald-950 text-emerald-300' : 'bg-amber-950 text-amber-300'}`}>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs ${archived ? 'bg-slate-800 text-slate-400' : category.status === 'ACTIVE' ? 'bg-emerald-950 text-emerald-300' : 'bg-amber-950 text-amber-300'}`}
+            >
               {archived ? 'Arquivada' : category.status === 'ACTIVE' ? 'Ativa' : 'Inativa'}
             </span>
           </div>
-          {category.description && <p className="mt-1 text-sm text-slate-400">{category.description}</p>}
+          {category.description && (
+            <p className="mt-1 text-sm text-slate-400">{category.description}</p>
+          )}
         </div>
         {!archived && (
           <div className="flex flex-wrap items-center gap-2">
-            <button className="rounded border border-slate-700 px-2 py-1 text-xs hover:border-emerald-400 disabled:opacity-50" type="button" disabled={busy || index === 0} onClick={() => onMove(-1)} aria-label={`Mover ${category.name} para cima`}>
+            <button
+              className="rounded border border-slate-700 px-2 py-1 text-xs hover:border-emerald-400 disabled:opacity-50"
+              type="button"
+              disabled={busy || index === 0}
+              onClick={() => onMove(-1)}
+              aria-label={`Mover ${category.name} para cima`}
+            >
               ↑
             </button>
-            <button className="rounded border border-slate-700 px-2 py-1 text-xs hover:border-emerald-400 disabled:opacity-50" type="button" disabled={busy || index === total - 1} onClick={() => onMove(1)} aria-label={`Mover ${category.name} para baixo`}>
+            <button
+              className="rounded border border-slate-700 px-2 py-1 text-xs hover:border-emerald-400 disabled:opacity-50"
+              type="button"
+              disabled={busy || index === total - 1}
+              onClick={() => onMove(1)}
+              aria-label={`Mover ${category.name} para baixo`}
+            >
               ↓
             </button>
-            <button className="rounded border border-slate-700 px-3 py-1 text-xs hover:border-emerald-400 disabled:opacity-50" type="button" disabled={busy} onClick={onEdit}>
+            <button
+              className="rounded border border-slate-700 px-3 py-1 text-xs hover:border-emerald-400 disabled:opacity-50"
+              type="button"
+              disabled={busy}
+              onClick={onEdit}
+            >
               Editar
             </button>
-            <button className="rounded border border-slate-700 px-3 py-1 text-xs hover:border-amber-400 disabled:opacity-50" type="button" disabled={busy} onClick={onToggle}>
+            <button
+              className="rounded border border-slate-700 px-3 py-1 text-xs hover:border-amber-400 disabled:opacity-50"
+              type="button"
+              disabled={busy}
+              onClick={onToggle}
+            >
               {category.status === 'ACTIVE' ? 'Desativar' : 'Ativar'}
             </button>
-            <button className="rounded border border-rose-900 px-3 py-1 text-xs text-rose-300 hover:border-rose-500 disabled:opacity-50" type="button" disabled={busy} onClick={onArchive}>
+            <button
+              className="rounded border border-rose-900 px-3 py-1 text-xs text-rose-300 hover:border-rose-500 disabled:opacity-50"
+              type="button"
+              disabled={busy}
+              onClick={onArchive}
+            >
               Arquivar
             </button>
           </div>

@@ -7,6 +7,7 @@ import { authApi } from '../../features/auth/api-client';
 import { AuthBoundary } from '../../features/auth/auth-boundary';
 import { authErrorMessage } from '../../features/auth/error-message';
 import { CategoryManagement } from '../../features/catalog/category-management';
+import { ProductManagement } from '../../features/catalog/product-management';
 import { EstablishmentSettingsForm } from '../../features/establishments/settings-form';
 
 export default function AdminPage() {
@@ -64,10 +65,21 @@ export default function AdminPage() {
                     <section className="mt-10">
                       <h2 className="text-xl font-semibold">Categorias do cardápio</h2>
                       <p className="mt-2 max-w-2xl text-slate-400">
-                        Organize as seções do menu editável. As alterações não mudam publicações anteriores.
+                        Organize as seções do menu editável. As alterações não mudam publicações
+                        anteriores.
                       </p>
                       <div className="mt-7">
                         <CategoryManagement establishmentId={context.establishments[0]!.id} />
+                      </div>
+                    </section>
+                    <section className="mt-10">
+                      <h2 className="text-xl font-semibold">Produtos do cardápio</h2>
+                      <p className="mt-2 max-w-2xl text-slate-400">
+                        Cadastre e organize os produtos do catálogo editável, sem alterar
+                        publicações anteriores.
+                      </p>
+                      <div className="mt-7">
+                        <ProductManagement establishmentId={context.establishments[0]!.id} />
                       </div>
                     </section>
                   </div>
