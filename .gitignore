@@ -12,3 +12,4 @@ docker-data/
 playwright-report/
 test-results/
 .DS_Store
+design-reference/
