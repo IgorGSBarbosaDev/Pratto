@@ -5,7 +5,7 @@ import {
   createPublicMenuErrorMetadata,
   createPublicMenuMetadata,
 } from '../features/public-menu/metadata';
-import { buildPublicMenuUrl } from '../features/public-menu/public-url';
+import { buildPublicMenuUrl, buildPublicProductUrl } from '../features/public-menu/public-url';
 
 const page: PublicMenuPageResponse = {
   establishment: {
@@ -39,6 +39,16 @@ describe('public menu metadata and URL', () => {
     );
     expect(buildPublicMenuUrl('not a URL', 'public-id', 'slug')).toBe(
       'http://localhost:3000/menu/public-id/slug',
+    );
+    expect(
+      buildPublicProductUrl(
+        'https://menus.example/pratto/',
+        'café público',
+        'cafe-aurora',
+        'produto especial',
+      ),
+    ).toBe(
+      'https://menus.example/pratto/menu/caf%C3%A9%20p%C3%BAblico/cafe-aurora?product=produto+especial',
     );
   });
 

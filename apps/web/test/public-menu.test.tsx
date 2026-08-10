@@ -70,6 +70,7 @@ function renderScreen(
   props: {
     initialPage?: PublicMenuPageResponse;
     initialError?: PublicMenuServerError;
+    initialProductId?: string;
   } = {},
 ) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -271,6 +272,117 @@ describe('PublicMenuScreen', () => {
     expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/menu')).length).toBe(
       0,
     );
+  });
+
+  it('opens a compact share sheet and copies the direct product URL', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          String(input).includes('/public/analytics/')
+            ? analyticsResponse(input)
+            : response(page()),
+        ),
+    );
+
+    renderScreen({ initialPage: page() });
+    await enterMenu();
+    const shareButton = await screen.findByRole('button', { name: 'Compartilhar Prato da casa' });
+    fireEvent.click(shareButton);
+
+    const dialog = screen.getByRole('dialog', { name: 'Compartilhar prato' });
+    expect(dialog).toHaveTextContent('Prato da casa');
+    const whatsapp = screen.getByRole('link', { name: 'WhatsApp' });
+    const twitter = screen.getByRole('link', { name: 'Twitter / X' });
+    expect(new URL(whatsapp.getAttribute('href')!).searchParams.get('text')).toContain(
+      'http://localhost:3000/menu/establishment-public-id/casa-aurora?product=product-1',
+    );
+    expect(new URL(twitter.getAttribute('href')!).searchParams.get('url')).toBe(
+      'http://localhost:3000/menu/establishment-public-id/casa-aurora?product=product-1',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar link' }));
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(
+        'http://localhost:3000/menu/establishment-public-id/casa-aurora?product=product-1',
+      ),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent('Link do prato copiado.');
+  });
+
+  it('uses native sharing for Instagram and falls back to copying when unavailable', async () => {
+    const nativeShare = vi.fn().mockResolvedValue(undefined);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { configurable: true, value: nativeShare });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          String(input).includes('/public/analytics/')
+            ? analyticsResponse(input)
+            : response(page()),
+        ),
+    );
+
+    renderScreen({ initialPage: page() });
+    await enterMenu();
+    fireEvent.click(await screen.findByRole('button', { name: 'Compartilhar Prato da casa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Instagram' }));
+    await waitFor(() =>
+      expect(nativeShare).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Prato da casa no Casa Aurora',
+          url: 'http://localhost:3000/menu/establishment-public-id/casa-aurora?product=product-1',
+        }),
+      ),
+    );
+
+    cleanup();
+    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
+    renderScreen({ initialPage: page() });
+    await enterMenu();
+    fireEvent.click(await screen.findByRole('button', { name: 'Compartilhar Prato da casa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Instagram' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Link copiado — cole no Instagram.',
+    );
+  });
+
+  it('loads paginated products and positions a direct product link in the feed', async () => {
+    const first = page({ nextCursor: 'next-product-page' });
+    const targetProduct = {
+      ...first.products[0]!,
+      id: 'product-2',
+      name: 'Prato compartilhado',
+    };
+    const second = page({ products: [targetProduct], nextCursor: null });
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/public/analytics/')) return analyticsResponse(input);
+      return response(url.includes('cursor=next-product-page') ? second : first);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderScreen({ initialPage: first, initialProductId: targetProduct.id });
+
+    expect(screen.queryByRole('button', { name: 'Explorar o menu' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Prato compartilhado' })).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([input]) => String(input).includes('cursor=next-product-page')),
+    ).toBe(true);
   });
 
   it('preserves a suspended state from the server without retrying automatically', async () => {

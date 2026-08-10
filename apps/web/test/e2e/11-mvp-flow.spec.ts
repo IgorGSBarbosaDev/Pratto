@@ -82,6 +82,22 @@ test('completes the real MVP flow from setup to dashboard', async ({ page }) => 
   await page.getByRole('button', { name: 'Explorar o menu' }).click();
   await expect(page.getByRole('feed', { name: 'Produtos publicados' })).toBeVisible();
   await expect(page.getByRole('heading', { name: productName })).toBeVisible();
+  await page.getByRole('button', { name: `Compartilhar ${productName}` }).click();
+  const shareDialog = page.getByRole('dialog', { name: 'Compartilhar prato' });
+  await expect(shareDialog).toBeVisible();
+  const twitterShareUrl = await shareDialog
+    .getByRole('link', { name: 'Twitter / X' })
+    .getAttribute('href');
+  const directProductUrl = new URL(twitterShareUrl!).searchParams.get('url');
+  expect(directProductUrl).toMatch(
+    /^http:\/\/localhost:3100\/menu\/cafe-aurora-local\/cafe-aurora\?product=[0-9a-f-]{36}$/,
+  );
+  await shareDialog.getByRole('button', { name: 'Fechar', exact: true }).click();
+  await expect(shareDialog).not.toBeVisible();
+
+  await page.goto(directProductUrl!);
+  await expect(page.getByRole('feed', { name: 'Produtos publicados' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: productName })).toBeVisible();
   await page.getByRole('button', { name: categoryName, exact: true }).click();
   await expect(page.getByRole('heading', { name: productName })).toBeVisible();
   await page.getByRole('heading', { name: productName }).click();
