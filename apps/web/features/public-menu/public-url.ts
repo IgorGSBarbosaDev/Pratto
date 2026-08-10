@@ -11,3 +11,14 @@ export function buildPublicMenuUrl(baseUrl: string, publicId: string, slug: stri
   url.hash = '';
   return url.toString();
 }
+
+export function buildPublicProductUrl(
+  baseUrl: string,
+  publicId: string,
+  slug: string,
+  productId: string,
+): string {
+  const url = new URL(buildPublicMenuUrl(baseUrl, publicId, slug));
+  url.searchParams.set('product', productId);
+  return url.toString();
+}

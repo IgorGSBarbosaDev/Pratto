@@ -20,13 +20,19 @@ import {
   X,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 import { ApiClientError } from '../auth/api-client';
 import { FoodImage, Skeleton } from '../design-system/feedback';
 
 import { PublicMenuAnalyticsClient } from './analytics-client';
 import { publicMenuApi } from './api-client';
+import {
+  ProductShareButton,
+  ProductShareSheet,
+  ProductShareToast,
+  type ShareFeedback,
+} from './product-share-sheet';
 import type { PublicMenuServerError } from './server-api';
 
 const PAGE_SIZE = 6;
@@ -46,20 +52,31 @@ export function PublicMenuScreen({
   slug,
   initialPage,
   initialError,
+  initialProductId,
 }: {
   publicId: string;
   slug: string;
   initialPage?: PublicMenuPageResponse;
   initialError?: PublicMenuServerError;
+  initialProductId?: string;
 }) {
   const router = useRouter();
   const feedRef = useRef<HTMLDivElement>(null);
   const [categoryId, setCategoryId] = useState<string | undefined>();
-  const [entered, setEntered] = useState(false);
+  const [entered, setEntered] = useState(Boolean(initialProductId));
   const [tab, setTab] = useState<CustomerTab>('menu');
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [detailsProduct, setDetailsProduct] = useState<PublicMenuProductResponse | null>(null);
+  const [shareProduct, setShareProduct] = useState<PublicMenuProductResponse | null>(null);
+  const [shareFeedback, setShareFeedback] = useState<ShareFeedback | null>(null);
   const [retryInitialError, setRetryInitialError] = useState(!initialError);
+  const deepLinkResolvedRef = useRef(false);
+  const feedbackIdRef = useRef(0);
+  const showShareFeedback = useCallback((message: string, tone: ShareFeedback['tone']) => {
+    feedbackIdRef.current += 1;
+    setShareFeedback({ id: feedbackIdRef.current, message, tone });
+  }, []);
+  const dismissShareFeedback = useCallback(() => setShareFeedback(null), []);
   const analyticsRef = useRef<PublicMenuAnalyticsClient | null>(null);
   const impressionTimersRef = useRef(new Map<string, number>());
   const qualifiedTimersRef = useRef(new Map<string, number>());
@@ -95,9 +112,12 @@ export function PublicMenuScreen({
 
   useEffect(() => {
     if (firstPage && firstPage.establishment.slug !== slug) {
-      router.replace(`/menu/${encodeURIComponent(publicId)}/${firstPage.establishment.slug}`);
+      const path = `/menu/${encodeURIComponent(publicId)}/${firstPage.establishment.slug}`;
+      router.replace(
+        initialProductId ? `${path}?product=${encodeURIComponent(initialProductId)}` : path,
+      );
     }
-  }, [firstPage, publicId, router, slug]);
+  }, [firstPage, initialProductId, publicId, router, slug]);
 
   useEffect(() => {
     if (!firstPage) return;
@@ -123,6 +143,29 @@ export function PublicMenuScreen({
       setActiveProductId(products[0]?.id ?? null);
     }
   }, [activeProductId, products]);
+
+  useEffect(() => {
+    if (!initialProductId || deepLinkResolvedRef.current || !firstPage) return;
+    const product = products.find((item) => item.id === initialProductId);
+    if (product) {
+      deepLinkResolvedRef.current = true;
+      setActiveProductId(product.id);
+      window.requestAnimationFrame(() => {
+        const target = Array.from(
+          feedRef.current?.querySelectorAll<HTMLElement>('[data-product-id]') ?? [],
+        ).find((element) => element.dataset.productId === product.id);
+        if (target && feedRef.current && typeof feedRef.current.scrollTo === 'function') {
+          feedRef.current.scrollTo({ top: target.offsetTop, behavior: 'auto' });
+        }
+      });
+      return;
+    }
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+      return;
+    }
+    if (!hasNextPage) deepLinkResolvedRef.current = true;
+  }, [fetchNextPage, firstPage, hasNextPage, initialProductId, isFetchingNextPage, products]);
 
   useEffect(() => {
     if (!entered || tab !== 'menu') return;
@@ -306,6 +349,7 @@ export function PublicMenuScreen({
                           });
                           setDetailsProduct(product);
                         }}
+                        onOpenShare={() => setShareProduct(product)}
                         onInteraction={(interactionType) =>
                           analyticsRef.current?.track({
                             eventType: 'product_interaction',
@@ -377,6 +421,24 @@ export function PublicMenuScreen({
                   })
                 }
                 onClose={() => setDetailsProduct(null)}
+              />
+            ) : null}
+            {shareProduct ? (
+              <ProductShareSheet
+                publicId={publicId}
+                slug={firstPage.establishment.slug}
+                establishmentName={firstPage.establishment.name}
+                product={shareProduct}
+                lightTheme={lightTheme}
+                onClose={() => setShareProduct(null)}
+                onFeedback={showShareFeedback}
+              />
+            ) : null}
+            {shareFeedback ? (
+              <ProductShareToast
+                key={shareFeedback.id}
+                feedback={shareFeedback}
+                onDismiss={dismissShareFeedback}
               />
             ) : null}
           </>
@@ -727,6 +789,7 @@ function ProductCard({
   lightTheme,
   showHint,
   onOpenDetails,
+  onOpenShare,
   onInteraction,
 }: {
   product: PublicMenuProductResponse;
@@ -736,6 +799,7 @@ function ProductCard({
   lightTheme: boolean;
   showHint: boolean;
   onOpenDetails: () => void;
+  onOpenShare: () => void;
   onInteraction: (interactionType: AnalyticsInteractionType) => void;
 }) {
   return (
@@ -757,53 +821,68 @@ function ProductCard({
       </div>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/[0.45] to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
-      <button
-        type="button"
-        onClick={onOpenDetails}
-        className={`absolute inset-x-0 bottom-0 z-10 flex flex-col items-start px-5 pb-28 pt-10 text-left text-white transition duration-300 ${active ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-60'}`}
+      <div
+        className={`absolute inset-x-0 bottom-0 z-10 px-5 pb-28 pt-10 text-left text-white transition duration-300 ${active ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-60'}`}
       >
-        <span className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/80">
-          {categoryName}
-        </span>
-        <h2
-          id={`product-title-${product.id}`}
-          className="font-serif text-[34px] leading-[1.05] text-white"
-        >
-          {product.name}
-        </h2>
-        {product.description ? (
-          <p className="mt-2 line-clamp-2 max-w-[310px] text-[15px] leading-snug text-white/[0.85]">
-            {product.description}
-          </p>
-        ) : null}
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {product.promotionalPrice ? (
-            <>
-              <span className="tnum rounded-full bg-white px-3.5 py-1.5 text-[15px] font-semibold text-ink">
-                {formatMoney(product.promotionalPrice)}
-              </span>
-              <span className="text-xs text-white/[0.65] line-through">
-                {formatMoney(product.price)}
-              </span>
-            </>
-          ) : (
-            <span className="tnum rounded-full bg-white px-3.5 py-1.5 text-[15px] font-semibold text-ink">
-              {formatMoney(product.price)}
+        <button type="button" onClick={onOpenDetails} className="block w-full text-left">
+          <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.22em] text-white/80">
+            {categoryName}
+          </span>
+          <h2
+            id={`product-title-${product.id}`}
+            className="font-serif text-[34px] leading-[1.05] text-white"
+          >
+            {product.name}
+          </h2>
+          {product.description ? (
+            <span className="mt-2 block line-clamp-2 max-w-[310px] text-[15px] leading-snug text-white/[0.85]">
+              {product.description}
             </span>
-          )}
-          <span className="text-sm font-medium text-white/75">Ver detalhes →</span>
+          ) : null}
+        </button>
+        <div className="mt-4 flex items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              {product.promotionalPrice ? (
+                <>
+                  <span className="tnum rounded-full bg-white px-3.5 py-1.5 text-[15px] font-semibold text-ink">
+                    {formatMoney(product.promotionalPrice)}
+                  </span>
+                  <span className="text-xs text-white/[0.65] line-through">
+                    {formatMoney(product.price)}
+                  </span>
+                </>
+              ) : (
+                <span className="tnum rounded-full bg-white px-3.5 py-1.5 text-[15px] font-semibold text-ink">
+                  {formatMoney(product.price)}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={onOpenDetails}
+                className="rounded-md text-sm font-medium text-white/75 transition-colors hover:text-white"
+              >
+                Ver detalhes →
+              </button>
+            </div>
+            {product.featured || product.availability === 'TEMPORARILY_UNAVAILABLE' ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {product.featured ? (
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/75">
+                    Destaque da casa
+                  </span>
+                ) : null}
+                {product.availability === 'TEMPORARILY_UNAVAILABLE' ? (
+                  <span className="rounded-full bg-black/40 px-2.5 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
+                    Indisponível hoje
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <ProductShareButton productName={product.name} onClick={onOpenShare} />
         </div>
-        {product.featured ? (
-          <span className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/75">
-            Destaque da casa
-          </span>
-        ) : null}
-        {product.availability === 'TEMPORARILY_UNAVAILABLE' ? (
-          <span className="mt-3 rounded-full bg-black/40 px-2.5 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
-            Indisponível hoje
-          </span>
-        ) : null}
-      </button>
+      </div>
       {showHint ? (
         <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2 text-white/70">
           <ChevronsDown size={26} strokeWidth={1.75} />
