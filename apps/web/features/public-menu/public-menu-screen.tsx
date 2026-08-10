@@ -7,17 +7,39 @@ import type {
   PublicMenuProductResponse,
 } from '@pratto/contracts';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import Link from 'next/link';
+import {
+  ArrowRight,
+  ChevronsDown,
+  Clock3,
+  LayoutGrid,
+  MapPin,
+  Store,
+  UtensilsCrossed,
+  Volume2,
+  VolumeX,
+  X,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 import { ApiClientError } from '../auth/api-client';
+import { FoodImage, Skeleton } from '../design-system/feedback';
 
 import { PublicMenuAnalyticsClient } from './analytics-client';
 import { publicMenuApi } from './api-client';
 import type { PublicMenuServerError } from './server-api';
 
 const PAGE_SIZE = 6;
+type CustomerTab = 'menu' | 'categories' | 'restaurant';
+const PUBLIC_DAYS = [
+  { key: 'monday', label: 'Segunda-feira' },
+  { key: 'tuesday', label: 'Terça-feira' },
+  { key: 'wednesday', label: 'Quarta-feira' },
+  { key: 'thursday', label: 'Quinta-feira' },
+  { key: 'friday', label: 'Sexta-feira' },
+  { key: 'saturday', label: 'Sábado' },
+  { key: 'sunday', label: 'Domingo' },
+] as const;
 
 export function PublicMenuScreen({
   publicId,
@@ -33,6 +55,8 @@ export function PublicMenuScreen({
   const router = useRouter();
   const feedRef = useRef<HTMLDivElement>(null);
   const [categoryId, setCategoryId] = useState<string | undefined>();
+  const [entered, setEntered] = useState(false);
+  const [tab, setTab] = useState<CustomerTab>('menu');
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [detailsProduct, setDetailsProduct] = useState<PublicMenuProductResponse | null>(null);
   const [retryInitialError, setRetryInitialError] = useState(!initialError);
@@ -101,6 +125,7 @@ export function PublicMenuScreen({
   }, [activeProductId, products]);
 
   useEffect(() => {
+    if (!entered || tab !== 'menu') return;
     const feed = feedRef.current;
     if (!feed || products.length === 0) return;
     const observer = new IntersectionObserver(
@@ -122,9 +147,10 @@ export function PublicMenuScreen({
       .querySelectorAll<HTMLElement>('[data-product-id]')
       .forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, products]);
+  }, [entered, fetchNextPage, hasNextPage, isFetchingNextPage, products, tab]);
 
   useEffect(() => {
+    if (!entered || tab !== 'menu') return;
     const feed = feedRef.current;
     if (!feed || products.length === 0) return;
     const impressionTimers = impressionTimersRef.current;
@@ -190,7 +216,7 @@ export function PublicMenuScreen({
       impressionTimers.clear();
       qualifiedTimers.clear();
     };
-  }, [products]);
+  }, [entered, products, tab]);
 
   if (initialError && !retryInitialError) {
     return <PublicMenuError error={initialError} onRetry={() => setRetryInitialError(true)} />;
@@ -203,6 +229,7 @@ export function PublicMenuScreen({
   const lightTheme = firstPage.establishment.theme.mode === 'LIGHT';
   const themeStyle = {
     '--menu-primary': firstPage.establishment.theme.primaryColor,
+    '--menu-primary-deep': darkenColor(firstPage.establishment.theme.primaryColor),
     colorScheme: lightTheme ? 'light' : 'dark',
   } as CSSProperties;
 
@@ -211,153 +238,478 @@ export function PublicMenuScreen({
       analyticsRef.current?.track({ eventType: 'category_selected', categoryId: nextCategoryId });
     }
     setCategoryId(nextCategoryId);
+    setTab('menu');
     if (feedRef.current && typeof feedRef.current.scrollTo === 'function') {
       feedRef.current.scrollTo({ top: 0, behavior: scrollBehavior() });
     }
   };
 
+  const categories = firstPage.categories;
+  const categoryName = (id: string) =>
+    categories.find((category) => category.id === id)?.name ?? firstPage.menu.name;
+  const fallbackImage = firstPage.establishment.coverImage?.url;
+
   return (
     <main
-      className={`h-[100svh] overflow-hidden ${lightTheme ? 'bg-stone-50 text-slate-950' : 'bg-slate-950 text-white'}`}
+      className="min-h-[100dvh] bg-sand sm:grid sm:place-items-center sm:p-6"
       style={themeStyle}
     >
-      <header
-        className={`pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b px-4 pb-8 pt-4 sm:px-6 ${lightTheme ? 'from-stone-50 via-stone-50/95' : 'from-slate-950 via-slate-950/90'} to-transparent`}
+      <section
+        className={`relative h-[100dvh] w-full overflow-hidden sm:h-[812px] sm:w-[390px] sm:rounded-[36px] sm:ring-1 sm:ring-black/10 sm:shadow-[0_40px_80px_-30px_rgba(24,23,22,.45)] ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
+        aria-label={`Cardápio de ${firstPage.establishment.name}`}
       >
-        <div className="pointer-events-auto mx-auto max-w-2xl">
-          <div className="flex items-center gap-3">
-            {firstPage.establishment.logo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                className={`h-10 w-10 rounded-full border object-cover ${lightTheme ? 'border-slate-950/10' : 'border-white/20'}`}
-                src={firstPage.establishment.logo.url}
-                alt=""
-                width={40}
-                height={40}
-              />
-            ) : (
-              <span
-                className="grid h-10 w-10 place-items-center rounded-full font-bold text-white"
-                style={{ backgroundColor: 'var(--menu-primary)' }}
-              >
-                {firstPage.establishment.name.slice(0, 1).toUpperCase()}
-              </span>
-            )}
-            <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold">{firstPage.establishment.name}</h1>
-              {firstPage.establishment.description && (
-                <p
-                  className={`truncate text-xs ${lightTheme ? 'text-slate-600' : 'text-slate-300'}`}
-                >
-                  {firstPage.establishment.description}
-                </p>
-              )}
-            </div>
-          </div>
-          {firstPage.categories.length > 0 && (
-            <nav
-              className="mt-4 flex gap-2 overflow-x-auto pb-1"
-              aria-label="Categorias do cardápio"
-            >
-              <CategoryButton
-                active={!categoryId}
-                label="Todos"
+        {!entered ? (
+          <RestaurantEntry
+            page={firstPage}
+            lightTheme={lightTheme}
+            onEnter={() => setEntered(true)}
+          />
+        ) : (
+          <>
+            {tab === 'menu' ? (
+              <div className="fade-in absolute inset-0" key={categoryId ?? 'all'}>
+                {products.length === 0 ? (
+                  <PublicMenuEmpty
+                    categorySelected={Boolean(categoryId)}
+                    lightTheme={lightTheme}
+                    onClear={() => selectCategory(undefined)}
+                  />
+                ) : (
+                  <div
+                    ref={feedRef}
+                    className="snap-y-feed no-scrollbar flex h-full flex-col overflow-y-scroll overscroll-y-contain"
+                    role="feed"
+                    tabIndex={0}
+                    aria-label="Produtos publicados"
+                    aria-busy={isFetchingNextPage}
+                  >
+                    {products.map((product, index) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        categoryName={categoryName(product.categoryId)}
+                        active={activeProductId === product.id}
+                        near={
+                          Math.abs(
+                            index - products.findIndex((item) => item.id === activeProductId),
+                          ) <= 2
+                        }
+                        lightTheme={lightTheme}
+                        showHint={
+                          index === 0 && products.length > 1 && activeProductId === product.id
+                        }
+                        onOpenDetails={() => {
+                          analyticsRef.current?.track({
+                            eventType: 'product_interaction',
+                            productId: product.id,
+                            interactionType: 'details_opened',
+                          });
+                          setDetailsProduct(product);
+                        }}
+                        onInteraction={(interactionType) =>
+                          analyticsRef.current?.track({
+                            eventType: 'product_interaction',
+                            productId: product.id,
+                            interactionType,
+                          })
+                        }
+                      />
+                    ))}
+                    {isFetchingNextPage ? <FeedLoadingCard lightTheme={lightTheme} /> : null}
+                    {query.error ? (
+                      <FeedError lightTheme={lightTheme} onRetry={() => void fetchNextPage()} />
+                    ) : null}
+                  </div>
+                )}
+                {categories.length > 0 ? (
+                  <div className="pointer-events-none absolute inset-x-0 top-0 z-20 pt-3">
+                    <nav
+                      className="no-scrollbar pointer-events-auto flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 py-1 [mask-image:linear-gradient(to_right,transparent,#000_18px,#000_calc(100%-24px),transparent)]"
+                      aria-label="Categorias do cardápio"
+                    >
+                      <CategoryButton
+                        active={!categoryId}
+                        label="Populares"
+                        onClick={() => selectCategory(undefined)}
+                      />
+                      {categories.map((category) => (
+                        <CategoryButton
+                          key={category.id}
+                          active={categoryId === category.id}
+                          label={category.name}
+                          onClick={() => selectCategory(category.id)}
+                        />
+                      ))}
+                      <span aria-hidden className="w-1 shrink-0" />
+                    </nav>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {tab === 'categories' ? (
+              <CategoryGrid
+                categories={categories}
+                products={products}
+                fallbackImage={fallbackImage}
                 lightTheme={lightTheme}
-                onClick={() => selectCategory(undefined)}
+                onPick={(id) => selectCategory(id)}
               />
-              {firstPage.categories.map((category) => (
-                <CategoryButton
-                  key={category.id}
-                  active={categoryId === category.id}
-                  label={category.name}
-                  lightTheme={lightTheme}
-                  onClick={() => selectCategory(category.id)}
-                />
-              ))}
-            </nav>
-          )}
-        </div>
-      </header>
-
-      {products.length === 0 ? (
-        <PublicMenuEmpty
-          categorySelected={Boolean(categoryId)}
-          lightTheme={lightTheme}
-          onClear={() => selectCategory(undefined)}
-        />
-      ) : (
-        <div
-          ref={feedRef}
-          className="h-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain"
-          role="feed"
-          tabIndex={0}
-          aria-label="Produtos publicados"
-          aria-busy={isFetchingNextPage}
-        >
-          {products.map((product, index) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              active={activeProductId === product.id}
-              near={
-                Math.abs(index - products.findIndex((item) => item.id === activeProductId)) <= 2
-              }
+            ) : null}
+            {tab === 'restaurant' ? (
+              <RestaurantInfo page={firstPage} lightTheme={lightTheme} />
+            ) : null}
+            <BottomNav
+              active={tab}
+              overlay={tab === 'menu'}
               lightTheme={lightTheme}
-              onOpenDetails={() => {
-                analyticsRef.current?.track({
-                  eventType: 'product_interaction',
-                  productId: product.id,
-                  interactionType: 'details_opened',
-                });
-                setDetailsProduct(product);
-              }}
-              onInteraction={(interactionType) =>
-                analyticsRef.current?.track({
-                  eventType: 'product_interaction',
-                  productId: product.id,
-                  interactionType,
-                })
-              }
+              onChange={setTab}
             />
-          ))}
-          {isFetchingNextPage && <FeedLoadingCard lightTheme={lightTheme} />}
-          {query.error && (
-            <FeedError lightTheme={lightTheme} onRetry={() => void fetchNextPage()} />
+            {detailsProduct ? (
+              <ProductDetails
+                product={detailsProduct}
+                categoryName={categoryName(detailsProduct.categoryId)}
+                lightTheme={lightTheme}
+                onInteraction={(interactionType) =>
+                  analyticsRef.current?.track({
+                    eventType: 'product_interaction',
+                    productId: detailsProduct.id,
+                    interactionType,
+                  })
+                }
+                onClose={() => setDetailsProduct(null)}
+              />
+            ) : null}
+          </>
+        )}
+      </section>
+    </main>
+  );
+}
+
+function RestaurantEntry({
+  page,
+  lightTheme,
+  onEnter,
+}: {
+  page: PublicMenuPageResponse;
+  lightTheme: boolean;
+  onEnter: () => void;
+}) {
+  const establishment = page.establishment;
+  const open = isOpenNow(establishment.operatingHours);
+  const location = [establishment.address?.neighborhood, establishment.address?.city]
+    .filter(Boolean)
+    .join(', ');
+  return (
+    <div
+      className={`relative h-full w-full overflow-hidden ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
+    >
+      {establishment.coverImage ? (
+        <FoodImage src={establishment.coverImage.url} alt="" className="h-[46%] w-full" />
+      ) : (
+        <div className={`h-[46%] w-full ${lightTheme ? 'bg-sand' : 'bg-ink-soft'}`} />
+      )}
+      <div
+        className={`pointer-events-none absolute left-0 top-0 h-[46%] w-full bg-gradient-to-t ${lightTheme ? 'from-cream' : 'from-ink'} via-transparent to-transparent`}
+      />
+      <div className="relative -mt-14 flex flex-col items-center px-6 text-center">
+        <div
+          className={`flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl shadow-[0_18px_40px_-18px_rgba(24,23,22,.6)] ${lightTheme ? 'bg-ink text-cream' : 'bg-cream text-ink'}`}
+        >
+          {establishment.logo ? (
+            <FoodImage src={establishment.logo.url} alt="" className="h-full w-full" />
+          ) : (
+            <span className="font-serif text-5xl">
+              {establishment.name.slice(0, 1).toUpperCase()}
+            </span>
           )}
         </div>
-      )}
+        <span
+          className={`mt-4 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${open ? 'bg-herb/10 text-herb' : lightTheme ? 'bg-ink/5 text-ink-soft' : 'bg-white/10 text-white/75'}`}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${open ? 'bg-herb' : 'bg-ink-faint'}`} />
+          {open ? 'Aberto agora' : 'Fechado agora'}
+        </span>
+        <h1 className="mt-3 font-serif text-[42px] leading-none">{establishment.name}</h1>
+        <p className="mt-1 text-[15px] font-medium uppercase tracking-[0.16em] text-[var(--menu-primary-deep)]">
+          {page.menu.name}
+        </p>
+        {establishment.description ? (
+          <p
+            className={`mt-4 line-clamp-3 max-w-[320px] text-[15px] leading-relaxed ${lightTheme ? 'text-ink-soft' : 'text-white/75'}`}
+          >
+            {establishment.description}
+          </p>
+        ) : null}
+        {location ? (
+          <div
+            className={`mt-4 flex items-center gap-1.5 text-sm ${lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}`}
+          >
+            <MapPin size={15} />
+            <span>{location}</span>
+          </div>
+        ) : null}
+        <button
+          type="button"
+          onClick={onEnter}
+          className="group mt-8 inline-flex items-center gap-2 rounded-full bg-[var(--menu-primary)] px-7 py-3.5 text-[16px] font-medium text-white shadow-[0_14px_30px_-12px_var(--menu-primary)] transition-all hover:brightness-90 active:scale-[0.98]"
+        >
+          Explorar o menu{' '}
+          <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />
+        </button>
+        <p className={`mt-3 text-xs ${lightTheme ? 'text-ink-faint' : 'text-white/[0.45]'}`}>
+          Deslize para descobrir cada prato
+        </p>
+      </div>
+    </div>
+  );
+}
 
-      {detailsProduct && (
-        <ProductDetails
-          product={detailsProduct}
-          lightTheme={lightTheme}
-          onClose={() => setDetailsProduct(null)}
-        />
+function CategoryGrid({
+  categories,
+  products,
+  fallbackImage,
+  lightTheme,
+  onPick,
+}: {
+  categories: PublicMenuPageResponse['categories'];
+  products: PublicMenuProductResponse[];
+  fallbackImage?: string;
+  lightTheme: boolean;
+  onPick: (id: string) => void;
+}) {
+  return (
+    <div
+      className={`no-scrollbar h-full overflow-y-auto px-4 pb-28 pt-5 ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
+    >
+      <h1 className="px-1 font-serif text-[32px] leading-tight">Categorias</h1>
+      <p className={`mb-4 px-1 text-[15px] ${lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}`}>
+        Escolha por onde começar.
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        {categories.map((category) => {
+          const image =
+            products
+              .find((product) => product.categoryId === category.id)
+              ?.media.find((media) => media.mediaType === 'IMAGE')?.url ?? fallbackImage;
+          return (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => onPick(category.id)}
+              className="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-sand text-left"
+            >
+              {image ? (
+                <FoodImage
+                  src={image}
+                  alt=""
+                  className="h-full w-full"
+                  imgClassName="transition-transform duration-500 group-hover:scale-105"
+                />
+              ) : null}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+              <span className="absolute bottom-3 left-3 font-serif text-[22px] text-white">
+                {category.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RestaurantInfo({
+  page,
+  lightTheme,
+}: {
+  page: PublicMenuPageResponse;
+  lightTheme: boolean;
+}) {
+  const establishment = page.establishment;
+  const open = isOpenNow(establishment.operatingHours);
+  const address = formatAddress(establishment.address);
+  return (
+    <div
+      className={`no-scrollbar h-full overflow-y-auto pb-28 ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
+    >
+      {establishment.coverImage ? (
+        <FoodImage src={establishment.coverImage.url} alt="" className="h-44 w-full" />
+      ) : (
+        <div className="h-44 bg-sand" />
       )}
-    </main>
+      <div className="px-5">
+        <div
+          className={`relative z-10 -mt-11 flex h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-2xl shadow-[0_10px_28px_-10px_rgba(24,23,22,.55)] ring-4 ${lightTheme ? 'bg-ink text-cream ring-cream' : 'bg-cream text-ink ring-ink'}`}
+        >
+          {establishment.logo ? (
+            <FoodImage src={establishment.logo.url} alt="" className="h-full w-full" />
+          ) : (
+            <span className="font-serif text-4xl">{establishment.name.slice(0, 1)}</span>
+          )}
+        </div>
+        <h1 className="mt-4 font-serif text-[34px] leading-none">{establishment.name}</h1>
+        <span
+          className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${open ? 'bg-herb/10 text-herb' : lightTheme ? 'bg-ink/5 text-ink-soft' : 'bg-white/10 text-white/75'}`}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${open ? 'bg-herb' : 'bg-ink-faint'}`} />
+          {open ? 'Aberto agora' : 'Fechado agora'}
+        </span>
+        {establishment.description ? (
+          <p
+            className={`mt-4 text-[15px] leading-relaxed ${lightTheme ? 'text-ink-soft' : 'text-white/70'}`}
+          >
+            {establishment.description}
+          </p>
+        ) : null}
+        <div className="mt-7">
+          <div className="mb-3 flex items-center gap-2">
+            <Clock3 size={16} className="text-[var(--menu-primary-deep)]" />
+            <span
+              className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}`}
+            >
+              Horário de funcionamento
+            </span>
+          </div>
+          <ul
+            className={`divide-y border-y ${lightTheme ? 'divide-line border-line' : 'divide-white/10 border-white/10'}`}
+          >
+            {PUBLIC_DAYS.map(({ key, label }) => {
+              const hours = establishment.operatingHours[key];
+              return (
+                <li key={key} className="flex items-center justify-between py-2.5 text-[15px]">
+                  <span className={lightTheme ? 'text-ink-soft' : 'text-white/[0.65]'}>
+                    {label}
+                  </span>
+                  <span className="font-medium">
+                    {!hours
+                      ? 'Não configurado'
+                      : hours.closed
+                        ? 'Fechado'
+                        : `${hours.open} – ${hours.close}`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        {address ? (
+          <div className="mt-7">
+            <div className="mb-2 flex items-center gap-2">
+              <MapPin size={16} className="text-[var(--menu-primary-deep)]" />
+              <span
+                className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}`}
+              >
+                Endereço
+              </span>
+            </div>
+            <p className={`text-[15px] ${lightTheme ? 'text-ink-soft' : 'text-white/70'}`}>
+              {address}
+            </p>
+          </div>
+        ) : null}
+        {establishment.phone || establishment.whatsapp ? (
+          <div className="mt-7">
+            <span
+              className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}`}
+            >
+              Contato
+            </span>
+            <ul className="mt-3 flex flex-col gap-2">
+              {establishment.phone ? (
+                <li
+                  className={`flex items-center justify-between rounded-xl px-4 py-3 text-[15px] ${lightTheme ? 'bg-sand' : 'bg-white/[0.08]'}`}
+                >
+                  <span className={lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}>
+                    Telefone
+                  </span>
+                  <span className="font-medium">{establishment.phone}</span>
+                </li>
+              ) : null}
+              {establishment.whatsapp ? (
+                <li
+                  className={`flex items-center justify-between rounded-xl px-4 py-3 text-[15px] ${lightTheme ? 'bg-sand' : 'bg-white/[0.08]'}`}
+                >
+                  <span className={lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}>
+                    WhatsApp
+                  </span>
+                  <span className="font-medium">{establishment.whatsapp}</span>
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function BottomNav({
+  active,
+  overlay,
+  lightTheme,
+  onChange,
+}: {
+  active: CustomerTab;
+  overlay: boolean;
+  lightTheme: boolean;
+  onChange: (tab: CustomerTab) => void;
+}) {
+  const items = [
+    { id: 'menu' as const, label: 'Menu', icon: UtensilsCrossed },
+    { id: 'categories' as const, label: 'Categorias', icon: LayoutGrid },
+    { id: 'restaurant' as const, label: 'Restaurante', icon: Store },
+  ];
+  return (
+    <nav
+      className={`absolute inset-x-0 bottom-0 z-20 flex items-stretch justify-around px-2 pb-3 pt-2 ${overlay ? 'bg-gradient-to-t from-black/60 to-transparent' : lightTheme ? 'border-t border-line bg-cream/95 text-ink backdrop-blur' : 'border-t border-white/10 bg-ink/95 text-white backdrop-blur'}`}
+      aria-label="Navegação do cardápio"
+    >
+      {items.map((item) => {
+        const selected = item.id === active;
+        const Icon = item.icon;
+        const color = overlay
+          ? selected
+            ? 'text-white'
+            : 'text-white/[0.55]'
+          : selected
+            ? lightTheme
+              ? 'text-[var(--menu-primary-deep)]'
+              : 'text-[var(--menu-primary)]'
+            : lightTheme
+              ? 'text-ink-faint'
+              : 'text-white/[0.55]';
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onChange(item.id)}
+            aria-current={selected ? 'page' : undefined}
+            className={`flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 transition ${color}`}
+          >
+            <Icon size={22} strokeWidth={selected ? 2.2 : 1.8} />
+            <span className={`text-[11px] ${selected ? 'font-semibold' : 'font-medium'}`}>
+              {item.label}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 
 function CategoryButton({
   active,
   label,
-  lightTheme,
   onClick,
 }: {
   active: boolean;
   label: string;
-  lightTheme: boolean;
   onClick: () => void;
 }) {
   return (
     <button
-      className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)] ${
-        active
-          ? 'border-[var(--menu-primary)] bg-[var(--menu-primary)] text-white'
-          : lightTheme
-            ? 'border-slate-950/15 bg-white/80 text-slate-700 hover:border-slate-950/40'
-            : 'border-white/20 bg-slate-950/60 text-slate-200 hover:border-white/50'
-      }`}
+      className={`shrink-0 snap-start rounded-full px-3.5 py-1.5 text-sm font-medium backdrop-blur-md transition-all duration-150 active:scale-95 ${active ? 'bg-white text-[var(--menu-primary-deep)] shadow-sm' : 'bg-white/15 text-white/90 hover:bg-white/25'}`}
       type="button"
       aria-pressed={active}
       onClick={onClick}
@@ -369,26 +721,32 @@ function CategoryButton({
 
 function ProductCard({
   product,
+  categoryName,
   active,
   near,
   lightTheme,
+  showHint,
   onOpenDetails,
   onInteraction,
 }: {
   product: PublicMenuProductResponse;
+  categoryName: string;
   active: boolean;
   near: boolean;
   lightTheme: boolean;
+  showHint: boolean;
   onOpenDetails: () => void;
   onInteraction: (interactionType: AnalyticsInteractionType) => void;
 }) {
   return (
     <article
-      className={`relative flex h-[100svh] snap-start items-end justify-center [contain-intrinsic-size:100svh] [content-visibility:auto] ${lightTheme ? 'bg-slate-100' : 'bg-slate-900'}`}
+      className="snap-item relative h-full w-full flex-shrink-0 overflow-hidden bg-ink [contain-intrinsic-size:100dvh] [content-visibility:auto]"
       data-product-id={product.id}
       aria-labelledby={`product-title-${product.id}`}
     >
-      <div className="absolute inset-0">
+      <div
+        className={`absolute inset-0 origin-center transition-transform duration-500 ${active ? 'scale-[1.06]' : 'scale-100'}`}
+      >
         <MediaGallery
           product={product}
           active={active}
@@ -397,56 +755,60 @@ function ProductCard({
           onInteraction={onInteraction}
         />
       </div>
-      <div
-        className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t px-5 pb-8 pt-36 sm:px-8 ${lightTheme ? 'from-white via-white/90' : 'from-slate-950 via-slate-950/80'} to-transparent`}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/[0.45] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+      <button
+        type="button"
+        onClick={onOpenDetails}
+        className={`absolute inset-x-0 bottom-0 z-10 flex flex-col items-start px-5 pb-28 pt-10 text-left text-white transition duration-300 ${active ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-60'}`}
       >
-        <div className="pointer-events-auto mx-auto max-w-2xl">
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-[var(--menu-primary)]">
-            {product.featured && <span>Destaque</span>}
-            {product.availability === 'TEMPORARILY_UNAVAILABLE' && (
-              <span className="rounded-full bg-amber-400/20 px-2 py-1 text-amber-200">
-                Indisponível no momento
+        <span className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/80">
+          {categoryName}
+        </span>
+        <h2
+          id={`product-title-${product.id}`}
+          className="font-serif text-[34px] leading-[1.05] text-white"
+        >
+          {product.name}
+        </h2>
+        {product.description ? (
+          <p className="mt-2 line-clamp-2 max-w-[310px] text-[15px] leading-snug text-white/[0.85]">
+            {product.description}
+          </p>
+        ) : null}
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {product.promotionalPrice ? (
+            <>
+              <span className="tnum rounded-full bg-white px-3.5 py-1.5 text-[15px] font-semibold text-ink">
+                {formatMoney(product.promotionalPrice)}
               </span>
-            )}
-          </div>
-          <h2
-            id={`product-title-${product.id}`}
-            className="text-3xl font-bold tracking-tight sm:text-5xl"
-          >
-            {product.name}
-          </h2>
-          <div className="mt-3 flex items-baseline gap-3">
-            {product.promotionalPrice ? (
-              <>
-                <span className="text-2xl font-bold text-[var(--menu-primary)]">
-                  {formatMoney(product.promotionalPrice)}
-                </span>
-                <span
-                  className={`text-sm line-through ${lightTheme ? 'text-slate-500' : 'text-slate-400'}`}
-                >
-                  {formatMoney(product.price)}
-                </span>
-              </>
-            ) : (
-              <span className="text-2xl font-bold">{formatMoney(product.price)}</span>
-            )}
-          </div>
-          {product.description && (
-            <p
-              className={`mt-3 line-clamp-2 max-w-xl text-sm leading-6 ${lightTheme ? 'text-slate-700' : 'text-slate-200'}`}
-            >
-              {product.description}
-            </p>
+              <span className="text-xs text-white/[0.65] line-through">
+                {formatMoney(product.price)}
+              </span>
+            </>
+          ) : (
+            <span className="tnum rounded-full bg-white px-3.5 py-1.5 text-[15px] font-semibold text-ink">
+              {formatMoney(product.price)}
+            </span>
           )}
-          <button
-            className={`mt-5 rounded-full border px-4 py-2 text-sm font-semibold backdrop-blur focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)] ${lightTheme ? 'border-slate-950/20 bg-slate-950/5 hover:bg-slate-950/10' : 'border-white/30 bg-white/10 hover:bg-white/20'}`}
-            type="button"
-            onClick={onOpenDetails}
-          >
-            Ver detalhes
-          </button>
+          <span className="text-sm font-medium text-white/75">Ver detalhes →</span>
         </div>
-      </div>
+        {product.featured ? (
+          <span className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/75">
+            Destaque da casa
+          </span>
+        ) : null}
+        {product.availability === 'TEMPORARILY_UNAVAILABLE' ? (
+          <span className="mt-3 rounded-full bg-black/40 px-2.5 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
+            Indisponível hoje
+          </span>
+        ) : null}
+      </button>
+      {showHint ? (
+        <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2 text-white/70">
+          <ChevronsDown size={26} strokeWidth={1.75} />
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -456,12 +818,14 @@ function MediaGallery({
   active,
   loadMedia,
   lightTheme,
+  compact = false,
   onInteraction,
 }: {
   product: PublicMenuProductResponse;
   active: boolean;
   loadMedia: boolean;
   lightTheme: boolean;
+  compact?: boolean;
   onInteraction: (interactionType: AnalyticsInteractionType) => void;
 }) {
   const [selectedMedia, setSelectedMedia] = useState(0);
@@ -483,7 +847,7 @@ function MediaGallery({
   if (!loadMedia || media.length === 0 || !selected) {
     return (
       <div
-        className={`grid h-full place-items-center px-8 text-center text-sm ${lightTheme ? 'bg-[radial-gradient(circle_at_top,#e2e8f0,#f8fafc_70%)] text-slate-600' : 'bg-[radial-gradient(circle_at_top,#334155,#020617_70%)] text-slate-400'}`}
+        className={`grid h-full place-items-center px-8 text-center text-sm ${lightTheme ? 'bg-sand text-ink-faint' : 'bg-ink-soft text-white/[0.55]'}`}
       >
         {media.length === 0 ? 'Este produto ainda não possui uma imagem.' : 'Carregando mídia…'}
       </div>
@@ -529,14 +893,14 @@ function MediaGallery({
                   sizes="100vw"
                 />
               )}
-              <div className="absolute inset-0 bg-slate-950/10" aria-hidden="true" />
+              <div className="absolute inset-0 bg-black/10" aria-hidden="true" />
             </div>
           ))}
         </div>
       </div>
       {media.length > 1 && (
         <div
-          className={`absolute bottom-28 left-1/2 z-10 flex -translate-x-1/2 gap-1.5 rounded-full px-2 py-1 ${lightTheme ? 'bg-white/80' : 'bg-slate-950/60'}`}
+          className={`absolute left-1/2 z-10 flex -translate-x-1/2 gap-1.5 rounded-full px-2 py-1 ${compact ? 'bottom-3' : 'bottom-28'} ${lightTheme ? 'bg-white/80' : 'bg-black/[0.55]'}`}
         >
           {media.map((item, index) => (
             <button
@@ -544,7 +908,7 @@ function MediaGallery({
                 index === selectedMedia
                   ? 'w-5 bg-[var(--menu-primary)]'
                   : lightTheme
-                    ? 'w-1.5 bg-slate-950/30'
+                    ? 'w-1.5 bg-ink/30'
                     : 'w-1.5 bg-white/50'
               }`}
               key={item.id}
@@ -556,11 +920,11 @@ function MediaGallery({
           ))}
         </div>
       )}
-      <p
-        className={`absolute bottom-5 left-5 z-10 text-xs ${lightTheme ? 'text-slate-700/70' : 'text-white/70'}`}
-      >
-        {media.length > 1 ? 'Deslize para ver mais mídias' : 'Mídia principal'}
-      </p>
+      {!compact && media.length > 1 ? (
+        <p className="absolute bottom-5 left-5 z-10 text-xs text-white/70">
+          Deslize para ver mais mídias
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -618,7 +982,7 @@ function VideoMedia({
         aria-label={`Vídeo de ${productName}`}
       />
       <button
-        className={`absolute right-5 top-24 rounded-full border px-3 py-2 text-xs font-semibold backdrop-blur focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)] ${lightTheme ? 'border-slate-950/20 bg-white/80 text-slate-950' : 'border-white/30 bg-slate-950/60 text-white'}`}
+        className={`absolute right-5 top-16 flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur ${lightTheme ? 'border-ink/15 bg-white/[0.85] text-ink' : 'border-white/30 bg-black/[0.55] text-white'}`}
         type="button"
         aria-label={muted ? 'Ativar som do vídeo' : 'Desativar som do vídeo'}
         aria-pressed={!muted}
@@ -627,7 +991,7 @@ function VideoMedia({
           setMuted((value) => !value);
         }}
       >
-        {muted ? 'Som desligado' : 'Som ligado'}
+        {muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
       </button>
     </>
   );
@@ -635,16 +999,23 @@ function VideoMedia({
 
 function ProductDetails({
   product,
+  categoryName,
   lightTheme,
+  onInteraction,
   onClose,
 }: {
   product: PublicMenuProductResponse;
+  categoryName: string;
   lightTheme: boolean;
+  onInteraction: (interactionType: AnalyticsInteractionType) => void;
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const dragStart = useRef(0);
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     previousFocusRef.current = document.activeElement as HTMLElement | null;
@@ -685,66 +1056,123 @@ function ProductDetails({
   }, [onClose]);
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-end bg-black/70 p-0 sm:items-center sm:justify-center sm:p-6"
-      role="presentation"
-      onClick={onClose}
-    >
+    <div className="absolute inset-0 z-40" role="presentation">
+      <button
+        type="button"
+        aria-label="Fechar detalhes"
+        className="absolute inset-0 bg-black/[0.45] transition-opacity duration-300"
+        style={{ opacity: Math.max(0, 1 - dragY / 420) }}
+        onClick={onClose}
+      />
       <section
         ref={dialogRef}
-        className={`max-h-[85svh] w-full max-w-xl overflow-y-auto rounded-t-3xl p-6 shadow-2xl sm:rounded-3xl ${lightTheme ? 'bg-white text-slate-950' : 'bg-slate-900 text-white'}`}
+        className={`absolute inset-x-0 bottom-0 max-h-[88%] overflow-hidden rounded-t-[24px] ${dragging ? '' : 'transition-transform duration-300 ease-out'} ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
+        style={{ transform: `translateY(${dragY}px)` }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="product-details-title"
-        onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--menu-primary)]">
-              Detalhes
-            </p>
-            <h2 id="product-details-title" className="mt-2 text-2xl font-bold">
-              {product.name}
-            </h2>
+        <div className="no-scrollbar max-h-[88dvh] overflow-y-auto">
+          <div className="relative h-56 w-full bg-sand">
+            <div
+              className="absolute inset-x-0 top-0 z-20 h-10 touch-none"
+              onPointerDown={(event) => {
+                dragStart.current = event.clientY;
+                setDragging(true);
+                event.currentTarget.setPointerCapture?.(event.pointerId);
+              }}
+              onPointerMove={(event) => {
+                if (dragging) setDragY(Math.max(0, event.clientY - dragStart.current));
+              }}
+              onPointerUp={() => {
+                setDragging(false);
+                if (dragY > 130) onClose();
+                else setDragY(0);
+              }}
+              onPointerCancel={() => {
+                setDragging(false);
+                setDragY(0);
+              }}
+            />
+            <MediaGallery
+              product={product}
+              active
+              loadMedia
+              lightTheme={lightTheme}
+              compact
+              onInteraction={onInteraction}
+            />
+            <div className="pointer-events-none absolute left-1/2 top-2 z-20 h-1 w-10 -translate-x-1/2 rounded-full bg-white/75" />
+            <button
+              ref={closeButtonRef}
+              type="button"
+              aria-label="Fechar"
+              onClick={onClose}
+              className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink backdrop-blur"
+            >
+              <X size={18} />
+            </button>
           </div>
-          <button
-            ref={closeButtonRef}
-            className={`rounded-full border px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)] ${lightTheme ? 'border-slate-950/20' : 'border-white/20'}`}
-            type="button"
-            aria-label="Fechar"
-            onClick={onClose}
-          >
-            Fechar
-          </button>
-        </div>
-        <div
-          className={`mt-6 space-y-5 text-sm leading-6 ${lightTheme ? 'text-slate-700' : 'text-slate-200'}`}
-        >
-          {product.description && <p>{product.description}</p>}
-          <div className="flex items-baseline gap-3">
-            <strong className="text-xl text-[var(--menu-primary)]">
-              {formatMoney(product.promotionalPrice ?? product.price)}
-            </strong>
-            {product.promotionalPrice && (
-              <span className="text-slate-500 line-through">{formatMoney(product.price)}</span>
-            )}
+          <div className="px-5 pb-8 pt-5">
+            <span
+              className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}`}
+            >
+              {categoryName}
+            </span>
+            <div className="mt-1 flex items-start justify-between gap-4">
+              <h2 id="product-details-title" className="font-serif text-[30px] leading-tight">
+                {product.name}
+              </h2>
+              <div className="tnum whitespace-nowrap pt-2 text-right text-[20px] font-semibold text-[var(--menu-primary-deep)]">
+                {formatMoney(product.promotionalPrice ?? product.price)}
+                {product.promotionalPrice ? (
+                  <span
+                    className={`block text-xs font-normal line-through ${lightTheme ? 'text-ink-faint' : 'text-white/[0.45]'}`}
+                  >
+                    {formatMoney(product.price)}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            {product.description ? (
+              <p
+                className={`mt-3 text-[15px] leading-relaxed ${lightTheme ? 'text-ink-soft' : 'text-white/70'}`}
+              >
+                {product.description}
+              </p>
+            ) : null}
+            {product.ingredients ? (
+              <div className="mt-6">
+                <span
+                  className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}`}
+                >
+                  Ingredientes
+                </span>
+                <p className="mt-2 text-[15px] leading-relaxed">{product.ingredients}</p>
+              </div>
+            ) : null}
+            {product.allergens ? (
+              <div className="mt-6">
+                <span
+                  className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}`}
+                >
+                  Alergênicos
+                </span>
+                <div
+                  className={`mt-2 inline-flex rounded-lg border px-2.5 py-1 text-xs font-medium ${lightTheme ? 'border-line bg-white/60 text-ink-soft' : 'border-white/15 text-white/70'}`}
+                >
+                  {product.allergens}
+                </div>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              className={`mt-8 w-full rounded-xl py-3.5 text-[15px] font-medium transition active:scale-[0.99] ${lightTheme ? 'bg-ink text-white' : 'bg-cream text-ink'}`}
+            >
+              Voltar ao menu
+            </button>
           </div>
-          {product.ingredients && (
-            <div>
-              <h3 className={`font-semibold ${lightTheme ? 'text-slate-950' : 'text-white'}`}>
-                Ingredientes
-              </h3>
-              <p>{product.ingredients}</p>
-            </div>
-          )}
-          {product.allergens && (
-            <div>
-              <h3 className={`font-semibold ${lightTheme ? 'text-slate-950' : 'text-white'}`}>
-                Alergênicos
-              </h3>
-              <p>{product.allergens}</p>
-            </div>
-          )}
         </div>
       </section>
     </div>
@@ -753,15 +1181,21 @@ function ProductDetails({
 
 function PublicMenuLoading() {
   return (
-    <main className="grid h-[100svh] place-items-center bg-stone-50 px-6 text-slate-950">
+    <main className="min-h-[100dvh] bg-sand sm:grid sm:place-items-center sm:p-6">
       <div
-        className="w-full max-w-md space-y-4"
+        className="h-[100dvh] w-full overflow-hidden bg-cream sm:h-[812px] sm:w-[390px] sm:rounded-[36px] sm:ring-1 sm:ring-black/10 sm:shadow-[0_40px_80px_-30px_rgba(24,23,22,.45)]"
         role="status"
         aria-busy="true"
         aria-label="Carregando cardápio"
       >
-        <div className="h-10 w-44 animate-pulse rounded-full bg-slate-200" />
-        <div className="h-[60svh] animate-pulse rounded-3xl bg-slate-100" />
+        <Skeleton className="h-[46%] w-full rounded-none" />
+        <div className="relative -mt-12 flex flex-col items-center gap-3 px-6">
+          <Skeleton className="h-24 w-24 rounded-3xl" />
+          <Skeleton className="h-4 w-24 rounded-full" />
+          <Skeleton className="h-10 w-44" />
+          <Skeleton className="h-4 w-56" />
+          <Skeleton className="mt-4 h-12 w-48 rounded-full" />
+        </div>
       </div>
     </main>
   );
@@ -799,14 +1233,20 @@ function PublicMenuError({ error, onRetry }: { error?: unknown; onRetry?: () => 
             ? error.message
             : 'Verifique sua conexão e tente novamente.'));
   return (
-    <main className="grid min-h-[100svh] place-items-center bg-stone-50 px-6 text-center text-slate-950">
-      <div className="max-w-md space-y-4">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">Pratto</p>
-        <h1 className="text-3xl font-bold">{title}</h1>
-        <p className="text-sm leading-6 text-slate-600">{message}</p>
+    <main className="grid min-h-[100dvh] place-items-center bg-cream px-8 text-center text-ink">
+      <div className="max-w-sm">
+        <div className="mx-auto mb-8 flex items-center justify-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink font-serif text-xl text-cream">
+            P
+          </span>
+          <span className="text-lg font-semibold tracking-tight">PRATTO</span>
+        </div>
+        <div className="mx-auto mb-5 h-px w-12 bg-line" />
+        <h1 className="font-serif text-[30px] leading-tight">{title}</h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">{message}</p>
         {retryable && onRetry && (
           <button
-            className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+            className="mt-6 rounded-xl bg-accent-deep px-5 py-3 text-sm font-medium text-white hover:bg-ink"
             type="button"
             onClick={onRetry}
           >
@@ -814,12 +1254,9 @@ function PublicMenuError({ error, onRetry }: { error?: unknown; onRetry?: () => 
           </button>
         )}
         {(notPublished || suspended || notFound) && (
-          <Link
-            className="inline-flex rounded-full border border-slate-950/15 px-5 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
-            href="/"
-          >
-            Ir para o início
-          </Link>
+          <p className="mt-10 text-xs uppercase tracking-[0.2em] text-ink-faint">
+            Menus digitais por PRATTO
+          </p>
         )}
       </div>
     </main>
@@ -837,21 +1274,21 @@ function PublicMenuEmpty({
 }) {
   return (
     <div
-      className={`grid h-[100svh] place-items-center px-6 text-center ${lightTheme ? 'bg-stone-50 text-slate-950' : 'bg-slate-950 text-white'}`}
+      className={`grid h-full place-items-center px-6 text-center ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
     >
       <div className="max-w-md space-y-4">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--menu-primary)]">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--menu-primary-deep)]">
           Pratto
         </p>
-        <h2 className="text-3xl font-bold">Nenhum produto disponível</h2>
-        <p className={`text-sm leading-6 ${lightTheme ? 'text-slate-600' : 'text-slate-400'}`}>
+        <h2 className="font-serif text-[32px] leading-tight">Nenhum prato disponível</h2>
+        <p className={`text-sm leading-6 ${lightTheme ? 'text-ink-soft' : 'text-white/[0.65]'}`}>
           {categorySelected
             ? 'Não há produtos publicados nesta categoria.'
             : 'Este cardápio ainda não possui produtos publicados.'}
         </p>
         {categorySelected && (
           <button
-            className={`rounded-full border px-5 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)] ${lightTheme ? 'border-slate-950/15' : 'border-white/20'}`}
+            className={`rounded-xl border px-5 py-3 text-sm font-medium ${lightTheme ? 'border-line' : 'border-white/20'}`}
             type="button"
             onClick={onClear}
           >
@@ -866,7 +1303,7 @@ function PublicMenuEmpty({
 function FeedLoadingCard({ lightTheme }: { lightTheme: boolean }) {
   return (
     <div
-      className={`grid h-24 place-items-center text-sm ${lightTheme ? 'bg-stone-50 text-slate-600' : 'bg-slate-950 text-slate-400'}`}
+      className={`snap-item grid h-full flex-shrink-0 place-items-center text-sm ${lightTheme ? 'bg-cream text-ink-faint' : 'bg-ink text-white/[0.55]'}`}
       role="status"
     >
       Carregando mais produtos…
@@ -877,7 +1314,7 @@ function FeedLoadingCard({ lightTheme }: { lightTheme: boolean }) {
 function FeedError({ lightTheme, onRetry }: { lightTheme: boolean; onRetry: () => void }) {
   return (
     <div
-      className={`grid min-h-24 place-items-center gap-2 px-6 py-5 text-center text-sm ${lightTheme ? 'bg-stone-50 text-slate-600' : 'bg-slate-950 text-slate-300'}`}
+      className={`grid min-h-24 place-items-center gap-2 px-6 py-5 text-center text-sm ${lightTheme ? 'bg-cream text-ink-soft' : 'bg-ink text-white/70'}`}
       role="alert"
     >
       <span>Não foi possível carregar mais produtos.</span>
@@ -906,4 +1343,40 @@ function formatMoney(value: string): string {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return `R$ ${value}`;
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+}
+
+function darkenColor(value: string): string {
+  const match = /^#([0-9a-f]{6})$/i.exec(value);
+  if (!match) return '#c63f25';
+  const hex = match[1]!;
+  const channels = [0, 2, 4].map((offset) =>
+    Math.round(Number.parseInt(hex.slice(offset, offset + 2), 16) * 0.82),
+  );
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function isOpenNow(hours: PublicMenuPageResponse['establishment']['operatingHours']): boolean {
+  const dayKeys = [
+    'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+  ] as const;
+  const current = hours[dayKeys[new Date().getDay()]!];
+  if (!current || current.closed || !current.open || !current.close) return false;
+  const now = new Date();
+  const value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  return current.close < current.open
+    ? value >= current.open || value < current.close
+    : value >= current.open && value < current.close;
+}
+
+function formatAddress(address: PublicMenuPageResponse['establishment']['address']): string {
+  if (!address) return '';
+  const street = [address.street, address.number].filter(Boolean).join(', ');
+  const city = [address.neighborhood, address.city, address.state].filter(Boolean).join(' · ');
+  return [street, address.complement, city, address.postalCode].filter(Boolean).join(' — ');
 }
