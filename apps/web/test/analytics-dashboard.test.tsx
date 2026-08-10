@@ -94,7 +94,7 @@ describe('AnalyticsDashboard', () => {
     renderDashboard();
 
     expect(await screen.findByText('Acessos ao cardápio')).toBeInTheDocument();
-    expect(screen.getByText('Desempenho do cardápio')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Visão geral' })).toBeInTheDocument();
     expect(screen.getByText('18')).toBeInTheDocument();
     expect(screen.getByText('Produtos mais vistos')).toBeInTheDocument();
     expect(screen.getAllByText('Prato da casa')).toHaveLength(2);

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ProductManagement } from '../features/catalog/product-management';
@@ -73,7 +73,27 @@ describe('ProductManagement', () => {
       target: { value: menuId },
     });
     expect(await screen.findByText('Nenhum produto cadastrado.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Novo prato' }));
     expect(screen.getByRole('option', { name: 'Lanches' })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('textbox', { name: /Nome do prato/ }), {
+      target: { value: 'X-Burger' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: /Preço \(R\$\)/ }), {
+      target: { value: '29.90' },
+    });
+    fireEvent.change(screen.getByRole('combobox', { name: /Categoria/ }), {
+      target: { value: categoryId },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar prato' }));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining(`/admin/menus/${menuId}/products`),
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('"promotionalPrice":null'),
+        }),
+      ),
+    );
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(`/admin/menus/${menuId}/products`),
       expect.objectContaining({ credentials: 'include' }),

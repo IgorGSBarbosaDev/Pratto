@@ -103,6 +103,10 @@ function analyticsResponse(input: RequestInfo | URL, status = 200) {
   return response({ results: [] }, status);
 }
 
+async function enterMenu() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Explorar o menu' }));
+}
+
 beforeEach(() => {
   intersectionObservers.length = 0;
   vi.stubGlobal(
@@ -133,7 +137,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => cleanup());
+afterEach(() => {
+  vi.useRealTimers();
+  cleanup();
+});
 
 describe('PublicMenuScreen', () => {
   it('loads the published feed without making an authenticated request', async () => {
@@ -151,6 +158,7 @@ describe('PublicMenuScreen', () => {
 
     renderScreen();
 
+    await enterMenu();
     expect(await screen.findByRole('heading', { name: 'Prato da casa' })).toBeInTheDocument();
     expect(screen.getByText('R$ 24,90')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pratos' })).toHaveAttribute('aria-pressed', 'false');
@@ -180,12 +188,13 @@ describe('PublicMenuScreen', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     renderScreen();
+    await enterMenu();
     expect(await screen.findByRole('heading', { name: 'Prato da casa' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Sobremesas' }));
 
     expect(await screen.findByRole('heading', { name: 'Torta da casa' })).toBeInTheDocument();
-    expect(screen.getByText('Indisponível no momento')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+    expect(screen.getByText('Indisponível hoje')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Ver detalhes/ }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Torta da casa');
     fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -206,8 +215,9 @@ describe('PublicMenuScreen', () => {
         ),
     );
     renderScreen();
+    await enterMenu();
     expect(
-      await screen.findByRole('heading', { name: 'Nenhum produto disponível' }),
+      await screen.findByRole('heading', { name: 'Nenhum prato disponível' }),
     ).toBeInTheDocument();
 
     cleanup();
@@ -249,10 +259,11 @@ describe('PublicMenuScreen', () => {
 
     renderScreen({ initialPage: serverPage });
 
+    await enterMenu();
     expect(await screen.findByRole('heading', { name: 'Prato da casa' })).toBeInTheDocument();
-    expect(screen.getByRole('main')).toHaveClass('bg-stone-50');
+    expect(screen.getByRole('main')).toHaveClass('bg-sand');
     expect(screen.getByRole('main')).toHaveStyle('--menu-primary: #b45309');
-    fireEvent.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+    fireEvent.click(screen.getByRole('button', { name: /Ver detalhes/ }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(document.activeElement).toHaveAttribute('aria-label', 'Fechar');
     fireEvent.keyDown(window, { key: 'Escape' });
@@ -302,7 +313,9 @@ describe('PublicMenuScreen', () => {
     );
 
     renderScreen();
+    await enterMenu();
     expect(await screen.findByRole('heading', { name: 'Prato da casa' })).toBeInTheDocument();
+    await waitFor(() => expect(intersectionObservers.length).toBeGreaterThanOrEqual(2));
     vi.useFakeTimers();
     const target = screen.getByRole('heading', { name: 'Prato da casa' }).closest('article');
     const analyticsObserver = intersectionObservers.at(-1);

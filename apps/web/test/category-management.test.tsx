@@ -49,9 +49,8 @@ describe('CategoryManagement', () => {
       target: { value: menuId },
     });
     expect(await screen.findByText('Nenhuma categoria cadastrada.')).toBeInTheDocument();
-    await screen
-      .findByRole('button', { name: 'Adicionar categoria' })
-      .then((button) => button.click());
+    fireEvent.click(screen.getByRole('button', { name: 'Nova categoria' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar categoria' }));
     expect(await screen.findByText(/informe o nome/i)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/admin/establishments/11111111-1111-4111-8111-111111111111/menus'),
