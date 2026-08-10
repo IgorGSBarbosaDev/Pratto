@@ -6,10 +6,13 @@ import type {
   AnalyticsDailyMetric,
 } from '@pratto/contracts';
 import { useQuery } from '@tanstack/react-query';
+import { BarChart3, Eye, MousePointerClick, QrCode, ScanSearch } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { ApiClientError } from '../auth/api-client';
+import { ErrorState, Skeleton } from '../design-system/feedback';
+import { SectionLabel, Select } from '../design-system/primitives';
 
 import { analyticsApi } from './api-client';
 
@@ -127,33 +130,28 @@ export function AnalyticsDashboard({ establishmentId }: { establishmentId: strin
   };
 
   return (
-    <section
-      aria-labelledby="analytics-dashboard-title"
-      className="mt-10 border-t border-slate-800 pt-10"
-    >
+    <section aria-labelledby="analytics-dashboard-title" className="mx-auto max-w-6xl">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 id="analytics-dashboard-title" className="text-xl font-semibold">
-            Desempenho do cardápio
-          </h2>
-          <p className="mt-2 max-w-2xl text-slate-400">
+          <SectionLabel>Analytics anônimos</SectionLabel>
+          <h1 id="analytics-dashboard-title" className="mt-1 pratto-page-title">
+            Visão geral
+          </h1>
+          <p className="mt-1 max-w-2xl text-[15px] text-ink-faint">
             Acompanhe como os visitantes encontram e exploram os produtos publicados.
           </p>
         </div>
         {query.isFetching && query.data ? (
-          <span role="status" className="text-sm text-slate-500">
+          <span role="status" className="text-sm text-ink-faint">
             Atualizando…
           </span>
         ) : null}
       </div>
 
-      <form
-        className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4"
-        onSubmit={submitFilters}
-      >
+      <form className="mt-6 rounded-2xl border border-line bg-cream p-4" onSubmit={submitFilters}>
         <div className="flex flex-wrap items-end gap-4">
           <fieldset>
-            <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+            <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink-faint">
               Período
             </legend>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Período">
@@ -169,10 +167,10 @@ export function AnalyticsDashboard({ establishmentId }: { establishmentId: strin
             </div>
           </fieldset>
 
-          <label className="text-sm text-slate-300">
+          <label className="text-sm text-ink-soft">
             Início
             <input
-              className="mt-2 block rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+              className="pratto-input mt-2 w-auto"
               type="date"
               value={fromDate}
               onChange={(event) => {
@@ -181,10 +179,10 @@ export function AnalyticsDashboard({ establishmentId }: { establishmentId: strin
               }}
             />
           </label>
-          <label className="text-sm text-slate-300">
+          <label className="text-sm text-ink-soft">
             Fim
             <input
-              className="mt-2 block rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+              className="pratto-input mt-2 w-auto"
               type="date"
               value={toDate}
               onChange={(event) => {
@@ -193,10 +191,10 @@ export function AnalyticsDashboard({ establishmentId }: { establishmentId: strin
               }}
             />
           </label>
-          <label className="min-w-48 flex-1 text-sm text-slate-300">
+          <label className="min-w-48 flex-1 text-sm text-ink-soft">
             Categoria
             <select
-              className="mt-2 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+              className="pratto-input mt-2"
               value={categoryId}
               onChange={(event) => {
                 setCategoryId(event.target.value);
@@ -220,10 +218,10 @@ export function AnalyticsDashboard({ establishmentId }: { establishmentId: strin
               ))}
             </select>
           </label>
-          <label className="min-w-48 flex-1 text-sm text-slate-300">
+          <label className="min-w-48 flex-1 text-sm text-ink-soft">
             Produto
             <select
-              className="mt-2 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+              className="pratto-input mt-2"
               value={productId}
               onChange={(event) => setProductId(event.target.value)}
             >
@@ -236,7 +234,7 @@ export function AnalyticsDashboard({ establishmentId }: { establishmentId: strin
             </select>
           </label>
           <button
-            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-11 rounded-xl bg-ink px-4 text-sm font-medium text-white transition hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-50"
             type="submit"
             disabled={query.isFetching}
           >
@@ -244,7 +242,7 @@ export function AnalyticsDashboard({ establishmentId }: { establishmentId: strin
           </button>
         </div>
         {filterError ? (
-          <p role="alert" className="mt-3 text-sm text-rose-300">
+          <p role="alert" className="mt-3 pratto-error">
             {filterError}
           </p>
         ) : null}
@@ -252,15 +250,8 @@ export function AnalyticsDashboard({ establishmentId }: { establishmentId: strin
 
       {query.isPending ? <DashboardLoading /> : null}
       {query.error ? (
-        <div role="alert" className="mt-6 rounded-2xl border border-rose-900/70 bg-rose-950/30 p-5">
-          <p className="text-sm text-rose-200">{messageFor(query.error)}</p>
-          <button
-            className="mt-4 rounded-lg border border-rose-800 px-3 py-2 text-sm text-rose-100 hover:border-rose-500"
-            type="button"
-            onClick={() => void query.refetch()}
-          >
-            Tentar novamente
-          </button>
+        <div className="mt-6 pratto-panel">
+          <ErrorState description={messageFor(query.error)} onRetry={() => void query.refetch()} />
         </div>
       ) : null}
       {query.data ? (
@@ -286,10 +277,8 @@ function PeriodButton({
 }) {
   return (
     <button
-      className={`rounded-lg border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-300 ${
-        active
-          ? 'border-emerald-500 bg-emerald-900/50 text-emerald-100'
-          : 'border-slate-700 text-slate-300 hover:border-slate-500'
+      className={`rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
+        active ? 'border-ink bg-ink text-white' : 'border-line text-ink-soft hover:bg-sand'
       }`}
       type="button"
       aria-pressed={active}
@@ -302,13 +291,13 @@ function PeriodButton({
 
 function DashboardLoading() {
   return (
-    <div role="status" aria-label="Carregando analytics" className="mt-6 space-y-6">
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-800 bg-slate-800 md:grid-cols-5">
+    <div role="status" aria-label="Carregando analytics" className="mt-6 space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {Array.from({ length: 5 }, (_, index) => (
-          <div key={index} className="h-24 animate-pulse bg-slate-900" />
+          <Skeleton key={index} className="h-32 rounded-2xl" />
         ))}
       </div>
-      <div className="h-64 animate-pulse rounded-2xl border border-slate-800 bg-slate-900" />
+      <Skeleton className="h-72 rounded-2xl" />
     </div>
   );
 }
@@ -326,19 +315,23 @@ function DashboardContent({
 }) {
   const hasData = Object.values(data.summary).some((value) => value > 0);
   return (
-    <div className="mt-6 space-y-6">
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-800 bg-slate-800 md:grid-cols-5">
-        <Metric label="Sessões" value={data.summary.sessions} />
-        <Metric label="Acessos ao cardápio" value={data.summary.menuAccesses} />
-        <Metric label="Impressões" value={data.summary.impressions} />
-        <Metric label="Visualizações qualificadas" value={data.summary.qualifiedViews} />
-        <Metric label="Interações" value={data.summary.interactions} />
+    <div className="mt-4 space-y-4">
+      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Metric icon={BarChart3} label="Sessões" value={data.summary.sessions} />
+        <Metric icon={QrCode} label="Acessos ao cardápio" value={data.summary.menuAccesses} />
+        <Metric icon={Eye} label="Impressões" value={data.summary.impressions} />
+        <Metric
+          icon={ScanSearch}
+          label="Visualizações qualificadas"
+          value={data.summary.qualifiedViews}
+        />
+        <Metric icon={MousePointerClick} label="Interações" value={data.summary.interactions} />
       </dl>
 
       {!hasData ? (
-        <div className="rounded-2xl border border-dashed border-slate-700 p-8 text-center">
-          <h3 className="text-lg font-semibold text-white">Ainda não há dados neste período</h3>
-          <p className="mt-2 text-sm text-slate-400">
+        <div className="rounded-2xl border border-dashed border-line bg-cream p-8 text-center">
+          <h3 className="text-lg font-semibold text-ink">Ainda não há dados neste período</h3>
+          <p className="mt-2 text-sm text-ink-faint">
             Quando visitantes explorarem o cardápio publicado, as métricas aparecerão aqui.
           </p>
         </div>
@@ -362,9 +355,9 @@ function DashboardContent({
               }))}
             />
             {productFilter ? (
-              <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-                <h3 className="text-base font-semibold text-white">Categorias mais acessadas</h3>
-                <p className="mt-4 text-sm text-slate-400">
+              <section className="rounded-2xl border border-line bg-cream p-5">
+                <h3 className="text-base font-semibold text-ink">Categorias mais acessadas</h3>
+                <p className="mt-4 text-sm text-ink-faint">
                   O ranking de categorias não é aplicável quando um produto está selecionado.
                 </p>
               </section>
@@ -388,11 +381,16 @@ function DashboardContent({
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ icon: Icon, label, value }: { icon: typeof Eye; label: string; value: number }) {
   return (
-    <div className="bg-slate-900 p-4">
-      <dt className="text-xs font-medium uppercase tracking-[0.1em] text-slate-500">{label}</dt>
-      <dd className="mt-3 text-2xl font-semibold text-white">{formatNumber(value)}</dd>
+    <div className="rounded-2xl border border-line bg-cream p-5">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sand text-ink-soft">
+        <Icon size={18} strokeWidth={1.8} />
+      </div>
+      <dd className="tnum mt-4 text-[30px] font-semibold leading-none text-ink">
+        {formatNumber(value)}
+      </dd>
+      <dt className="mt-1.5 text-sm text-ink-faint">{label}</dt>
     </div>
   );
 }
@@ -408,17 +406,27 @@ function EvolutionPanel({
 }) {
   const max = Math.max(1, ...daily.map((day) => day[metric]));
   const currentMetric = chartMetrics.find((item) => item.value === metric)!;
+  const points = daily.map((day, index) => ({
+    x: daily.length === 1 ? 50 : (index / Math.max(1, daily.length - 1)) * 100,
+    y: 32 - (day[metric] / max) * 27,
+    value: day[metric],
+    day: day.day,
+  }));
+  const linePath = points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
+    .join(' ');
+  const areaPath = points.length > 0 ? `${linePath} L 100 36 L 0 36 Z` : '';
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+    <section className="rounded-2xl border border-line bg-cream p-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h3 className="text-base font-semibold text-white">Evolução diária</h3>
-          <p className="mt-1 text-sm text-slate-500">{currentMetric.label} por dia no período.</p>
+          <h3 className="text-base font-semibold text-ink">Evolução diária</h3>
+          <p className="mt-1 text-sm text-ink-faint">{currentMetric.label} por dia no período.</p>
         </div>
-        <label className="text-sm text-slate-300">
+        <label className="text-sm text-ink-soft">
           Métrica
-          <select
-            className="ml-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+          <Select
+            className="ml-2 inline-block w-auto"
             value={metric}
             onChange={(event) => onMetricChange(event.target.value as ChartMetric)}
           >
@@ -427,30 +435,70 @@ function EvolutionPanel({
                 {item.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
-      <div className="mt-6 space-y-2" role="img" aria-label={`Evolução de ${currentMetric.label}`}>
-        {daily.map((day) => {
-          const value = day[metric];
-          return (
-            <div
-              key={day.day}
-              className="grid grid-cols-[4rem_1fr_3rem] items-center gap-3 text-sm"
-            >
-              <span className="text-slate-500">{formatDay(day.day)}</span>
-              <div className="h-2 rounded-full bg-slate-800">
-                <div
-                  className="h-2 rounded-full bg-emerald-600"
-                  style={{ width: `${(value / max) * 100}%` }}
-                />
+      <div className="mt-6" role="img" aria-label={`Evolução de ${currentMetric.label}`}>
+        {points.length > 0 ? (
+          <>
+            <div className="relative h-56 overflow-hidden rounded-xl border border-line/80 bg-sand/35 px-3 py-4">
+              <div className="pointer-events-none absolute inset-x-3 inset-y-4 flex flex-col justify-between">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <span key={index} className="block border-t border-line/70" />
+                ))}
               </div>
-              <strong className="text-right font-medium text-slate-200">
-                {formatNumber(value)}
-              </strong>
+              <svg
+                className="relative h-full w-full overflow-visible"
+                viewBox="0 0 100 36"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <defs>
+                  <linearGradient id="analytics-area" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0.02" />
+                  </linearGradient>
+                </defs>
+                <path d={areaPath} fill="url(#analytics-area)" />
+                <path
+                  d={linePath}
+                  fill="none"
+                  stroke="var(--color-accent)"
+                  strokeWidth="0.8"
+                  vectorEffect="non-scaling-stroke"
+                />
+                {points.map((point) => (
+                  <circle
+                    key={point.day}
+                    cx={point.x}
+                    cy={point.y}
+                    r="0.9"
+                    fill="var(--color-cream)"
+                    stroke="var(--color-accent)"
+                    strokeWidth="0.5"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ))}
+              </svg>
             </div>
-          );
-        })}
+            <div className="mt-3 flex justify-between text-xs text-ink-faint" aria-hidden="true">
+              <span>{formatDay(points[0]!.day)}</span>
+              {points.length > 2 ? (
+                <span>{formatDay(points[Math.floor(points.length / 2)]!.day)}</span>
+              ) : null}
+              {points.length > 1 ? <span>{formatDay(points.at(-1)!.day)}</span> : null}
+            </div>
+            <ol className="sr-only">
+              {points.map((point) => (
+                <li key={point.day}>
+                  {formatDay(point.day)}: {formatNumber(point.value)}
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : (
+          <p className="text-sm text-ink-faint">Sem pontos diários no período.</p>
+        )}
       </div>
     </section>
   );
@@ -472,27 +520,27 @@ function RankingPanel({
   }>;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-      <h3 className="text-base font-semibold text-white">{title}</h3>
+    <section className="rounded-2xl border border-line bg-cream p-5">
+      <h3 className="text-base font-semibold text-ink">{title}</h3>
       {items.length === 0 ? (
-        <p className="mt-4 text-sm text-slate-400">{emptyMessage}</p>
+        <p className="mt-4 text-sm text-ink-faint">{emptyMessage}</p>
       ) : (
-        <ol className="mt-4 divide-y divide-slate-800">
+        <ol className="mt-4 divide-y divide-line">
           {items.map((item, index) => (
             <li
               key={item.id}
               className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-slate-100">
-                  <span className="mr-2 text-slate-600">{index + 1}.</span>
+                <p className="truncate text-sm font-medium text-ink">
+                  <span className="mr-2 text-ink-faint">{index + 1}.</span>
                   {item.name}
                 </p>
-                <p className="mt-1 truncate text-xs text-slate-500">{item.detail}</p>
+                <p className="mt-1 truncate text-xs text-ink-faint">{item.detail}</p>
               </div>
-              <p className="shrink-0 text-right text-sm text-slate-300">
-                <strong className="block text-white">{formatNumber(item.value)}</strong>
-                <span className="text-xs text-slate-500">{item.valueLabel}</span>
+              <p className="shrink-0 text-right text-sm text-ink-soft">
+                <strong className="block text-ink">{formatNumber(item.value)}</strong>
+                <span className="text-xs text-ink-faint">{item.valueLabel}</span>
               </p>
             </li>
           ))}

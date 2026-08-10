@@ -2,14 +2,12 @@
 
 import type { ProductMediaResponse } from '@pratto/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown, ChevronUp, ImagePlus, Star, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { ApiClientError } from '../auth/api-client';
 
 import { catalogApi } from './api-client';
-
-const inputClass =
-  'mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400';
 
 function messageFor(error: unknown): string {
   if (error instanceof ApiClientError) return error.message;
@@ -60,46 +58,54 @@ export function ProductMediaManagement({
   const busy = upload.isPending || primary.isPending || remove.isPending || reorder.isPending;
 
   return (
-    <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+    <div className="rounded-2xl border border-line bg-cream p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h5 className="font-medium">Mídias do produto</h5>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-ink-faint">
             JPEG, PNG, WebP até 5 MB; MP4, WebM ou MOV até 50 MB.
           </p>
         </div>
-        <span className="text-xs text-slate-500">{media.length} arquivos</span>
+        <span className="text-xs text-ink-faint">{media.length} arquivos</span>
       </div>
       <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="min-w-64 flex-1 text-xs text-slate-400">
-          Arquivo de imagem ou vídeo
+        <label className="min-w-64 flex-1 text-xs font-medium text-ink-soft">
+          <span>Arquivo de imagem ou vídeo</span>
           <input
             ref={fileInput}
-            className={inputClass}
+            className="sr-only"
             type="file"
             accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
             onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
           />
+          <span className="mt-1 flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-line bg-cream px-3.5 transition hover:border-ink/25 hover:bg-sand/35">
+            <span className="rounded-lg bg-sand px-3 py-1.5 text-xs font-semibold text-ink">
+              Escolher arquivo
+            </span>
+            <span className="min-w-0 truncate text-xs font-normal text-ink-faint">
+              {selectedFile?.name ?? 'Nenhum arquivo selecionado'}
+            </span>
+          </span>
         </label>
         <button
-          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent-deep px-4 text-sm font-medium text-white hover:bg-ink disabled:cursor-not-allowed disabled:opacity-50"
           type="button"
           disabled={busy || !selectedFile}
           onClick={() => upload.mutate()}
         >
-          {upload.isPending ? 'Enviando…' : 'Enviar mídia'}
+          <ImagePlus size={16} /> {upload.isPending ? 'Enviando…' : 'Enviar mídia'}
         </button>
       </div>
       {mediaQuery.isPending ? (
-        <p role="status" className="mt-4 text-sm text-slate-500">
+        <p role="status" className="mt-4 text-sm text-ink-faint">
           Carregando mídias…
         </p>
       ) : mediaQuery.error ? (
-        <p role="alert" className="mt-4 text-sm text-rose-300">
+        <p role="alert" className="mt-4 pratto-error">
           {messageFor(mediaQuery.error)}
         </p>
       ) : media.length === 0 ? (
-        <p className="mt-4 rounded-lg border border-dashed border-slate-700 p-4 text-sm text-slate-500">
+        <p className="mt-4 rounded-xl border border-dashed border-line p-4 text-sm text-ink-faint">
           Nenhuma mídia cadastrada para este produto.
         </p>
       ) : (
@@ -125,7 +131,7 @@ export function ProductMediaManagement({
         </div>
       )}
       {(upload.error || primary.error || remove.error || reorder.error) && (
-        <p role="alert" className="mt-4 text-sm text-rose-300">
+        <p role="alert" className="mt-4 pratto-error">
           {messageFor(upload.error ?? primary.error ?? remove.error ?? reorder.error)}
         </p>
       )}
@@ -151,8 +157,8 @@ function MediaCard({
   onMove: (direction: -1 | 1) => void;
 }) {
   return (
-    <article className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
-      <div className="aspect-video bg-slate-900">
+    <article className="overflow-hidden rounded-xl border border-line bg-cream">
+      <div className="aspect-video bg-sand">
         {item.mediaType === 'IMAGE' ? (
           // MinIO's public URL is environment-specific and is not routed through Next image optimization.
           // eslint-disable-next-line @next/next/no-img-element
@@ -168,49 +174,49 @@ function MediaCard({
       </div>
       <div className="space-y-3 p-3">
         <div className="flex items-start justify-between gap-2 text-xs">
-          <span className="truncate text-slate-300" title={item.originalName}>
+          <span className="truncate text-ink-soft" title={item.originalName}>
             {item.originalName}
           </span>
           {item.isPrimary && (
-            <span className="shrink-0 rounded-full bg-emerald-950 px-2 py-0.5 text-emerald-300">
+            <span className="shrink-0 rounded-full bg-herb/10 px-2 py-0.5 text-herb">
               Principal
             </span>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            className="rounded border border-slate-700 px-2 py-1 text-xs hover:border-emerald-400 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-xs text-ink-soft hover:border-ink/30 disabled:opacity-50"
             type="button"
             disabled={busy || item.isPrimary}
             onClick={onPrimary}
           >
-            Definir principal
+            <Star size={12} /> Definir principal
           </button>
           <button
-            className="rounded border border-slate-700 px-2 py-1 text-xs hover:border-emerald-400 disabled:opacity-50"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-line text-ink-faint hover:border-ink/30 disabled:opacity-50"
             type="button"
             disabled={busy || index === 0}
             onClick={() => onMove(-1)}
             aria-label={`Mover ${item.originalName} para cima`}
           >
-            ↑
+            <ChevronUp size={13} />
           </button>
           <button
-            className="rounded border border-slate-700 px-2 py-1 text-xs hover:border-emerald-400 disabled:opacity-50"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-line text-ink-faint hover:border-ink/30 disabled:opacity-50"
             type="button"
             disabled={busy || index === total - 1}
             onClick={() => onMove(1)}
             aria-label={`Mover ${item.originalName} para baixo`}
           >
-            ↓
+            <ChevronDown size={13} />
           </button>
           <button
-            className="rounded border border-rose-900 px-2 py-1 text-xs text-rose-300 hover:border-rose-500 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-lg border border-accent/20 px-2 py-1 text-xs text-accent-deep hover:border-accent/50 disabled:opacity-50"
             type="button"
             disabled={busy}
             onClick={onRemove}
           >
-            Remover
+            <Trash2 size={12} /> Remover
           </button>
         </div>
       </div>
