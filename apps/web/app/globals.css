@@ -1,25 +1,162 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..600&family=Instrument+Serif:ital@0;1&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+  --color-cream: #fff9f4;
+  --color-sand: #f3ebe3;
+  --color-sand-deep: #e9ded2;
+  --color-ink: #181716;
+  --color-ink-soft: #4a4642;
+  --color-ink-faint: #746c64;
+  --color-accent: #f45b3d;
+  --color-accent-deep: #c63f25;
+  --color-herb: #3f7652;
+  --color-line: #eadfd4;
+  --radius-sheet: 24px;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
+body {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
-  background: #020617;
-  color: #f8fafc;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-sand);
+  color: var(--color-ink);
+  font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 :focus-visible {
-  outline: 3px solid #34d399;
+  outline: 3px solid color-mix(in srgb, var(--color-accent) 48%, transparent);
   outline-offset: 3px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.snap-y-feed {
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.snap-item {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes pratto-shimmer {
+  from {
+    background-position: -180% 0;
+  }
+  to {
+    background-position: 180% 0;
+  }
+}
+
+@keyframes pratto-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pratto-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.skeleton {
+  background-color: var(--color-sand);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  background-position: -180% 0;
+  background-repeat: no-repeat;
+  background-size: 180% 100%;
+  animation: pratto-shimmer 1.4s ease-in-out infinite;
+}
+
+.fade-in {
+  animation: pratto-fade 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@layer components {
+  .pratto-panel {
+    @apply rounded-2xl border border-line bg-cream;
+  }
+
+  .pratto-input {
+    @apply h-11 w-full rounded-xl border border-line bg-cream px-3.5 text-[15px] text-ink outline-none transition placeholder:text-ink-faint focus:border-ink focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  textarea.pratto-input {
+    @apply h-auto py-2.5 leading-relaxed;
+  }
+
+  .pratto-label {
+    @apply block text-[13px] font-medium text-ink;
+  }
+
+  .pratto-help {
+    @apply text-[13px] leading-relaxed text-ink-faint;
+  }
+
+  .pratto-error {
+    @apply text-[13px] font-medium text-accent-deep;
+  }
+
+  .pratto-page-title {
+    @apply font-serif text-[34px] leading-tight text-ink;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
