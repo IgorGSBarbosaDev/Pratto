@@ -9,15 +9,18 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-950 px-6 py-12 text-center text-white">
+    <main className="grid min-h-screen place-items-center bg-cream px-6 py-12 text-center text-ink">
       <div className="max-w-md">
-        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-emerald-300">Pratto</p>
-        <h1 className="mt-4 text-3xl font-bold">Cardápio não encontrado</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-400">
+        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-ink font-serif text-2xl text-cream">
+          P
+        </div>
+        <div className="mx-auto my-7 h-px w-12 bg-line" />
+        <h1 className="font-serif text-[34px] leading-tight">Cardápio não encontrado</h1>
+        <p className="mt-3 text-[15px] leading-7 text-ink-soft">
           O estabelecimento pode ter sido removido ou o endereço informado não existe.
         </p>
         <Link
-          className="mt-6 inline-flex rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
+          className="mt-7 inline-flex rounded-xl bg-ink px-5 py-3 text-sm font-medium text-white transition hover:bg-ink-soft"
           href="/"
         >
           Voltar ao início

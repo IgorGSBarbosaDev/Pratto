@@ -35,9 +35,9 @@ export default function ResetPasswordPage() {
   return (
     <AuthCard eyebrow="Segurança" title="Escolha uma nova senha">
       {reset.isSuccess ? (
-        <div aria-live="polite" className="grid gap-5 text-slate-300">
+        <div aria-live="polite" className="grid gap-5 text-ink-soft">
           <p>Senha alterada. Todas as sessões anteriores foram encerradas.</p>
-          <Link className="font-semibold text-amber-300" href="/login">
+          <Link className="font-semibold text-accent-deep" href="/login">
             Entrar com a nova senha
           </Link>
         </div>
@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
           noValidate
         >
           {!token ? (
-            <p role="alert" className="text-sm text-rose-300">
+            <p role="alert" className="text-sm text-accent-deep">
               O link não contém um token válido.
             </p>
           ) : null}
@@ -60,10 +60,10 @@ export default function ResetPasswordPage() {
             error={form.formState.errors.password?.message}
             {...form.register('password')}
           />
-          <p className="text-xs leading-5 text-slate-400">
+          <p className="text-xs leading-5 text-ink-faint">
             Use entre 15 e 128 caracteres. Espaços e caracteres Unicode são permitidos.
           </p>
-          <div aria-live="polite" className="min-h-5 text-sm text-rose-300">
+          <div aria-live="polite" className="min-h-5 text-sm text-accent-deep">
             {reset.error ? authErrorMessage(reset.error) : null}
           </div>
           <button className={submitClass} disabled={!token || reset.isPending} type="submit">

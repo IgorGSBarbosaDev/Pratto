@@ -32,14 +32,14 @@ export function AuthBoundary({
 
   if (query.isPending) {
     return (
-      <p role="status" className="text-sm text-slate-400">
+      <p role="status" className="text-sm text-ink-faint">
         Confirmando sua sessão…
       </p>
     );
   }
   if (query.error || !query.data) {
     return (
-      <p role="alert" className="text-sm text-rose-300">
+      <p role="alert" className="text-sm text-accent-deep">
         Não foi possível validar sua sessão.
       </p>
     );

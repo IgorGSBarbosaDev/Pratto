@@ -22,9 +22,9 @@ export default function ForgotPasswordPage() {
   return (
     <AuthCard eyebrow="Recuperação" title="Redefina sua senha">
       {requestReset.data ? (
-        <div aria-live="polite" className="grid gap-5 text-slate-300">
+        <div aria-live="polite" className="grid gap-5 text-ink-soft">
           <p>{requestReset.data.message}</p>
-          <Link className="font-semibold text-amber-300" href="/login">
+          <Link className="font-semibold text-accent-deep" href="/login">
             Voltar ao login
           </Link>
         </div>
@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
           onSubmit={form.handleSubmit((value) => requestReset.mutate(value))}
           noValidate
         >
-          <p className="text-sm leading-6 text-slate-400">
+          <p className="text-sm leading-6 text-ink-soft">
             Informe seu e-mail. A resposta será a mesma exista ou não uma conta.
           </p>
           <Field
@@ -45,13 +45,13 @@ export default function ForgotPasswordPage() {
             error={form.formState.errors.email?.message}
             {...form.register('email')}
           />
-          <div aria-live="polite" className="min-h-5 text-sm text-rose-300">
+          <div aria-live="polite" className="min-h-5 text-sm text-accent-deep">
             {requestReset.error ? authErrorMessage(requestReset.error) : null}
           </div>
           <button className={submitClass} disabled={requestReset.isPending} type="submit">
             {requestReset.isPending ? 'Enviando…' : 'Enviar instruções'}
           </button>
-          <Link className="text-center text-sm text-amber-300" href="/login">
+          <Link className="text-center text-sm font-medium text-accent-deep" href="/login">
             Voltar ao login
           </Link>
         </form>

@@ -60,14 +60,14 @@ function LoginForm() {
           error={form.formState.errors.password?.message}
           {...form.register('password')}
         />
-        <div aria-live="polite" className="min-h-5 text-sm text-rose-300">
+        <div aria-live="polite" className="min-h-5 text-sm text-accent-deep">
           {login.error ? authErrorMessage(login.error) : null}
         </div>
         <button className={submitClass} disabled={login.isPending} type="submit">
           {login.isPending ? 'Entrando…' : 'Entrar'}
         </button>
         <Link
-          className="text-center text-sm text-amber-300 hover:text-amber-200"
+          className="text-center text-sm font-medium text-accent-deep hover:text-accent"
           href="/forgot-password"
         >
           Esqueci minha senha
@@ -79,7 +79,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-slate-950" />}>
+    <Suspense fallback={<main className="min-h-screen bg-sand" />}>
       <LoginForm />
     </Suspense>
   );
