@@ -8,6 +8,8 @@ User 1 ── 1 PasswordCredential
 User 1 ── 0..1 PasswordResetToken
 User 1 ── * Membership * ── 1 Organization
 Organization 1 ── * Establishment
+Establishment 1 ── * MembershipInvitation
+Organization 1 ── * MembershipInvitation
 Establishment 1 ── * Menu
 Menu 1 ── * Category
 Menu 1 ── * Product
@@ -18,8 +20,11 @@ Menu 1 ── 0..1 MenuPublication (active)
 ```
 
 `Membership` é a única ligação de autorização entre usuário e organização. Não existe relação
-direta entre usuário e estabelecimento. Um usuário pode participar de várias organizações, e cada
-organização pode possuir vários estabelecimentos.
+direta entre usuário e estabelecimento nesta fase; as rotas de equipe validam o estabelecimento
+contra a organização ativa. Um usuário pode participar de várias organizações, e cada organização
+pode possuir vários estabelecimentos, embora a seleção por unidade esteja fora do escopo atual.
+`MembershipInvitation` registra o estabelecimento de origem do convite, o papel atribuído e o
+estado do ciclo de aceitação, sem substituir a membership.
 
 ## Identificadores e exposição pública
 
@@ -61,6 +66,8 @@ cascade. Sessões, memberships e publicações preservam as referências necess�
 
 - `LifecycleStatus`: `ACTIVE`, `INACTIVE`.
 - `MembershipRole`: `OWNER`, `ADMIN`, `MEMBER`.
+- `MembershipInvitationStatus`: `PENDING`, `ACCEPTED`, `CANCELED`; convites pendentes vencidos
+  são apresentados como `EXPIRED` pela API sem estado adicional no banco.
 - `MenuStatus`: `DRAFT`, `ACTIVE`, `ARCHIVED`.
 - `Category`: `ACTIVE` ou `INACTIVE`; o arquivamento preenche `archivedAt` e mantém o registro.
 - `Product`: `ACTIVE` ou `INACTIVE`, com `AVAILABLE`, `TEMPORARILY_UNAVAILABLE` ou `HIDDEN` para

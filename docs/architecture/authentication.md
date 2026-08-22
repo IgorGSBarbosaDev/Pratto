@@ -29,8 +29,13 @@ selecionada automaticamente; com várias, a sessão permanece autenticada sem te
 membership alheia no próprio banco.
 
 Em toda resolução tenant-aware, o guard revalida usuário, membership, organização e
-estabelecimentos ativos. IDs enviados pelo cliente nunca substituem o contexto resolvido. OWNER,
-ADMIN e MEMBER têm o mesmo acesso nesta fase.
+estabelecimentos ativos. IDs enviados pelo cliente nunca substituem o contexto resolvido. As
+permissões são centrais em `packages/contracts/src/authorization.ts` e aplicadas pelo
+`PermissionGuard`: OWNER tem controle completo, ADMIN opera e gerencia membros não proprietários,
+e MEMBER tem acesso operacional de consulta.
+
+Convites de equipe usam `membership_invitations`, armazenam somente o HMAC do token, expiram em sete
+dias e são aceitos em uma transação que cria ou reativa a membership sem duplicá-la.
 
 ## Recuperação, limite e auditoria
 

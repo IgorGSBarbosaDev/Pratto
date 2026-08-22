@@ -25,4 +25,5 @@ autenticação sem valores sensíveis em claro.
 - Revogação, renovação e seleção sobrevivem a reinícios e múltiplas instâncias.
 - Toda rota tenant-aware precisa dos guards de autenticação e organização.
 - Uma consulta adicional revalida relações ativas, priorizando isolamento sobre cache prematuro.
-- Permissões granulares e seleção por estabelecimento continuam fora do escopo.
+- A seleção por estabelecimento continua fora do escopo; permissões granulares de equipe foram
+  adicionadas em `ADR-012` sem alterar o mecanismo de seleção de organização.
