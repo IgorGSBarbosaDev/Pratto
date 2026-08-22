@@ -10,6 +10,7 @@ export interface MenuPublicationResponse {
 export interface ActiveMenuPublicationResponse {
   menuId: string;
   publication: MenuPublicationResponse | null;
+  hasUnpublishedChanges: boolean;
 }
 
 export interface MenuPublicationSummaryResponse {

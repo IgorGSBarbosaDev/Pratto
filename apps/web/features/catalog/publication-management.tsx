@@ -110,6 +110,7 @@ export function PublicationManagement({
   }
 
   const publication = activeQuery.data?.publication ?? null;
+  const hasUnpublishedChanges = activeQuery.data?.hasUnpublishedChanges ?? false;
   const history = historyQuery.data?.publications ?? [];
   const publicationError = activeQuery.error ?? historyQuery.error;
   const isLoadingPublication = menuId !== null && (activeQuery.isPending || historyQuery.isPending);
@@ -191,6 +192,14 @@ export function PublicationManagement({
                       </p>
                       <p className="mt-1 text-sm text-ink-faint">
                         Versão {publication.version} · {formatDate(publication.publishedAt)}
+                      </p>
+                      <p
+                        className={`mt-3 text-sm font-medium ${hasUnpublishedChanges ? 'text-accent-deep' : 'text-herb'}`}
+                        role={hasUnpublishedChanges ? 'status' : undefined}
+                      >
+                        {hasUnpublishedChanges
+                          ? 'Há alterações aguardando publicação.'
+                          : 'Tudo está publicado.'}
                       </p>
                     </>
                   ) : (

@@ -76,10 +76,17 @@ describe('PublicationManagement', () => {
       }
       if (url.endsWith('/publication')) {
         return Promise.resolve(
-          new Response(JSON.stringify({ menuId, publication: published ? publication : null }), {
-            status: 200,
-            headers: { 'content-type': 'application/json' },
-          }),
+          new Response(
+            JSON.stringify({
+              menuId,
+              publication: published ? publication : null,
+              hasUnpublishedChanges: false,
+            }),
+            {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            },
+          ),
         );
       }
       return Promise.resolve(
@@ -119,6 +126,7 @@ describe('PublicationManagement', () => {
     expect(
       await screen.findByText('Cardápio publicado com sucesso na versão 1.'),
     ).toBeInTheDocument();
+    expect(await screen.findByText('Tudo está publicado.')).toBeInTheDocument();
     await waitFor(() => {
       const post = fetchMock.mock.calls.find(([, options]) => options?.method === 'POST');
       expect(post).toBeDefined();

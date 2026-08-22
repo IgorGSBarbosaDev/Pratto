@@ -54,7 +54,11 @@ describe('PublicationController', () => {
   });
 
   it('delegates active publication and history queries with the explicit menu', async () => {
-    const active: ActiveMenuPublicationResponse = { menuId, publication };
+    const active: ActiveMenuPublicationResponse = {
+      menuId,
+      publication,
+      hasUnpublishedChanges: false,
+    };
     const history: MenuPublicationHistoryResponse = {
       menuId,
       publications: [publication],

@@ -26,7 +26,16 @@ export interface PublishMenuInput {
 }
 
 export type MenuPublicationErrorCode =
-  'IDEMPOTENCY_KEY_INVALID' | 'PUBLICATION_ACCESS_DENIED' | 'MENU_NOT_FOUND' | 'MENU_ARCHIVED';
+  | 'IDEMPOTENCY_KEY_INVALID'
+  | 'PUBLICATION_ACCESS_DENIED'
+  | 'MENU_NOT_FOUND'
+  | 'MENU_ARCHIVED'
+  | 'PUBLICATION_STATE_UNAVAILABLE';
+
+export interface ActiveMenuPublicationState {
+  publication: MenuPublication | null;
+  hasUnpublishedChanges: boolean;
+}
 
 export interface PublicationQueryInput {
   menuId: string;
@@ -163,16 +172,42 @@ export class MenuPublicationService {
     throw new Error('Publication transaction exhausted its retry attempts.');
   }
 
-  async getActive(input: PublicationQueryInput): Promise<MenuPublication | null> {
-    await this.assertReader(this.database, input.tenant);
-    const menu = await this.findScopedMenu(this.database, input);
-    if (!menu.activePublicationId) return null;
-    return this.database.menuPublication.findFirst({
-      where: {
-        id: menu.activePublicationId,
-        organizationId: input.tenant.organizationId,
-        menuId: input.menuId,
-      },
+  async getActive(input: PublicationQueryInput): Promise<ActiveMenuPublicationState> {
+    return this.database.$transaction(async (transaction) => {
+      await this.assertReader(transaction, input.tenant);
+      const menu = await this.findScopedMenu(transaction, input);
+      if (!menu.activePublicationId) {
+        return { publication: null, hasUnpublishedChanges: false };
+      }
+
+      const publication = await transaction.menuPublication.findFirst({
+        where: {
+          id: menu.activePublicationId,
+          organizationId: input.tenant.organizationId,
+          menuId: input.menuId,
+        },
+      });
+      if (!publication) return { publication: null, hasUnpublishedChanges: false };
+
+      let currentSnapshot: MenuSnapshot;
+      try {
+        currentSnapshot = await this.snapshotSource.buildSnapshot({
+          transaction,
+          menuId: input.menuId,
+          organizationId: input.tenant.organizationId,
+        });
+      } catch {
+        throw new MenuPublicationServiceError(
+          'PUBLICATION_STATE_UNAVAILABLE',
+          'Não foi possível verificar o estado da publicação.',
+        );
+      }
+
+      return {
+        publication,
+        hasUnpublishedChanges:
+          stableSerialize(currentSnapshot) !== stableSerialize(publication.snapshot),
+      };
     });
   }
 
@@ -210,7 +245,7 @@ export class MenuPublicationService {
   }
 
   private async assertReader(
-    database: PrismaClient,
+    database: PrismaClient | Prisma.TransactionClient,
     tenant: PublicationTenantContext,
   ): Promise<void> {
     const membership = await database.membership.findFirst({
@@ -232,7 +267,7 @@ export class MenuPublicationService {
   }
 
   private async findScopedMenu(
-    database: PrismaClient,
+    database: PrismaClient | Prisma.TransactionClient,
     input: PublicationQueryInput,
   ): Promise<{ activePublicationId: string | null; establishmentId: string }> {
     const menu = await database.menu.findFirst({
@@ -254,6 +289,17 @@ export class MenuPublicationService {
   ): boolean {
     return !tenant.establishmentIds || tenant.establishmentIds.includes(establishmentId);
   }
+}
+
+function stableSerialize(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((item) => stableSerialize(item)).join(',')}]`;
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableSerialize(record[key])}`)
+    .join(',')}}`;
 }
 
 function isRetryablePublicationError(error: unknown): boolean {

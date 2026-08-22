@@ -132,8 +132,8 @@ describe('versioned menu publications', () => {
     await expect(
       service.getActive({ menuId: tenant.menu.id, tenant: context }),
     ).resolves.toMatchObject({
-      id: second.id,
-      version: 2,
+      publication: { id: second.id, version: 2 },
+      hasUnpublishedChanges: false,
     });
     await expect(service.listHistory({ menuId: tenant.menu.id, tenant: context })).resolves.toEqual(
       [
@@ -141,6 +141,51 @@ describe('versioned menu publications', () => {
         expect.objectContaining({ id: first.id, version: 1 }),
       ],
     );
+  });
+
+  it('reports pending changes by comparing the editable snapshot with the active publication', async () => {
+    const tenant = await createTenantFixture(database, { label: 'Publication state' });
+    const service = new PublicationService(database, new CatalogMenuSnapshotSource());
+    const context = { organizationId: tenant.organization.id, userId: tenant.user.id };
+    const first = await service.publish({
+      menuId: tenant.menu.id,
+      tenant: context,
+      idempotencyKey: 'state-1',
+    });
+
+    await expect(
+      service.getActive({ menuId: tenant.menu.id, tenant: context }),
+    ).resolves.toMatchObject({
+      publication: { id: first.id },
+      hasUnpublishedChanges: false,
+    });
+
+    await database.establishment.update({
+      where: { id: tenant.establishment.id },
+      data: { description: 'Alteração pendente' },
+    });
+
+    await expect(
+      service.getActive({ menuId: tenant.menu.id, tenant: context }),
+    ).resolves.toMatchObject({
+      publication: { id: first.id },
+      hasUnpublishedChanges: true,
+    });
+
+    const second = await service.publish({
+      menuId: tenant.menu.id,
+      tenant: context,
+      idempotencyKey: 'state-2',
+    });
+    await expect(
+      service.getActive({ menuId: tenant.menu.id, tenant: context }),
+    ).resolves.toMatchObject({
+      publication: { id: second.id },
+      hasUnpublishedChanges: false,
+    });
+    expect(first.snapshot).toMatchObject({
+      establishment: { description: null },
+    });
   });
 
   it('freezes establishment assets and settings in each complete snapshot', async () => {

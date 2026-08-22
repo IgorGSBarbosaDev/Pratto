@@ -41,8 +41,12 @@ export class PublicationService {
 
   async getActive(tenant: TenantPrincipal, menuId: string): Promise<ActiveMenuPublicationResponse> {
     try {
-      const publication = await this.databaseService.getActive({ menuId, tenant });
-      return { menuId, publication: publication ? toPublicationResponse(publication) : null };
+      const state = await this.databaseService.getActive({ menuId, tenant });
+      return {
+        menuId,
+        publication: state.publication ? toPublicationResponse(state.publication) : null,
+        hasUnpublishedChanges: state.hasUnpublishedChanges,
+      };
     } catch (error) {
       this.handleError(error);
     }
@@ -78,7 +82,9 @@ export class PublicationService {
             ? HttpStatus.NOT_FOUND
             : error.code === 'MENU_ARCHIVED'
               ? HttpStatus.CONFLICT
-              : HttpStatus.BAD_REQUEST;
+              : error.code === 'PUBLICATION_STATE_UNAVAILABLE'
+                ? HttpStatus.SERVICE_UNAVAILABLE
+                : HttpStatus.BAD_REQUEST;
       throw new StableHttpException(status, error.code, error.message);
     }
 
