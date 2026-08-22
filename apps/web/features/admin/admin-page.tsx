@@ -14,6 +14,7 @@ import {
   Send,
   Store,
   UtensilsCrossed,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -28,6 +29,7 @@ import { CategoryManagement } from '../catalog/category-management';
 import { ProductManagement } from '../catalog/product-management';
 import { PublicationManagement } from '../catalog/publication-management';
 import { EstablishmentSettingsForm } from '../establishments/settings-form';
+import { TeamManagement } from '../team/team-management';
 
 type AdminView =
   | 'overview'
@@ -37,7 +39,8 @@ type AdminView =
   | 'publication'
   | 'settings-info'
   | 'settings-hours'
-  | 'settings-appearance';
+  | 'settings-appearance'
+  | 'settings-team';
 
 type NavItem = { id: AdminView; label: string; icon: LucideIcon };
 type NavGroup = { title?: string; items: NavItem[] };
@@ -59,6 +62,7 @@ const groups: NavGroup[] = [
       { id: 'settings-info', label: 'Informações', icon: Store },
       { id: 'settings-hours', label: 'Horários', icon: Clock3 },
       { id: 'settings-appearance', label: 'Aparência', icon: Palette },
+      { id: 'settings-team', label: 'Equipe', icon: Users },
     ],
   },
 ];
@@ -115,6 +119,8 @@ export function AdminPage({ publicMenuBaseUrl }: { publicMenuBaseUrl: string }) 
               ) : (
                 <AdminWorkspace
                   establishmentId={establishment.id}
+                  actorId={context.user.id}
+                  actorRole={context.activeOrganization?.role ?? 'MEMBER'}
                   view={view}
                   selectedMenuId={menuId}
                   onMenuChange={setMenuId}
@@ -139,12 +145,16 @@ export function AdminPage({ publicMenuBaseUrl }: { publicMenuBaseUrl: string }) 
 
 function AdminWorkspace({
   establishmentId,
+  actorId,
+  actorRole,
   view,
   selectedMenuId,
   onMenuChange,
   publicMenuBaseUrl,
 }: {
   establishmentId: string;
+  actorId: string;
+  actorRole: 'OWNER' | 'ADMIN' | 'MEMBER';
   view: AdminView;
   selectedMenuId: string | null;
   onMenuChange: (menuId: string | null) => void;
@@ -165,7 +175,8 @@ function AdminWorkspace({
       {view !== 'overview' &&
       view !== 'settings-info' &&
       view !== 'settings-hours' &&
-      view !== 'settings-appearance' ? (
+      view !== 'settings-appearance' &&
+      view !== 'settings-team' ? (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-cream px-4 py-3">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sand text-ink-soft">
@@ -229,6 +240,9 @@ function AdminWorkspace({
       ) : null}
       {view === 'settings-appearance' ? (
         <EstablishmentSettingsForm establishmentId={establishmentId} section="appearance" />
+      ) : null}
+      {view === 'settings-team' ? (
+        <TeamManagement establishmentId={establishmentId} actorId={actorId} actorRole={actorRole} />
       ) : null}
     </div>
   );
