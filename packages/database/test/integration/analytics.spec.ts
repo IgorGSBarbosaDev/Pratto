@@ -562,7 +562,7 @@ describe('public menu analytics integration', () => {
     });
     await database.analyticsSession.update({
       where: { id: linkedSession.sessionId },
-      data: { lastSeenAt: oldLastSeen, expiresAt: old },
+      data: { firstSeenAt: oldLastSeen, lastSeenAt: oldLastSeen, expiresAt: old },
     });
     await database.analyticsRateLimitBucket.create({
       data: {

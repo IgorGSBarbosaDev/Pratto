@@ -131,10 +131,19 @@ describe('public menu integration', () => {
       where: { id: tenant.establishment.id },
       data: { status: LifecycleStatus.ACTIVE },
     });
-    await database.menuPublication.update({
-      where: { id: publication.id },
-      data: { snapshot: { schemaVersion: 2 } },
-    });
+    await database.$executeRawUnsafe(
+      'ALTER TABLE "menu_publications" DISABLE TRIGGER "menu_publications_immutable_trigger"',
+    );
+    try {
+      await database.menuPublication.update({
+        where: { id: publication.id },
+        data: { snapshot: { schemaVersion: 2 } },
+      });
+    } finally {
+      await database.$executeRawUnsafe(
+        'ALTER TABLE "menu_publications" ENABLE TRIGGER "menu_publications_immutable_trigger"',
+      );
+    }
     await expect(
       service.getPage(tenant.establishment.publicId, { limit: 6 }),
     ).rejects.toMatchObject({
