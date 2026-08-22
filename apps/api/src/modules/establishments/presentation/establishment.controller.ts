@@ -64,7 +64,7 @@ export class EstablishmentController {
   }
 
   @Patch(':establishmentId/settings')
-  @RequirePermission(Permission.ESTABLISHMENT_UPDATE)
+  @RequirePermission(Permission.SETTINGS_MANAGE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Update public establishment settings' })
@@ -82,7 +82,7 @@ export class EstablishmentController {
   }
 
   @Post(':establishmentId/assets/:assetKind')
-  @RequirePermission(Permission.ESTABLISHMENT_UPDATE)
+  @RequirePermission(Permission.SETTINGS_MANAGE)
   @UseGuards(CsrfGuard)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
@@ -114,7 +114,7 @@ export class EstablishmentController {
   }
 
   @Delete(':establishmentId/assets/:assetKind')
-  @RequirePermission(Permission.ESTABLISHMENT_UPDATE)
+  @RequirePermission(Permission.SETTINGS_MANAGE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Remove the establishment logo or cover image' })

@@ -13,12 +13,16 @@ jest.mock('@pratto/database', () => ({
   prisma: {
     establishment: { findFirst: jest.fn() },
     membership: { findFirst: jest.fn(), count: jest.fn(), update: jest.fn() },
+    $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
   },
 }));
 
 const database = prisma as unknown as {
   establishment: { findFirst: jest.Mock };
   membership: { findFirst: jest.Mock; count: jest.Mock; update: jest.Mock };
+  $transaction: jest.Mock;
+  $queryRaw: jest.Mock;
 };
 
 const tenant = (role: TenantPrincipal['role']): TenantPrincipal => ({
@@ -39,6 +43,8 @@ describe('TeamService authorization', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    database.$transaction.mockImplementation(async (callback) => callback(database));
+    database.$queryRaw.mockResolvedValue([]);
     database.establishment.findFirst.mockResolvedValue({ id: 'establishment-id', name: 'Pratto' });
   });
 
@@ -51,6 +57,15 @@ describe('TeamService authorization', () => {
         role: 'MEMBER',
       }),
     ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'PERMISSION_DENIED' }),
+    });
+    expect(database.establishment.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('denies members from reading team administration', async () => {
+    const service = new TeamService(email, passwords as never);
+
+    await expect(service.getTeam(tenant('MEMBER'), 'establishment-id')).rejects.toMatchObject({
       response: expect.objectContaining({ code: 'PERMISSION_DENIED' }),
     });
     expect(database.establishment.findFirst).not.toHaveBeenCalled();
@@ -90,6 +105,28 @@ describe('TeamService authorization', () => {
       }),
     ).rejects.toMatchObject({
       response: expect.objectContaining({ code: 'TEAM_MEMBER_MANAGEMENT_DENIED' }),
+    });
+    expect(database.membership.update).not.toHaveBeenCalled();
+  });
+
+  it('prevents a member from escalating their own role', async () => {
+    database.membership.findFirst.mockResolvedValue({
+      id: 'member-membership',
+      userId: 'user-id',
+      role: 'MEMBER',
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      user: { name: 'Member', email: 'member@example.com' },
+    });
+    const service = new TeamService(email, passwords as never);
+
+    await expect(
+      service.updateMember(tenant('OWNER'), 'establishment-id', 'member-membership', {
+        role: 'ADMIN',
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'SELF_MANAGEMENT_NOT_ALLOWED' }),
     });
     expect(database.membership.update).not.toHaveBeenCalled();
   });

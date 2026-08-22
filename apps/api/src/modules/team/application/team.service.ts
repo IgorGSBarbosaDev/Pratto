@@ -56,6 +56,8 @@ type InvitationRecord = Prisma.MembershipInvitationGetPayload<{
   };
 }>;
 
+type DatabaseClient = Prisma.TransactionClient | typeof prisma;
+
 const memberSelect = {
   id: true,
   userId: true,
@@ -89,6 +91,7 @@ export class TeamService {
   ) {}
 
   async getTeam(tenant: TenantPrincipal, establishmentId: string): Promise<TeamResponse> {
+    this.assertPermission(tenant, Permission.TEAM_READ);
     await this.findEstablishment(tenant, establishmentId);
     const [members, invitations] = await Promise.all([
       prisma.membership.findMany({
@@ -250,17 +253,19 @@ export class TeamService {
   ): Promise<TeamMember> {
     this.assertPermission(tenant, Permission.TEAM_MANAGE);
     await this.findEstablishment(tenant, establishmentId);
-    const current = await this.findMember(tenant, membershipId);
-    if (current.userId === tenant.userId) this.selfManagementNotAllowed();
-    this.assertCanManageTarget(tenant.role, current.role, input.role);
-    if (current.role === 'OWNER' && input.role !== 'OWNER') {
-      await this.assertAnotherOwner(tenant.organizationId, current.userId);
-    }
+    const updated = await prisma.$transaction(async (transaction) => {
+      const current = await this.findMember(tenant, membershipId, transaction);
+      if (current.userId === tenant.userId) this.selfManagementNotAllowed();
+      this.assertCanManageTarget(tenant.role, current.role, input.role);
+      if (current.role === 'OWNER' && input.role !== 'OWNER') {
+        await this.assertAnotherOwner(transaction, tenant.organizationId, current.userId);
+      }
 
-    const updated = await prisma.membership.update({
-      where: { id: current.id },
-      data: { role: input.role },
-      select: memberSelect,
+      return transaction.membership.update({
+        where: { id: current.id },
+        data: { role: input.role },
+        select: memberSelect,
+      });
     });
     return this.toMember(updated);
   }
@@ -272,13 +277,18 @@ export class TeamService {
   ): Promise<void> {
     this.assertPermission(tenant, Permission.TEAM_MANAGE);
     await this.findEstablishment(tenant, establishmentId);
-    const current = await this.findMember(tenant, membershipId);
-    if (current.userId === tenant.userId) this.selfManagementNotAllowed();
-    this.assertCanManageTarget(tenant.role, current.role);
-    if (current.role === 'OWNER') {
-      await this.assertAnotherOwner(tenant.organizationId, current.userId);
-    }
-    await prisma.membership.update({ where: { id: current.id }, data: { status: 'INACTIVE' } });
+    await prisma.$transaction(async (transaction) => {
+      const current = await this.findMember(tenant, membershipId, transaction);
+      if (current.userId === tenant.userId) this.selfManagementNotAllowed();
+      this.assertCanManageTarget(tenant.role, current.role);
+      if (current.role === 'OWNER') {
+        await this.assertAnotherOwner(transaction, tenant.organizationId, current.userId);
+      }
+      await transaction.membership.update({
+        where: { id: current.id },
+        data: { status: 'INACTIVE' },
+      });
+    });
   }
 
   async preview(token: string): Promise<InvitationPreviewResponse> {
@@ -394,8 +404,12 @@ export class TeamService {
     return establishment;
   }
 
-  private async findMember(tenant: TenantPrincipal, membershipId: string): Promise<TeamMembership> {
-    const member = await prisma.membership.findFirst({
+  private async findMember(
+    tenant: TenantPrincipal,
+    membershipId: string,
+    database: DatabaseClient = prisma,
+  ): Promise<TeamMembership> {
+    const member = await database.membership.findFirst({
       where: { id: membershipId, organizationId: tenant.organizationId, status: 'ACTIVE' },
       select: memberSelect,
     });
@@ -403,8 +417,20 @@ export class TeamService {
     return member;
   }
 
-  private async assertAnotherOwner(organizationId: string, userId: string): Promise<void> {
-    const owners = await prisma.membership.count({
+  private async assertAnotherOwner(
+    database: DatabaseClient,
+    organizationId: string,
+    userId: string,
+  ): Promise<void> {
+    await database.$queryRaw`
+      SELECT "id"
+      FROM "memberships"
+      WHERE "organization_id" = ${organizationId}::uuid
+        AND "role" = 'OWNER'
+        AND "status" = 'ACTIVE'
+      FOR UPDATE
+    `;
+    const owners = await database.membership.count({
       where: { organizationId, role: 'OWNER', status: 'ACTIVE', userId: { not: userId } },
     });
     if (owners === 0) {

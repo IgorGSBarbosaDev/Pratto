@@ -1,5 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
-import { Permission } from '@pratto/contracts';
+import { hasPermission, Permission, permissionsForRole } from '@pratto/contracts';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
 import type { AuthenticatedRequest } from '../../identity/domain/auth.types';
@@ -39,5 +39,23 @@ describe('PermissionGuard', () => {
         }),
       });
     }
+  });
+
+  it('keeps sensitive establishment permissions exclusive to owners', () => {
+    expect(hasPermission('OWNER', Permission.SETTINGS_MANAGE)).toBe(true);
+    expect(hasPermission('OWNER', Permission.OWNERSHIP_MANAGE)).toBe(true);
+    expect(hasPermission('ADMIN', Permission.SETTINGS_MANAGE)).toBe(false);
+    expect(hasPermission('ADMIN', Permission.OWNERSHIP_MANAGE)).toBe(false);
+    expect(hasPermission('MEMBER', Permission.TEAM_READ)).toBe(false);
+  });
+
+  it('exposes a single static permission set for each supported role', () => {
+    expect(permissionsForRole('OWNER')).toEqual(Object.values(Permission));
+    expect(permissionsForRole('ADMIN')).toContain(Permission.TEAM_MANAGE);
+    expect(permissionsForRole('ADMIN')).not.toContain(Permission.OWNERSHIP_MANAGE);
+    expect(permissionsForRole('MEMBER')).toEqual([
+      Permission.ESTABLISHMENT_READ,
+      Permission.CATALOG_READ,
+    ]);
   });
 });

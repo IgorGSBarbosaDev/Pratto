@@ -84,9 +84,11 @@ function formatMoney(value: string) {
 export function ProductManagement({
   establishmentId,
   selectedMenuId,
+  canManage = true,
 }: {
   establishmentId: string;
   selectedMenuId?: string | null;
+  canManage?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [internalMenuId, setInternalMenuId] = useState<string | null>(null);
@@ -273,7 +275,7 @@ export function ProductManagement({
           <h1 className="mt-1 pratto-page-title">Pratos</h1>
         </div>
         <Button
-          disabled={!menuId}
+          disabled={!menuId || !canManage}
           onClick={() => {
             setEditingId(null);
             form.reset(emptyValues);
@@ -340,9 +342,11 @@ export function ProductManagement({
                 title="Nenhum produto cadastrado."
                 description="Crie o primeiro prato para começar a montar o cardápio."
                 action={
-                  <Button onClick={() => setDrawerOpen(true)}>
-                    <Plus size={17} /> Criar prato
-                  </Button>
+                  canManage ? (
+                    <Button onClick={() => setDrawerOpen(true)}>
+                      <Plus size={17} /> Criar prato
+                    </Button>
+                  ) : undefined
                 }
               />
             ) : filtered.length === 0 ? (
@@ -384,6 +388,7 @@ export function ProductManagement({
                               <button
                                 type="button"
                                 disabled={
+                                  !canManage ||
                                   busy ||
                                   archived ||
                                   categoryFilter !== 'all' ||
@@ -399,6 +404,7 @@ export function ProductManagement({
                               <button
                                 type="button"
                                 disabled={
+                                  !canManage ||
                                   busy ||
                                   archived ||
                                   categoryFilter !== 'all' ||
@@ -440,7 +446,7 @@ export function ProductManagement({
                           <div className="flex justify-center">
                             <Toggle
                               on={!archived && product.status === 'ACTIVE'}
-                              disabled={busy || archived}
+                              disabled={!canManage || busy || archived}
                               ariaLabel={`Produto ${product.name} ativo`}
                               onToggle={() =>
                                 status.mutate({
@@ -451,39 +457,45 @@ export function ProductManagement({
                             />
                           </div>
                           <div className="flex justify-end gap-1">
-                            <button
-                              type="button"
-                              disabled={busy || archived}
-                              onClick={() => {
-                                setEditingId(product.id);
-                                setDrawerOpen(true);
-                              }}
-                              className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint transition hover:bg-sand-deep hover:text-ink"
-                              aria-label={`Editar ${product.name}`}
-                            >
-                              <Pencil size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy || archived}
-                              onClick={() => {
-                                setEditingId(product.id);
-                                setDrawerOpen(true);
-                              }}
-                              className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint transition hover:bg-sand-deep hover:text-ink"
-                              aria-label={`Gerenciar mídias de ${product.name}`}
-                            >
-                              <ImagePlus size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy || archived}
-                              onClick={() => setArchiving(product)}
-                              className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint transition hover:bg-accent/10 hover:text-accent-deep"
-                              aria-label={`Arquivar ${product.name}`}
-                            >
-                              <Archive size={16} />
-                            </button>
+                            {canManage ? (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={busy || archived}
+                                  onClick={() => {
+                                    setEditingId(product.id);
+                                    setDrawerOpen(true);
+                                  }}
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint transition hover:bg-sand-deep hover:text-ink"
+                                  aria-label={`Editar ${product.name}`}
+                                >
+                                  <Pencil size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={busy || archived}
+                                  onClick={() => {
+                                    setEditingId(product.id);
+                                    setDrawerOpen(true);
+                                  }}
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint transition hover:bg-sand-deep hover:text-ink"
+                                  aria-label={`Gerenciar mídias de ${product.name}`}
+                                >
+                                  <ImagePlus size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={busy || archived}
+                                  onClick={() => setArchiving(product)}
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint transition hover:bg-accent/10 hover:text-accent-deep"
+                                  aria-label={`Arquivar ${product.name}`}
+                                >
+                                  <Archive size={16} />
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-ink-faint">Somente leitura</span>
+                            )}
                           </div>
                         </div>
                       );
@@ -506,6 +518,7 @@ export function ProductManagement({
         editing={editing}
         menuId={menuId}
         categories={categories}
+        canManage={canManage}
         form={form}
         saving={save.isPending}
         saveError={save.error}
@@ -534,6 +547,7 @@ function ProductDrawer({
   editing,
   menuId,
   categories,
+  canManage,
   form,
   saving,
   saveError,
@@ -544,6 +558,7 @@ function ProductDrawer({
   editing: ProductResponse | null;
   menuId: string | null;
   categories: CategoryResponse[];
+  canManage: boolean;
   form: ReturnType<typeof useForm<ProductFormValues>>;
   saving: boolean;
   saveError: unknown;
@@ -594,7 +609,11 @@ function ProductDrawer({
               <SectionLabel>Mídia</SectionLabel>
               <div className="mt-2">
                 {editing && menuId ? (
-                  <ProductMediaManagement menuId={menuId} productId={editing.id} />
+                  <ProductMediaManagement
+                    menuId={menuId}
+                    productId={editing.id}
+                    canManage={canManage}
+                  />
                 ) : (
                   <div className="rounded-2xl border border-dashed border-line bg-sand/35 px-5 py-8 text-center">
                     <ImagePlus className="mx-auto text-ink-faint" size={24} />

@@ -19,8 +19,10 @@ fase de múltiplas unidades.
 
 As permissões são definidas em `packages/contracts/src/authorization.ts` e aplicadas por
 `PermissionGuard` nas rotas, com as regras de alvo de equipe reutilizadas no serviço. `OWNER` tem
-controle completo; `ADMIN` gerencia a operação e membros não proprietários; `MEMBER` tem acesso de
-consulta ao estabelecimento e catálogo.
+controle completo, incluindo `SETTINGS_MANAGE` e `OWNERSHIP_MANAGE`; `ADMIN` gerencia a operação e
+membros não proprietários; `MEMBER` tem acesso de consulta ao estabelecimento e catálogo. A
+interface filtra a navegação e deixa as mutações de catálogo em modo somente leitura quando o papel
+não possui a permissão correspondente, sem substituir a validação da API.
 
 Convites ficam em `membership_invitations`. O banco armazena somente o HMAC do token, com expiração
 de sete dias, unicidade para convites pendentes por organização/e-mail e estados `PENDING`,

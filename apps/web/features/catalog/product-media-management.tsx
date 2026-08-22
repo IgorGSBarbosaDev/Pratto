@@ -18,9 +18,11 @@ function messageFor(error: unknown): string {
 export function ProductMediaManagement({
   menuId,
   productId,
+  canManage = true,
 }: {
   menuId: string;
   productId: string;
+  canManage?: boolean;
 }) {
   const queryClient = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -81,9 +83,12 @@ export function ProductMediaManagement({
             className="sr-only"
             type="file"
             accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+            disabled={!canManage}
             onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
           />
-          <span className="mt-1 flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-line bg-cream px-3.5 transition hover:border-ink/25 hover:bg-sand/35">
+          <span
+            className={`mt-1 flex h-11 items-center gap-3 rounded-xl border border-line bg-cream px-3.5 transition hover:border-ink/25 hover:bg-sand/35 ${canManage ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+          >
             <span className="rounded-lg bg-sand px-3 py-1.5 text-xs font-semibold text-ink">
               Escolher arquivo
             </span>
@@ -95,7 +100,7 @@ export function ProductMediaManagement({
         <button
           className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent-deep px-4 text-sm font-medium text-white hover:bg-ink disabled:cursor-not-allowed disabled:opacity-50"
           type="button"
-          disabled={busy || !selectedFile}
+          disabled={!canManage || busy || !selectedFile}
           onClick={() => upload.mutate()}
         >
           <ImagePlus size={16} /> {upload.isPending ? 'Enviando…' : 'Enviar mídia'}
@@ -131,6 +136,7 @@ export function ProductMediaManagement({
                 [next[index], next[target]] = [next[target]!, next[index]!];
                 reorder.mutate(next);
               }}
+              canManage={canManage}
             />
           ))}
         </div>
@@ -173,6 +179,7 @@ function MediaCard({
   onPrimary,
   onRemove,
   onMove,
+  canManage,
 }: {
   item: ProductMediaResponse;
   index: number;
@@ -181,6 +188,7 @@ function MediaCard({
   onPrimary: () => void;
   onRemove: () => void;
   onMove: (direction: -1 | 1) => void;
+  canManage: boolean;
 }) {
   return (
     <article className="overflow-hidden rounded-xl border border-line bg-cream">
@@ -210,40 +218,46 @@ function MediaCard({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-xs text-ink-soft hover:border-ink/30 disabled:opacity-50"
-            type="button"
-            disabled={busy || item.isPrimary}
-            onClick={onPrimary}
-          >
-            <Star size={12} /> Definir principal
-          </button>
-          <button
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-line text-ink-faint hover:border-ink/30 disabled:opacity-50"
-            type="button"
-            disabled={busy || index === 0}
-            onClick={() => onMove(-1)}
-            aria-label={`Mover ${item.originalName} para cima`}
-          >
-            <ChevronUp size={13} />
-          </button>
-          <button
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-line text-ink-faint hover:border-ink/30 disabled:opacity-50"
-            type="button"
-            disabled={busy || index === total - 1}
-            onClick={() => onMove(1)}
-            aria-label={`Mover ${item.originalName} para baixo`}
-          >
-            <ChevronDown size={13} />
-          </button>
-          <button
-            className="inline-flex items-center gap-1 rounded-lg border border-accent/20 px-2 py-1 text-xs text-accent-deep hover:border-accent/50 disabled:opacity-50"
-            type="button"
-            disabled={busy}
-            onClick={onRemove}
-          >
-            <Trash2 size={12} /> Remover
-          </button>
+          {canManage ? (
+            <>
+              <button
+                className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-xs text-ink-soft hover:border-ink/30 disabled:opacity-50"
+                type="button"
+                disabled={busy || item.isPrimary}
+                onClick={onPrimary}
+              >
+                <Star size={12} /> Definir principal
+              </button>
+              <button
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-line text-ink-faint hover:border-ink/30 disabled:opacity-50"
+                type="button"
+                disabled={busy || index === 0}
+                onClick={() => onMove(-1)}
+                aria-label={`Mover ${item.originalName} para cima`}
+              >
+                <ChevronUp size={13} />
+              </button>
+              <button
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-line text-ink-faint hover:border-ink/30 disabled:opacity-50"
+                type="button"
+                disabled={busy || index === total - 1}
+                onClick={() => onMove(1)}
+                aria-label={`Mover ${item.originalName} para baixo`}
+              >
+                <ChevronDown size={13} />
+              </button>
+              <button
+                className="inline-flex items-center gap-1 rounded-lg border border-accent/20 px-2 py-1 text-xs text-accent-deep hover:border-accent/50 disabled:opacity-50"
+                type="button"
+                disabled={busy}
+                onClick={onRemove}
+              >
+                <Trash2 size={12} /> Remover
+              </button>
+            </>
+          ) : (
+            <span className="text-xs text-ink-faint">Somente leitura</span>
+          )}
         </div>
       </div>
     </article>

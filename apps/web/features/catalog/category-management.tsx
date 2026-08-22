@@ -42,9 +42,11 @@ function messageFor(error: unknown): string {
 export function CategoryManagement({
   establishmentId,
   selectedMenuId,
+  canManage = true,
 }: {
   establishmentId: string;
   selectedMenuId?: string | null;
+  canManage?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [internalMenuId, setInternalMenuId] = useState<string | null>(null);
@@ -201,7 +203,7 @@ export function CategoryManagement({
           </p>
         </div>
         <Button
-          disabled={!menuId}
+          disabled={!menuId || !canManage}
           onClick={() => {
             setEditingId(null);
             form.reset({ name: '', description: '' });
@@ -232,9 +234,11 @@ export function CategoryManagement({
               title="Nenhuma categoria cadastrada."
               description="Crie a primeira categoria para começar a organizar os pratos."
               action={
-                <Button onClick={() => setDrawerOpen(true)}>
-                  <Plus size={17} /> Criar categoria
-                </Button>
+                canManage ? (
+                  <Button onClick={() => setDrawerOpen(true)}>
+                    <Plus size={17} /> Criar categoria
+                  </Button>
+                ) : undefined
               }
             />
           ) : (
@@ -265,7 +269,7 @@ export function CategoryManagement({
                           <div className="flex flex-col">
                             <button
                               type="button"
-                              disabled={busy || archived || index === 0}
+                              disabled={!canManage || busy || archived || index === 0}
                               aria-label={`Mover ${category.name} para cima`}
                               onClick={() => move(category, -1)}
                               className="rounded hover:bg-sand disabled:opacity-25"
@@ -274,7 +278,9 @@ export function CategoryManagement({
                             </button>
                             <button
                               type="button"
-                              disabled={busy || archived || index === visible.length - 1}
+                              disabled={
+                                !canManage || busy || archived || index === visible.length - 1
+                              }
                               aria-label={`Mover ${category.name} para baixo`}
                               onClick={() => move(category, 1)}
                               className="rounded hover:bg-sand disabled:opacity-25"
@@ -294,7 +300,7 @@ export function CategoryManagement({
                         <div className="flex items-center gap-3">
                           <Toggle
                             on={!archived && category.status === 'ACTIVE'}
-                            disabled={busy || archived}
+                            disabled={!canManage || busy || archived}
                             ariaLabel={`Categoria ${category.name} ativa`}
                             onToggle={() =>
                               status.mutate({
@@ -312,27 +318,33 @@ export function CategoryManagement({
                           </span>
                         </div>
                         <div className="flex justify-end gap-1">
-                          <button
-                            type="button"
-                            disabled={busy || archived}
-                            onClick={() => {
-                              setEditingId(category.id);
-                              setDrawerOpen(true);
-                            }}
-                            className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint transition hover:bg-sand-deep hover:text-ink"
-                            aria-label={`Editar ${category.name}`}
-                          >
-                            <Pencil size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={busy || archived}
-                            onClick={() => setArchiving(category)}
-                            className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint transition hover:bg-accent/10 hover:text-accent-deep"
-                            aria-label={`Arquivar ${category.name}`}
-                          >
-                            <Archive size={16} />
-                          </button>
+                          {canManage ? (
+                            <>
+                              <button
+                                type="button"
+                                disabled={busy || archived}
+                                onClick={() => {
+                                  setEditingId(category.id);
+                                  setDrawerOpen(true);
+                                }}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint transition hover:bg-sand-deep hover:text-ink"
+                                aria-label={`Editar ${category.name}`}
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busy || archived}
+                                onClick={() => setArchiving(category)}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint transition hover:bg-accent/10 hover:text-accent-deep"
+                                aria-label={`Arquivar ${category.name}`}
+                              >
+                                <Archive size={16} />
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-xs text-ink-faint">Somente leitura</span>
+                          )}
                         </div>
                       </div>
                     );

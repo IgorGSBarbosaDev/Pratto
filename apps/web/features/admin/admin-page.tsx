@@ -1,5 +1,6 @@
 'use client';
 
+import { hasPermission, Permission, type MembershipRole } from '@pratto/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart3,
@@ -42,30 +43,88 @@ type AdminView =
   | 'settings-appearance'
   | 'settings-team';
 
-type NavItem = { id: AdminView; label: string; icon: LucideIcon };
+type NavItem = { id: AdminView; label: string; icon: LucideIcon; permission: Permission };
 type NavGroup = { title?: string; items: NavItem[] };
 
 const groups: NavGroup[] = [
-  { items: [{ id: 'overview', label: 'Visão geral', icon: BarChart3 }] },
+  {
+    items: [
+      {
+        id: 'overview',
+        label: 'Visão geral',
+        icon: BarChart3,
+        permission: Permission.ANALYTICS_READ,
+      },
+    ],
+  },
   {
     title: 'Cardápio',
     items: [
-      { id: 'dishes', label: 'Pratos', icon: UtensilsCrossed },
-      { id: 'categories', label: 'Categorias', icon: LayoutGrid },
-      { id: 'preview', label: 'Prévia', icon: Eye },
-      { id: 'publication', label: 'Publicação', icon: Send },
+      {
+        id: 'dishes',
+        label: 'Pratos',
+        icon: UtensilsCrossed,
+        permission: Permission.CATALOG_READ,
+      },
+      {
+        id: 'categories',
+        label: 'Categorias',
+        icon: LayoutGrid,
+        permission: Permission.CATALOG_READ,
+      },
+      {
+        id: 'preview',
+        label: 'Prévia',
+        icon: Eye,
+        permission: Permission.PUBLICATION_READ,
+      },
+      {
+        id: 'publication',
+        label: 'Publicação',
+        icon: Send,
+        permission: Permission.PUBLICATION_READ,
+      },
     ],
   },
   {
     title: 'Restaurante',
     items: [
-      { id: 'settings-info', label: 'Informações', icon: Store },
-      { id: 'settings-hours', label: 'Horários', icon: Clock3 },
-      { id: 'settings-appearance', label: 'Aparência', icon: Palette },
-      { id: 'settings-team', label: 'Equipe', icon: Users },
+      {
+        id: 'settings-info',
+        label: 'Informações',
+        icon: Store,
+        permission: Permission.SETTINGS_MANAGE,
+      },
+      {
+        id: 'settings-hours',
+        label: 'Horários',
+        icon: Clock3,
+        permission: Permission.SETTINGS_MANAGE,
+      },
+      {
+        id: 'settings-appearance',
+        label: 'Aparência',
+        icon: Palette,
+        permission: Permission.SETTINGS_MANAGE,
+      },
+      {
+        id: 'settings-team',
+        label: 'Equipe',
+        icon: Users,
+        permission: Permission.TEAM_READ,
+      },
     ],
   },
 ];
+
+function navigationFor(role: MembershipRole): NavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => hasPermission(role, item.permission)),
+    }))
+    .filter((group) => group.items.length > 0);
+}
 
 export function AdminPage({ publicMenuBaseUrl }: { publicMenuBaseUrl: string }) {
   const router = useRouter();
@@ -93,11 +152,16 @@ export function AdminPage({ publicMenuBaseUrl }: { publicMenuBaseUrl: string }) 
     <AuthBoundary>
       {(context) => {
         const establishment = context.establishments[0];
+        const actorRole = context.activeOrganization?.role ?? 'MEMBER';
+        const navigation = navigationFor(actorRole);
+        const availableViews = navigation.flatMap((group) => group.items.map((item) => item.id));
+        const activeView = availableViews.includes(view) ? view : (availableViews[0] ?? 'dishes');
         return (
           <main className="flex h-screen min-h-[680px] overflow-hidden bg-sand text-ink">
             <AdminSidebar
-              active={view}
+              active={activeView}
               collapsed={collapsed}
+              groups={navigation}
               restaurantName={establishment?.name ?? context.activeOrganization?.name ?? 'PRATTO'}
               userName={context.user.name}
               onChange={setView}
@@ -120,8 +184,10 @@ export function AdminPage({ publicMenuBaseUrl }: { publicMenuBaseUrl: string }) 
                 <AdminWorkspace
                   establishmentId={establishment.id}
                   actorId={context.user.id}
-                  actorRole={context.activeOrganization?.role ?? 'MEMBER'}
-                  view={view}
+                  actorRole={actorRole}
+                  view={activeView}
+                  canManageCatalog={hasPermission(actorRole, Permission.CATALOG_WRITE)}
+                  canPublish={hasPermission(actorRole, Permission.PUBLICATION_PUBLISH)}
                   selectedMenuId={menuId}
                   onMenuChange={setMenuId}
                   publicMenuBaseUrl={publicMenuBaseUrl}
@@ -148,14 +214,18 @@ function AdminWorkspace({
   actorId,
   actorRole,
   view,
+  canManageCatalog,
+  canPublish,
   selectedMenuId,
   onMenuChange,
   publicMenuBaseUrl,
 }: {
   establishmentId: string;
   actorId: string;
-  actorRole: 'OWNER' | 'ADMIN' | 'MEMBER';
+  actorRole: MembershipRole;
   view: AdminView;
+  canManageCatalog: boolean;
+  canPublish: boolean;
   selectedMenuId: string | null;
   onMenuChange: (menuId: string | null) => void;
   publicMenuBaseUrl: string;
@@ -212,16 +282,25 @@ function AdminWorkspace({
 
       {view === 'overview' ? <AnalyticsDashboard establishmentId={establishmentId} /> : null}
       {view === 'dishes' ? (
-        <ProductManagement establishmentId={establishmentId} selectedMenuId={selectedMenuId} />
+        <ProductManagement
+          establishmentId={establishmentId}
+          selectedMenuId={selectedMenuId}
+          canManage={canManageCatalog}
+        />
       ) : null}
       {view === 'categories' ? (
-        <CategoryManagement establishmentId={establishmentId} selectedMenuId={selectedMenuId} />
+        <CategoryManagement
+          establishmentId={establishmentId}
+          selectedMenuId={selectedMenuId}
+          canManage={canManageCatalog}
+        />
       ) : null}
       {view === 'preview' ? (
         <PublicationManagement
           establishmentId={establishmentId}
           publicMenuBaseUrl={publicMenuBaseUrl}
           selectedMenuId={selectedMenuId}
+          canPublish={canPublish}
           previewOnly
         />
       ) : null}
@@ -230,6 +309,7 @@ function AdminWorkspace({
           establishmentId={establishmentId}
           publicMenuBaseUrl={publicMenuBaseUrl}
           selectedMenuId={selectedMenuId}
+          canPublish={canPublish}
         />
       ) : null}
       {view === 'settings-info' ? (
@@ -251,6 +331,7 @@ function AdminWorkspace({
 function AdminSidebar({
   active,
   collapsed,
+  groups,
   restaurantName,
   userName,
   onChange,
@@ -260,6 +341,7 @@ function AdminSidebar({
 }: {
   active: AdminView;
   collapsed: boolean;
+  groups: NavGroup[];
   restaurantName: string;
   userName: string;
   onChange: (view: AdminView) => void;

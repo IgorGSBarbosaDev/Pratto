@@ -36,11 +36,13 @@ export function PublicationManagement({
   publicMenuBaseUrl,
   selectedMenuId,
   previewOnly = false,
+  canPublish = true,
 }: {
   establishmentId: string;
   publicMenuBaseUrl: string;
   selectedMenuId?: string | null;
   previewOnly?: boolean;
+  canPublish?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [internalMenuId, setInternalMenuId] = useState<string | null>(null);
@@ -208,16 +210,22 @@ export function PublicationManagement({
                     </p>
                   )}
                 </div>
-                <Button
-                  type="button"
-                  disabled={publish.isPending}
-                  onClick={() => {
-                    setFeedback(null);
-                    publish.mutate();
-                  }}
-                >
-                  <Send size={16} /> {publish.isPending ? 'Publicando…' : 'Publicar cardápio'}
-                </Button>
+                {canPublish ? (
+                  <Button
+                    type="button"
+                    disabled={publish.isPending}
+                    onClick={() => {
+                      setFeedback(null);
+                      publish.mutate();
+                    }}
+                  >
+                    <Send size={16} /> {publish.isPending ? 'Publicando…' : 'Publicar cardápio'}
+                  </Button>
+                ) : (
+                  <span className="rounded-full bg-sand px-3 py-2 text-xs font-medium text-ink-faint">
+                    Somente leitura
+                  </span>
+                )}
               </div>
               {feedback && (
                 <p
