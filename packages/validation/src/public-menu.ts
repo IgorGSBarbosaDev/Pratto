@@ -8,6 +8,7 @@ export const publicMenuQuerySchema = z
   .object({
     cursor: publicMenuCursorSchema.optional(),
     categoryId: categoryIdSchema.optional(),
+    search: z.string().trim().max(120).optional(),
     limit: z.coerce.number().int().min(1).max(12).default(6),
   })
   .strict();

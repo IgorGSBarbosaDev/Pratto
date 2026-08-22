@@ -41,7 +41,21 @@ describe('PublicMenuController', () => {
     expect(getPage).toHaveBeenCalledWith('establishment-public-id', {
       limit: 6,
       categoryId: undefined,
+      search: undefined,
     });
+  });
+
+  it('delegates related product discovery through the public route', async () => {
+    const getRelated = jest.fn().mockResolvedValue({ products: [] });
+    const controller = new PublicMenuController({ getRelated } as never);
+
+    await expect(
+      controller.getRelated('establishment-public-id', '11111111-1111-4111-8111-111111111111'),
+    ).resolves.toEqual({ products: [] });
+    expect(getRelated).toHaveBeenCalledWith(
+      'establishment-public-id',
+      '11111111-1111-4111-8111-111111111111',
+    );
   });
 
   it('rejects invalid public query values before calling the service', () => {

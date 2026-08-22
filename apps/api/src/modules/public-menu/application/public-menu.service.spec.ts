@@ -7,7 +7,30 @@ import type { PublicMenuServiceError } from './public-menu.service';
 const publicationId = 'publication-id';
 const categoryId = 'category-id';
 
-function snapshot() {
+interface SnapshotProduct {
+  id: string;
+  categoryId: string;
+  name: string;
+  description: string | null;
+  price: string;
+  promotionalPrice: string | null;
+  ingredients: string | null;
+  allergens: string | null;
+  availability: 'AVAILABLE' | 'TEMPORARILY_UNAVAILABLE' | 'HIDDEN';
+  featured: boolean;
+  displayOrder: number;
+}
+
+interface SnapshotFixture {
+  schemaVersion: number;
+  establishment: Record<string, unknown>;
+  menu: { name: string };
+  categories: Array<{ id: string; name: string; description: string | null }>;
+  products: SnapshotProduct[];
+  media: Array<Record<string, unknown>>;
+}
+
+function snapshot(): SnapshotFixture {
   return {
     schemaVersion: 3,
     establishment: {
@@ -177,6 +200,128 @@ describe('PublicMenuService', () => {
     ).rejects.toMatchObject<Partial<PublicMenuServiceError>>({
       code: 'PUBLIC_MENU_CURSOR_STALE',
     });
+  });
+
+  it('searches name, description and category within the active publication', async () => {
+    const searchableSnapshot = snapshot();
+    searchableSnapshot.categories = [
+      { id: categoryId, name: 'Pratos', description: null },
+      { id: 'dessert-category', name: 'Sobremesas', description: 'Doces da casa' },
+    ];
+    searchableSnapshot.products = [
+      ...searchableSnapshot.products,
+      {
+        id: 'product-dessert',
+        categoryId: 'dessert-category',
+        name: 'Torta da tarde',
+        description: 'Sobremesa feita na hora',
+        price: '18.00',
+        promotionalPrice: null,
+        ingredients: null,
+        allergens: null,
+        availability: 'AVAILABLE',
+        featured: false,
+        displayOrder: 3,
+      },
+    ];
+    jest.spyOn(prisma.establishment, 'findFirst').mockResolvedValue({
+      id: 'establishment-id',
+      organizationId: 'organization-id',
+      status: 'ACTIVE',
+    } as never);
+    jest.spyOn(prisma.menu, 'findMany').mockResolvedValue([
+      {
+        activePublicationId: publicationId,
+        activePublication: {
+          id: publicationId,
+          version: 4,
+          publishedAt: new Date('2026-08-09T12:00:00.000Z'),
+          snapshot: searchableSnapshot,
+        },
+      },
+    ] as never);
+
+    const result = await new PublicMenuService(createStorage()).getPage('public-id', {
+      limit: 6,
+      search: 'SOBREMESAS',
+    });
+
+    expect(result.products.map((product) => product.id)).toEqual(['product-dessert']);
+    expect(result.categories).toEqual([
+      { id: 'dessert-category', name: 'Sobremesas', description: 'Doces da casa' },
+    ]);
+  });
+
+  it('returns deterministic related available products from the published snapshot', async () => {
+    const relatedSnapshot = snapshot();
+    relatedSnapshot.products = [
+      ...relatedSnapshot.products,
+      {
+        id: 'product-same-category',
+        categoryId,
+        name: 'Acompanhamento',
+        description: null,
+        price: '12.00',
+        promotionalPrice: null,
+        ingredients: null,
+        allergens: null,
+        availability: 'AVAILABLE',
+        featured: false,
+        displayOrder: 4,
+      },
+      {
+        id: 'product-other-category',
+        categoryId: 'other-category',
+        name: 'Bebida',
+        description: null,
+        price: '8.00',
+        promotionalPrice: null,
+        ingredients: null,
+        allergens: null,
+        availability: 'AVAILABLE',
+        featured: false,
+        displayOrder: 5,
+      },
+      {
+        id: 'product-unavailable',
+        categoryId,
+        name: 'Indisponível',
+        description: null,
+        price: '9.00',
+        promotionalPrice: null,
+        ingredients: null,
+        allergens: null,
+        availability: 'TEMPORARILY_UNAVAILABLE',
+        featured: true,
+        displayOrder: 1,
+      },
+    ];
+    jest.spyOn(prisma.establishment, 'findFirst').mockResolvedValue({
+      id: 'establishment-id',
+      organizationId: 'organization-id',
+      status: 'ACTIVE',
+    } as never);
+    jest.spyOn(prisma.menu, 'findMany').mockResolvedValue([
+      {
+        activePublicationId: publicationId,
+        activePublication: {
+          id: publicationId,
+          version: 4,
+          publishedAt: new Date('2026-08-09T12:00:00.000Z'),
+          snapshot: relatedSnapshot,
+        },
+      },
+    ] as never);
+
+    const result = await new PublicMenuService(createStorage()).getRelated(
+      'public-id',
+      'product-1',
+    );
+
+    expect(result.products.map((product) => product.id)).toEqual([
+      'product-same-category',
+      'product-other-category',
+    ]);
   });
 
   it.each([
