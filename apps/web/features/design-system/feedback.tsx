@@ -1,7 +1,10 @@
 'use client';
 
 import { AlertTriangle, RotateCcw, UtensilsCrossed, type LucideIcon } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, useId, type ReactNode } from 'react';
+
+import { Button } from './primitives';
+import { useModalDialog } from './use-modal-dialog';
 
 export function Skeleton({ className = '' }: { className?: string }) {
   return <div className={`skeleton rounded-lg ${className}`} />;
@@ -69,6 +72,80 @@ export function ErrorState({
           Tentar novamente
         </button>
       ) : null}
+    </div>
+  );
+}
+
+export function ConfirmDialog({
+  open,
+  title,
+  description,
+  confirmLabel,
+  pending = false,
+  error,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  pending?: boolean;
+  error?: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
+  const requestClose = () => {
+    if (!pending) onCancel();
+  };
+  useModalDialog(open, dialogRef, requestClose);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-6">
+      <button
+        type="button"
+        aria-label="Cancelar confirmação"
+        onClick={requestClose}
+        disabled={pending}
+        className="absolute inset-0 bg-ink/45 disabled:cursor-not-allowed"
+      />
+      <section
+        ref={dialogRef}
+        tabIndex={-1}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        className="relative w-full max-w-sm rounded-2xl bg-cream p-6 shadow-2xl"
+      >
+        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent-deep">
+          <AlertTriangle size={20} aria-hidden="true" />
+        </div>
+        <h3 id={titleId} className="text-[18px] font-semibold text-ink">
+          {title}
+        </h3>
+        <p id={descriptionId} className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+          {description}
+        </p>
+        {error ? (
+          <p role="alert" className="mt-3 pratto-error">
+            {error}
+          </p>
+        ) : null}
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="ghost" onClick={requestClose} disabled={pending}>
+            Cancelar
+          </Button>
+          <Button data-dialog-initial-focus onClick={onConfirm} disabled={pending}>
+            {pending ? 'Processando…' : confirmLabel}
+          </Button>
+        </div>
+      </section>
     </div>
   );
 }

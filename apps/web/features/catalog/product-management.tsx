@@ -5,7 +5,6 @@ import type { CategoryResponse, ProductAvailability, ProductResponse } from '@pr
 import { productCreateSchema } from '@pratto/validation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  AlertTriangle,
   Archive,
   ChevronDown,
   ChevronUp,
@@ -21,7 +20,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 
 import { ApiClientError } from '../auth/api-client';
-import { EmptyState, ErrorState, FoodImage, Skeleton } from '../design-system/feedback';
+import {
+  ConfirmDialog,
+  EmptyState,
+  ErrorState,
+  FoodImage,
+  Skeleton,
+} from '../design-system/feedback';
 import {
   Button,
   Field,
@@ -348,7 +353,12 @@ export function ProductManagement({
                 description="Ajuste a busca ou escolha outra categoria."
               />
             ) : (
-              <div className="overflow-x-auto">
+              <div
+                className="overflow-x-auto overscroll-x-contain rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                role="region"
+                aria-label="Tabela de pratos"
+                tabIndex={0}
+              >
                 <div className="min-w-[880px]">
                   <div className="grid grid-cols-[52px_1fr_150px_120px_120px_120px] gap-4 border-b border-line px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-faint">
                     <span />
@@ -570,6 +580,7 @@ function ProductDrawer({
           <button
             type="button"
             aria-label="Fechar"
+            data-dialog-initial-focus
             onClick={onClose}
             disabled={saving}
             className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft hover:bg-sand"
@@ -732,44 +743,20 @@ function ArchiveProductDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const dialogRef = useRef<HTMLElement>(null);
-  useModalDialog(Boolean(product), dialogRef, onCancel);
-  if (!product) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-      <button
-        type="button"
-        aria-label="Cancelar arquivamento"
-        onClick={onCancel}
-        className="absolute inset-0 bg-ink/45"
-      />
-      <section
-        ref={dialogRef}
-        tabIndex={-1}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="archive-product-title"
-        className="relative w-full max-w-sm rounded-2xl bg-cream p-6 shadow-2xl"
-      >
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent-deep">
-          <AlertTriangle size={20} />
-        </div>
-        <h3 id="archive-product-title" className="text-[18px] font-semibold text-ink">
-          Arquivar prato?
-        </h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
-          “{product.name}” deixará o catálogo editável. Publicações anteriores permanecem imutáveis.
-        </p>
-        <div className="mt-6 flex justify-end gap-3">
-          <Button variant="ghost" onClick={onCancel} disabled={pending}>
-            Cancelar
-          </Button>
-          <Button onClick={onConfirm} disabled={pending}>
-            {pending ? 'Arquivando…' : 'Arquivar'}
-          </Button>
-        </div>
-      </section>
-    </div>
+    <ConfirmDialog
+      open={Boolean(product)}
+      title="Arquivar prato?"
+      description={
+        product
+          ? `“${product.name}” deixará o catálogo editável. Publicações anteriores permanecem imutáveis.`
+          : ''
+      }
+      confirmLabel="Arquivar"
+      pending={pending}
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
   );
 }
 

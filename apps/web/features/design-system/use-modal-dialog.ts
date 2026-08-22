@@ -11,6 +11,9 @@ const focusableSelector = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
+const openDialogs: HTMLElement[] = [];
+let bodyOverflowBeforeDialogs: string | null = null;
+
 export function useModalDialog(
   open: boolean,
   dialogRef: RefObject<HTMLElement | null>,
@@ -24,13 +27,20 @@ export function useModalDialog(
     if (!dialog) return;
     const previousFocus =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
+    if (openDialogs.length === 0) bodyOverflowBeforeDialogs = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    openDialogs.push(dialog);
 
     const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
-    window.requestAnimationFrame(() => focusable()[0]?.focus());
+    const focusInitial = () => {
+      const initial = dialog.querySelector<HTMLElement>('[data-dialog-initial-focus]');
+      (initial ?? focusable()[0] ?? dialog).focus();
+    };
+    focusInitial();
+    const focusFrame = window.requestAnimationFrame(focusInitial);
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (openDialogs.at(-1) !== dialog) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         closeRef.current();
@@ -45,6 +55,11 @@ export function useModalDialog(
       }
       const first = elements[0]!;
       const last = elements.at(-1)!;
+      if (!dialog.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+        return;
+      }
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
@@ -57,7 +72,13 @@ export function useModalDialog(
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = previousOverflow;
+      window.cancelAnimationFrame(focusFrame);
+      const dialogIndex = openDialogs.lastIndexOf(dialog);
+      if (dialogIndex >= 0) openDialogs.splice(dialogIndex, 1);
+      if (openDialogs.length === 0 && bodyOverflowBeforeDialogs !== null) {
+        document.body.style.overflow = bodyOverflowBeforeDialogs;
+        bodyOverflowBeforeDialogs = null;
+      }
       previousFocus?.focus();
     };
   }, [dialogRef, open]);

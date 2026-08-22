@@ -5,7 +5,6 @@ import type { CategoryResponse } from '@pratto/contracts';
 import { categoryCreateSchema } from '@pratto/validation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  AlertTriangle,
   Archive,
   ChevronDown,
   ChevronUp,
@@ -19,7 +18,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 
 import { ApiClientError } from '../auth/api-client';
-import { EmptyState, ErrorState, Skeleton } from '../design-system/feedback';
+import { ConfirmDialog, EmptyState, ErrorState, Skeleton } from '../design-system/feedback';
 import {
   Button,
   Field,
@@ -239,7 +238,12 @@ export function CategoryManagement({
               }
             />
           ) : (
-            <div className="overflow-x-auto">
+            <div
+              className="overflow-x-auto overscroll-x-contain rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              role="region"
+              aria-label="Tabela de categorias"
+              tabIndex={0}
+            >
               <div className="min-w-[720px]">
                 <div className="grid grid-cols-[52px_1fr_180px_150px] gap-4 border-b border-line px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-faint">
                   <span />
@@ -421,6 +425,7 @@ function CategoryDrawer({
           <button
             type="button"
             aria-label="Fechar"
+            data-dialog-initial-focus
             onClick={onClose}
             disabled={saving}
             className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft hover:bg-sand"
@@ -480,44 +485,20 @@ function ArchiveDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const dialogRef = useRef<HTMLElement>(null);
-  useModalDialog(Boolean(category), dialogRef, onCancel);
-  if (!category) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-      <button
-        type="button"
-        aria-label="Cancelar arquivamento"
-        onClick={onCancel}
-        className="absolute inset-0 bg-ink/45"
-      />
-      <section
-        ref={dialogRef}
-        tabIndex={-1}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="archive-title"
-        className="relative w-full max-w-sm rounded-2xl bg-cream p-6 shadow-2xl"
-      >
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent-deep">
-          <AlertTriangle size={20} />
-        </div>
-        <h3 id="archive-title" className="text-[18px] font-semibold text-ink">
-          Arquivar categoria?
-        </h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
-          “{category.name}” deixará o rascunho ativo. Publicações anteriores permanecem imutáveis.
-        </p>
-        <div className="mt-6 flex justify-end gap-3">
-          <Button variant="ghost" onClick={onCancel} disabled={pending}>
-            Cancelar
-          </Button>
-          <Button onClick={onConfirm} disabled={pending}>
-            {pending ? 'Arquivando…' : 'Arquivar'}
-          </Button>
-        </div>
-      </section>
-    </div>
+    <ConfirmDialog
+      open={Boolean(category)}
+      title="Arquivar categoria?"
+      description={
+        category
+          ? `“${category.name}” deixará o rascunho ativo. Publicações anteriores permanecem imutáveis.`
+          : ''
+      }
+      confirmLabel="Arquivar"
+      pending={pending}
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
   );
 }
 

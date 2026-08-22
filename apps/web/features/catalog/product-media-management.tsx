@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, ImagePlus, Star, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { ApiClientError } from '../auth/api-client';
+import { ConfirmDialog } from '../design-system/feedback';
 
 import { catalogApi } from './api-client';
 
@@ -25,6 +26,7 @@ export function ProductMediaManagement({
   const fileInput = useRef<HTMLInputElement>(null);
   const queryKey = ['catalog-product-media', menuId, productId] as const;
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [removingMedia, setRemovingMedia] = useState<ProductMediaResponse | null>(null);
   const mediaQuery = useQuery({
     queryKey,
     queryFn: () => catalogApi.listProductMedia(menuId, productId),
@@ -47,7 +49,10 @@ export function ProductMediaManagement({
   });
   const remove = useMutation({
     mutationFn: (mediaId: string) => catalogApi.removeProductMedia(menuId, productId, mediaId),
-    onSuccess: invalidate,
+    onSuccess: async () => {
+      setRemovingMedia(null);
+      await invalidate();
+    },
   });
   const reorder = useMutation({
     mutationFn: (mediaIds: string[]) =>
@@ -118,7 +123,7 @@ export function ProductMediaManagement({
               total={media.length}
               busy={busy}
               onPrimary={() => primary.mutate(item.id)}
-              onRemove={() => remove.mutate(item.id)}
+              onRemove={() => setRemovingMedia(item)}
               onMove={(direction) => {
                 const next = media.map((mediaItem) => mediaItem.id);
                 const target = index + direction;
@@ -135,6 +140,27 @@ export function ProductMediaManagement({
           {messageFor(upload.error ?? primary.error ?? remove.error ?? reorder.error)}
         </p>
       )}
+      <ConfirmDialog
+        open={Boolean(removingMedia)}
+        title="Remover mídia?"
+        description={
+          removingMedia
+            ? `“${removingMedia.originalName}” sairá do catálogo editável. Publicações anteriores permanecem imutáveis.`
+            : ''
+        }
+        confirmLabel="Remover"
+        pending={remove.isPending}
+        error={remove.error ? messageFor(remove.error) : undefined}
+        onCancel={() => {
+          if (!remove.isPending) {
+            setRemovingMedia(null);
+            remove.reset();
+          }
+        }}
+        onConfirm={() => {
+          if (removingMedia) remove.mutate(removingMedia.id);
+        }}
+      />
     </div>
   );
 }

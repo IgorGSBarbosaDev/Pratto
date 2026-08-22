@@ -157,6 +157,7 @@ export function ProductShareSheet({
           <IconButton
             type="button"
             aria-label="Fechar"
+            data-dialog-initial-focus
             onClick={requestClose}
             className={
               lightTheme ? 'bg-sand text-ink hover:bg-sand-deep' : 'bg-white/10 text-white'
