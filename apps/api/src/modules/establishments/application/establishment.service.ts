@@ -64,7 +64,7 @@ export class EstablishmentService {
     input: EstablishmentUpdateInput,
   ): Promise<EstablishmentSettingsResponse> {
     const current = await this.findEstablishment(tenant, establishmentId);
-    this.assertPermission(tenant, Permission.ESTABLISHMENT_UPDATE);
+    this.assertPermission(tenant, Permission.SETTINGS_MANAGE);
     if (Object.keys(input).length === 0) return this.toResponse(current);
 
     const data: Prisma.EstablishmentUpdateInput = {};
@@ -103,7 +103,7 @@ export class EstablishmentService {
     file: EstablishmentUploadFile | undefined,
   ): Promise<EstablishmentSettingsResponse> {
     const current = await this.findEstablishment(tenant, establishmentId);
-    this.assertPermission(tenant, Permission.ESTABLISHMENT_UPDATE);
+    this.assertPermission(tenant, Permission.SETTINGS_MANAGE);
     this.validateUpload(file);
 
     const extension = this.extensionFor(file!.mimetype);
@@ -140,7 +140,7 @@ export class EstablishmentService {
     kind: EstablishmentAssetKind,
   ): Promise<EstablishmentSettingsResponse> {
     const current = await this.findEstablishment(tenant, establishmentId);
-    this.assertPermission(tenant, Permission.ESTABLISHMENT_UPDATE);
+    this.assertPermission(tenant, Permission.SETTINGS_MANAGE);
     const oldKey = kind === 'logo' ? current.logoKey : current.coverImageKey;
     const data: Prisma.EstablishmentUpdateInput =
       kind === 'logo'

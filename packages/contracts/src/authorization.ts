@@ -2,7 +2,10 @@ import type { MembershipRole } from './auth';
 
 export const Permission = {
   ESTABLISHMENT_READ: 'establishment:read',
+  /** @deprecated Use SETTINGS_MANAGE for establishment mutations. */
   ESTABLISHMENT_UPDATE: 'establishment:update',
+  SETTINGS_MANAGE: 'establishment:settings:manage',
+  OWNERSHIP_MANAGE: 'establishment:ownership:manage',
   CATALOG_READ: 'catalog:read',
   CATALOG_WRITE: 'catalog:write',
   PUBLICATION_READ: 'publication:read',
@@ -19,7 +22,6 @@ const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
   OWNER: Object.values(Permission),
   ADMIN: [
     Permission.ESTABLISHMENT_READ,
-    Permission.ESTABLISHMENT_UPDATE,
     Permission.CATALOG_READ,
     Permission.CATALOG_WRITE,
     Permission.PUBLICATION_READ,
@@ -34,6 +36,10 @@ const ROLE_PERMISSIONS: Record<MembershipRole, readonly Permission[]> = {
 
 export function hasPermission(role: MembershipRole, permission: Permission): boolean {
   return ROLE_PERMISSIONS[role].includes(permission);
+}
+
+export function permissionsForRole(role: MembershipRole): readonly Permission[] {
+  return ROLE_PERMISSIONS[role];
 }
 
 export function canManageRole(

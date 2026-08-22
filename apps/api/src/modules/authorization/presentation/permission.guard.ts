@@ -1,6 +1,6 @@
 import type { CanActivate, ExecutionContext } from '@nestjs/common';
-import { HttpStatus, Injectable } from '@nestjs/common';
-import type { Reflector } from '@nestjs/core';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { hasPermission, type Permission } from '@pratto/contracts';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
@@ -10,7 +10,7 @@ import { REQUIRED_PERMISSIONS } from './require-permission.decorator';
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
     const permission = this.reflector.getAllAndOverride<Permission | undefined>(
