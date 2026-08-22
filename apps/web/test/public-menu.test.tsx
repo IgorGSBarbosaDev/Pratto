@@ -104,6 +104,10 @@ function analyticsResponse(input: RequestInfo | URL, status = 200) {
   return response({ results: [] }, status);
 }
 
+function isPublicMenuPageRequest(input: RequestInfo | URL): boolean {
+  return new URL(String(input)).pathname.endsWith('/menu');
+}
+
 async function enterMenu() {
   fireEvent.click(await screen.findByRole('button', { name: 'Explorar o menu' }));
 }
@@ -163,9 +167,7 @@ describe('PublicMenuScreen', () => {
     expect(await screen.findByRole('heading', { name: 'Prato da casa' })).toBeInTheDocument();
     expect(screen.getByText('R$ 24,90')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pratos' })).toHaveAttribute('aria-pressed', 'false');
-    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/menu')).length).toBe(
-      1,
-    );
+    expect(fetchMock.mock.calls.filter(([input]) => isPublicMenuPageRequest(input)).length).toBe(1);
   });
 
   it('renders contact links and sends anonymous contact events without contact data', async () => {
@@ -239,6 +241,7 @@ describe('PublicMenuScreen', () => {
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
       const url = new URL(String(input));
       if (url.pathname.includes('/public/analytics/')) return analyticsResponse(input);
+      if (url.pathname.includes('/related')) return response({ products: [] });
       return response(url.searchParams.get('categoryId') === dessertCategoryId ? filtered : page());
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -254,9 +257,92 @@ describe('PublicMenuScreen', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent('Torta da casa');
     fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/menu')).length).toBe(
-      2,
-    );
+    expect(fetchMock.mock.calls.filter(([input]) => isPublicMenuPageRequest(input)).length).toBe(2);
+  });
+
+  it('searches the published snapshot after a short typing debounce', async () => {
+    const searchResult = page({
+      categories: [{ id: dessertCategoryId, name: 'Sobremesas', description: null }],
+      products: [
+        {
+          ...page().products[0]!,
+          id: 'dessert-search-1',
+          categoryId: dessertCategoryId,
+          name: 'Torta de maçã',
+        },
+      ],
+    });
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.includes('/public/analytics/')) return analyticsResponse(input);
+      return response(url.searchParams.get('search') === 'torta' ? searchResult : page());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderScreen({ initialPage: page() });
+    await enterMenu();
+    const search = screen.getByRole('searchbox', { name: 'Buscar produtos' });
+    fireEvent.change(search, { target: { value: 'torta' } });
+
+    expect(await screen.findByRole('heading', { name: 'Torta de maçã' })).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(
+        ([input]) => new URL(String(input)).searchParams.get('search') === 'torta',
+      ),
+    ).toBe(true);
+    expect(screen.queryByRole('heading', { name: 'Prato da casa' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Ver detalhes/ }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Torta de maçã');
+  });
+
+  it('loads all pages when switching to the traditional menu', async () => {
+    const first = page({ nextCursor: 'next-traditional-page' });
+    const second = page({
+      products: [{ ...page().products[0]!, id: 'product-2', name: 'Arroz cremoso' }],
+      nextCursor: null,
+    });
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.includes('/public/analytics/')) return analyticsResponse(input);
+      return response(url.searchParams.get('cursor') ? second : first);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderScreen({ initialPage: first });
+    await enterMenu();
+    fireEvent.click(screen.getByRole('button', { name: 'Ver menu tradicional' }));
+
+    expect(await screen.findByText('Arroz cremoso')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pratos' })).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(
+        ([input]) => new URL(String(input)).searchParams.get('cursor') === 'next-traditional-page',
+      ),
+    ).toBe(true);
+  });
+
+  it('shows related available products and opens one from product details', async () => {
+    const relatedProduct = {
+      ...page().products[0]!,
+      id: 'related-1',
+      name: 'Acompanhamento da casa',
+    };
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.includes('/public/analytics/')) return analyticsResponse(input);
+      if (url.pathname.includes('/related')) return response({ products: [relatedProduct] });
+      return response(page());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderScreen({ initialPage: page() });
+    await enterMenu();
+    fireEvent.click(screen.getByRole('button', { name: /Ver detalhes/ }));
+    expect(await screen.findByText('Você também pode gostar')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: /Acompanhamento da casa/ }));
+    expect(
+      await screen.findByRole('heading', { name: 'Acompanhamento da casa' }),
+    ).toBeInTheDocument();
   });
 
   it('renders empty and not-published states', async () => {
@@ -324,9 +410,7 @@ describe('PublicMenuScreen', () => {
     expect(document.activeElement).toHaveAttribute('aria-label', 'Fechar');
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/menu')).length).toBe(
-      0,
-    );
+    expect(fetchMock.mock.calls.filter(([input]) => isPublicMenuPageRequest(input)).length).toBe(0);
   });
 
   it('opens a compact share sheet and copies the direct product URL', async () => {

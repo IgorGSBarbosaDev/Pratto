@@ -7,13 +7,17 @@ import type {
   PublicMenuPageResponse,
   PublicMenuProductResponse,
 } from '@pratto/contracts';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   ArrowRight,
+  BookOpen,
   ChevronsDown,
   Clock3,
+  List,
   LayoutGrid,
   MapPin,
+  Search,
+  Send,
   Store,
   UtensilsCrossed,
   Volume2,
@@ -39,6 +43,7 @@ import type { PublicMenuServerError } from './server-api';
 
 const PAGE_SIZE = 6;
 type CustomerTab = 'menu' | 'categories' | 'restaurant';
+type MenuViewMode = 'feed' | 'traditional';
 const PUBLIC_DAYS = [
   { key: 'monday', label: 'Segunda-feira' },
   { key: 'tuesday', label: 'Terça-feira' },
@@ -67,6 +72,9 @@ export function PublicMenuScreen({
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [entered, setEntered] = useState(Boolean(initialProductId));
   const [tab, setTab] = useState<CustomerTab>('menu');
+  const [viewMode, setViewMode] = useState<MenuViewMode>('feed');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [detailsProduct, setDetailsProduct] = useState<PublicMenuProductResponse | null>(null);
   const [shareProduct, setShareProduct] = useState<PublicMenuProductResponse | null>(null);
@@ -85,19 +93,25 @@ export function PublicMenuScreen({
   const trackedImpressionsRef = useRef(new Set<string>());
   const trackedQualifiedViewsRef = useRef(new Set<string>());
   if (!analyticsRef.current) analyticsRef.current = new PublicMenuAnalyticsClient();
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearchTerm(searchInput.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
   const query = useInfiniteQuery({
-    queryKey: ['public-menu', publicId, categoryId ?? 'all'],
+    queryKey: ['public-menu', publicId, categoryId ?? 'all', searchTerm],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
       publicMenuApi.getPage(publicId, {
         cursor: pageParam,
         categoryId,
+        search: searchTerm || undefined,
         limit: PAGE_SIZE,
       }),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     enabled: retryInitialError,
     initialData:
-      initialPage && !categoryId
+      initialPage && !categoryId && !searchTerm
         ? { pages: [initialPage], pageParams: [undefined as string | undefined] }
         : undefined,
     staleTime: 30_000,
@@ -111,6 +125,13 @@ export function PublicMenuScreen({
   );
   const firstProductId = products[0]?.id ?? null;
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = query;
+  const relatedQuery = useQuery({
+    queryKey: ['public-menu-related', publicId, detailsProduct?.id],
+    queryFn: () => publicMenuApi.getRelated(publicId, detailsProduct!.id),
+    enabled: Boolean(detailsProduct),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
 
   useEffect(() => {
     if (firstPage && firstPage.establishment.slug !== slug) {
@@ -170,7 +191,12 @@ export function PublicMenuScreen({
   }, [fetchNextPage, firstPage, hasNextPage, initialProductId, isFetchingNextPage, products]);
 
   useEffect(() => {
-    if (!entered || tab !== 'menu') return;
+    if (!entered || tab !== 'menu' || viewMode !== 'traditional') return;
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [entered, fetchNextPage, hasNextPage, isFetchingNextPage, tab, viewMode]);
+
+  useEffect(() => {
+    if (!entered || tab !== 'menu' || viewMode !== 'feed') return;
     const feed = feedRef.current;
     if (!feed || products.length === 0) return;
     const observer = new IntersectionObserver(
@@ -192,10 +218,10 @@ export function PublicMenuScreen({
       .querySelectorAll<HTMLElement>('[data-product-id]')
       .forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [entered, fetchNextPage, hasNextPage, isFetchingNextPage, products, tab]);
+  }, [entered, fetchNextPage, hasNextPage, isFetchingNextPage, products, tab, viewMode]);
 
   useEffect(() => {
-    if (!entered || tab !== 'menu') return;
+    if (!entered || tab !== 'menu' || viewMode !== 'feed') return;
     const feed = feedRef.current;
     if (!feed || products.length === 0) return;
     const impressionTimers = impressionTimersRef.current;
@@ -261,7 +287,7 @@ export function PublicMenuScreen({
       impressionTimers.clear();
       qualifiedTimers.clear();
     };
-  }, [entered, products, tab]);
+  }, [entered, products, tab, viewMode]);
 
   if (initialError && !retryInitialError) {
     return <PublicMenuError error={initialError} onRetry={() => setRetryInitialError(true)} />;
@@ -283,6 +309,7 @@ export function PublicMenuScreen({
       analyticsRef.current?.track({ eventType: 'category_selected', categoryId: nextCategoryId });
     }
     setCategoryId(nextCategoryId);
+    setViewMode('feed');
     setTab('menu');
     if (feedRef.current && typeof feedRef.current.scrollTo === 'function') {
       feedRef.current.scrollTo({ top: 0, behavior: scrollBehavior() });
@@ -293,6 +320,18 @@ export function PublicMenuScreen({
   const categoryName = (id: string) =>
     categories.find((category) => category.id === id)?.name ?? firstPage.menu.name;
   const fallbackImage = firstPage.establishment.coverImage?.url;
+  const openProduct = (product: PublicMenuProductResponse) => {
+    analyticsRef.current?.track({
+      eventType: 'product_interaction',
+      productId: product.id,
+      interactionType: 'details_opened',
+    });
+    setDetailsProduct(product);
+  };
+  const clearDiscovery = () => {
+    setSearchInput('');
+    setCategoryId(undefined);
+  };
 
   return (
     <main
@@ -312,84 +351,104 @@ export function PublicMenuScreen({
         ) : (
           <>
             {tab === 'menu' ? (
-              <div className="fade-in absolute inset-0" key={categoryId ?? 'all'}>
-                {products.length === 0 ? (
-                  <PublicMenuEmpty
-                    categorySelected={Boolean(categoryId)}
-                    lightTheme={lightTheme}
-                    onClear={() => selectCategory(undefined)}
-                  />
-                ) : (
-                  <div
-                    ref={feedRef}
-                    className="snap-y-feed no-scrollbar flex h-full flex-col overflow-y-scroll overscroll-y-contain"
-                    role="feed"
-                    tabIndex={0}
-                    aria-label="Produtos publicados"
-                    aria-busy={isFetchingNextPage}
-                  >
-                    {products.map((product, index) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        categoryName={categoryName(product.categoryId)}
-                        active={activeProductId === product.id}
-                        near={
-                          Math.abs(
-                            index - products.findIndex((item) => item.id === activeProductId),
-                          ) <= 2
-                        }
+              <div
+                className="fade-in absolute inset-0"
+                key={`${categoryId ?? 'all'}-${viewMode}-${searchTerm}`}
+              >
+                {viewMode === 'feed' ? (
+                  <>
+                    {products.length === 0 ? (
+                      <PublicMenuEmpty
+                        categorySelected={Boolean(categoryId)}
+                        searchActive={Boolean(searchTerm)}
                         lightTheme={lightTheme}
-                        showHint={
-                          index === 0 && products.length > 1 && activeProductId === product.id
-                        }
-                        onOpenDetails={() => {
-                          analyticsRef.current?.track({
-                            eventType: 'product_interaction',
-                            productId: product.id,
-                            interactionType: 'details_opened',
-                          });
-                          setDetailsProduct(product);
-                        }}
-                        onOpenShare={() => setShareProduct(product)}
-                        onInteraction={(interactionType) =>
-                          analyticsRef.current?.track({
-                            eventType: 'product_interaction',
-                            productId: product.id,
-                            interactionType,
-                          })
-                        }
+                        onClear={clearDiscovery}
                       />
-                    ))}
-                    {isFetchingNextPage ? <FeedLoadingCard lightTheme={lightTheme} /> : null}
-                    {query.error ? (
-                      <FeedError lightTheme={lightTheme} onRetry={() => void fetchNextPage()} />
+                    ) : (
+                      <div
+                        ref={feedRef}
+                        className="snap-y-feed no-scrollbar flex h-full flex-col overflow-y-scroll overscroll-y-contain"
+                        role="feed"
+                        tabIndex={0}
+                        aria-label="Produtos publicados"
+                        aria-busy={isFetchingNextPage}
+                      >
+                        {products.map((product, index) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            categoryName={categoryName(product.categoryId)}
+                            active={activeProductId === product.id}
+                            near={
+                              Math.abs(
+                                index - products.findIndex((item) => item.id === activeProductId),
+                              ) <= 2
+                            }
+                            lightTheme={lightTheme}
+                            showHint={
+                              index === 0 && products.length > 1 && activeProductId === product.id
+                            }
+                            onOpenDetails={() => openProduct(product)}
+                            onOpenShare={() => setShareProduct(product)}
+                            onInteraction={(interactionType) =>
+                              analyticsRef.current?.track({
+                                eventType: 'product_interaction',
+                                productId: product.id,
+                                interactionType,
+                              })
+                            }
+                          />
+                        ))}
+                        {isFetchingNextPage ? <FeedLoadingCard lightTheme={lightTheme} /> : null}
+                        {query.error ? (
+                          <FeedError lightTheme={lightTheme} onRetry={() => void fetchNextPage()} />
+                        ) : null}
+                      </div>
+                    )}
+                    {categories.length > 0 ? (
+                      <div className="pointer-events-none absolute inset-x-0 top-[108px] z-20 pt-2">
+                        <nav
+                          className="no-scrollbar pointer-events-auto flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 py-1 [mask-image:linear-gradient(to_right,transparent,#000_18px,#000_calc(100%-24px),transparent)]"
+                          aria-label="Categorias do cardápio"
+                        >
+                          <CategoryButton
+                            active={!categoryId}
+                            label="Populares"
+                            onClick={() => selectCategory(undefined)}
+                          />
+                          {categories.map((category) => (
+                            <CategoryButton
+                              key={category.id}
+                              active={categoryId === category.id}
+                              label={category.name}
+                              onClick={() => selectCategory(category.id)}
+                            />
+                          ))}
+                          <span aria-hidden className="w-1 shrink-0" />
+                        </nav>
+                      </div>
                     ) : null}
-                  </div>
+                  </>
+                ) : (
+                  <TraditionalMenu
+                    categories={categories}
+                    products={products}
+                    lightTheme={lightTheme}
+                    searchActive={Boolean(searchTerm)}
+                    isLoadingMore={Boolean(hasNextPage || isFetchingNextPage)}
+                    onOpenDetails={openProduct}
+                    onOpenShare={setShareProduct}
+                  />
                 )}
-                {categories.length > 0 ? (
-                  <div className="pointer-events-none absolute inset-x-0 top-0 z-20 pt-3">
-                    <nav
-                      className="no-scrollbar pointer-events-auto flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 py-1 [mask-image:linear-gradient(to_right,transparent,#000_18px,#000_calc(100%-24px),transparent)]"
-                      aria-label="Categorias do cardápio"
-                    >
-                      <CategoryButton
-                        active={!categoryId}
-                        label="Populares"
-                        onClick={() => selectCategory(undefined)}
-                      />
-                      {categories.map((category) => (
-                        <CategoryButton
-                          key={category.id}
-                          active={categoryId === category.id}
-                          label={category.name}
-                          onClick={() => selectCategory(category.id)}
-                        />
-                      ))}
-                      <span aria-hidden className="w-1 shrink-0" />
-                    </nav>
-                  </div>
-                ) : null}
+                <MenuDiscoveryControls
+                  value={searchInput}
+                  viewMode={viewMode}
+                  lightTheme={lightTheme}
+                  overlay={viewMode === 'feed'}
+                  onChange={setSearchInput}
+                  onViewModeChange={setViewMode}
+                  onClear={clearDiscovery}
+                />
               </div>
             ) : null}
             {tab === 'categories' ? (
@@ -429,6 +488,10 @@ export function PublicMenuScreen({
                     interactionType,
                   })
                 }
+                relatedProducts={relatedQuery.data?.products ?? []}
+                relatedPending={relatedQuery.isPending}
+                relatedError={Boolean(relatedQuery.error)}
+                onOpenRelated={openProduct}
                 onClose={() => setDetailsProduct(null)}
               />
             ) : null}
@@ -454,6 +517,292 @@ export function PublicMenuScreen({
         )}
       </section>
     </main>
+  );
+}
+
+function MenuDiscoveryControls({
+  value,
+  viewMode,
+  lightTheme,
+  overlay,
+  onChange,
+  onViewModeChange,
+  onClear,
+}: {
+  value: string;
+  viewMode: MenuViewMode;
+  lightTheme: boolean;
+  overlay: boolean;
+  onChange: (value: string) => void;
+  onViewModeChange: (mode: MenuViewMode) => void;
+  onClear: () => void;
+}) {
+  const surface = overlay
+    ? 'bg-gradient-to-b from-black/65 via-black/35 to-transparent text-white'
+    : lightTheme
+      ? 'border-b border-line bg-cream/95 text-ink backdrop-blur'
+      : 'border-b border-white/10 bg-ink/95 text-white backdrop-blur';
+  const inputSurface = overlay
+    ? 'border-white/20 bg-white/15 text-white placeholder:text-white/65'
+    : lightTheme
+      ? 'border-line bg-sand/70 text-ink placeholder:text-ink-faint'
+      : 'border-white/10 bg-white/[0.08] text-white placeholder:text-white/45';
+  const inactiveText = overlay
+    ? 'text-white/65 hover:bg-white/10'
+    : lightTheme
+      ? 'text-ink-faint hover:bg-sand'
+      : 'text-white/55 hover:bg-white/10';
+  return (
+    <div className={`absolute inset-x-0 top-0 z-30 px-4 pb-3 pt-3 ${surface}`}>
+      <div className="flex items-center gap-2">
+        <label className="relative min-w-0 flex-1">
+          <Search
+            size={17}
+            aria-hidden="true"
+            className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 ${overlay ? 'text-white/70' : lightTheme ? 'text-ink-faint' : 'text-white/50'}`}
+          />
+          <input
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            className={`h-10 w-full rounded-xl border py-2 pl-9 pr-9 text-sm outline-none transition focus:border-[var(--menu-primary)] focus:ring-2 focus:ring-[var(--menu-primary)]/30 ${inputSurface}`}
+            type="search"
+            aria-label="Buscar produtos"
+            placeholder="Buscar no cardápio"
+            autoComplete="off"
+          />
+          {value ? (
+            <button
+              type="button"
+              aria-label="Limpar busca"
+              onClick={onClear}
+              className={`absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg ${inactiveText}`}
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          ) : null}
+        </label>
+        <div
+          className={`flex shrink-0 rounded-xl p-0.5 ${overlay ? 'bg-black/25' : lightTheme ? 'bg-sand' : 'bg-white/[0.08]'}`}
+          role="group"
+          aria-label="Forma de visualizar o cardápio"
+        >
+          <button
+            type="button"
+            aria-pressed={viewMode === 'feed'}
+            aria-label="Ver feed"
+            title="Feed vertical"
+            onClick={() => onViewModeChange('feed')}
+            className={`flex h-9 items-center justify-center gap-1 rounded-[10px] px-2 transition ${viewMode === 'feed' ? 'bg-[var(--menu-primary)] text-white shadow-sm' : inactiveText}`}
+          >
+            <BookOpen size={15} aria-hidden="true" />
+            <span className="text-[11px] font-medium">Feed</span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={viewMode === 'traditional'}
+            aria-label="Ver menu tradicional"
+            title="Menu tradicional"
+            onClick={() => onViewModeChange('traditional')}
+            className={`flex h-9 items-center justify-center gap-1 rounded-[10px] px-2 transition ${viewMode === 'traditional' ? 'bg-[var(--menu-primary)] text-white shadow-sm' : inactiveText}`}
+          >
+            <List size={15} aria-hidden="true" />
+            <span className="text-[11px] font-medium">Lista</span>
+          </button>
+        </div>
+      </div>
+      <div
+        className={`mt-1 text-[11px] ${overlay ? 'text-white/60' : lightTheme ? 'text-ink-faint' : 'text-white/45'}`}
+      >
+        {viewMode === 'feed' ? 'Feed vertical' : 'Menu tradicional'}
+        {value.trim() ? ' · buscando produtos' : ''}
+      </div>
+    </div>
+  );
+}
+
+function TraditionalMenu({
+  categories,
+  products,
+  lightTheme,
+  searchActive,
+  isLoadingMore,
+  onOpenDetails,
+  onOpenShare,
+}: {
+  categories: PublicMenuPageResponse['categories'];
+  products: PublicMenuProductResponse[];
+  lightTheme: boolean;
+  searchActive: boolean;
+  isLoadingMore: boolean;
+  onOpenDetails: (product: PublicMenuProductResponse) => void;
+  onOpenShare: (product: PublicMenuProductResponse) => void;
+}) {
+  const groups = categories
+    .map((category) => ({
+      category,
+      products: products.filter((product) => product.categoryId === category.id),
+    }))
+    .filter((group) => group.products.length > 0);
+  const textMuted = lightTheme ? 'text-ink-faint' : 'text-white/55';
+
+  if (products.length === 0) {
+    return (
+      <div
+        className={`h-full overflow-y-auto px-6 pb-28 pt-36 text-center ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
+      >
+        <div className="mx-auto max-w-xs">
+          <div
+            className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl ${lightTheme ? 'bg-sand text-ink-soft' : 'bg-white/10 text-white/70'}`}
+          >
+            <Search size={21} aria-hidden="true" />
+          </div>
+          <h1 className="mt-4 font-serif text-[28px]">
+            {searchActive ? 'Nenhum produto encontrado' : 'Nenhum prato disponível'}
+          </h1>
+          <p className={`mt-2 text-sm leading-relaxed ${textMuted}`}>
+            {searchActive
+              ? 'Tente buscar por outro nome, descrição ou categoria.'
+              : 'Este cardápio ainda não possui produtos publicados.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`no-scrollbar h-full overflow-y-auto px-4 pb-28 pt-36 ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
+    >
+      {groups.length > 1 ? (
+        <nav
+          className={`no-scrollbar sticky top-0 z-10 -mx-1 mb-5 flex gap-2 overflow-x-auto rounded-xl px-1 py-1 backdrop-blur ${lightTheme ? 'bg-cream/90' : 'bg-ink/90'}`}
+          aria-label="Navegação rápida por categoria"
+        >
+          {groups.map(({ category }) => (
+            <button
+              key={category.id}
+              type="button"
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition ${lightTheme ? 'border-line bg-white/70 text-ink-soft hover:border-ink/25' : 'border-white/15 bg-white/[0.06] text-white/75 hover:bg-white/10'}`}
+              onClick={() => {
+                document
+                  .getElementById(`menu-category-${category.id}`)
+                  ?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+              }}
+            >
+              {category.name}
+            </button>
+          ))}
+        </nav>
+      ) : null}
+      <div className="space-y-8">
+        {groups.map(({ category, products: categoryProducts }) => (
+          <section key={category.id} id={`menu-category-${category.id}`} className="scroll-mt-14">
+            <div className="mb-3 flex items-end justify-between gap-3 border-b border-current/10 pb-2">
+              <div>
+                <h2 className="font-serif text-[28px] leading-none">{category.name}</h2>
+                {category.description ? (
+                  <p className={`mt-1 text-xs ${textMuted}`}>{category.description}</p>
+                ) : null}
+              </div>
+              <span className={`shrink-0 text-xs ${textMuted}`}>
+                {categoryProducts.length} itens
+              </span>
+            </div>
+            <div className="space-y-2">
+              {categoryProducts.map((product) => (
+                <TraditionalProductRow
+                  key={product.id}
+                  product={product}
+                  lightTheme={lightTheme}
+                  onOpenDetails={() => onOpenDetails(product)}
+                  onOpenShare={() => onOpenShare(product)}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+      {isLoadingMore ? (
+        <p className={`py-6 text-center text-sm ${textMuted}`} role="status">
+          Carregando mais produtos…
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function TraditionalProductRow({
+  product,
+  lightTheme,
+  onOpenDetails,
+  onOpenShare,
+}: {
+  product: PublicMenuProductResponse;
+  lightTheme: boolean;
+  onOpenDetails: () => void;
+  onOpenShare: () => void;
+}) {
+  const image = product.media.find((media) => media.mediaType === 'IMAGE')?.url;
+  return (
+    <article
+      className={`flex items-center gap-3 rounded-2xl border p-2.5 transition ${lightTheme ? 'border-line bg-white/55 hover:border-ink/20' : 'border-white/10 bg-white/[0.06] hover:border-white/20'}`}
+    >
+      <button
+        type="button"
+        onClick={onOpenDetails}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)]"
+        aria-label={`Abrir detalhes de ${product.name}`}
+      >
+        {image ? (
+          <FoodImage src={image} alt="" className="h-[76px] w-[76px] shrink-0 rounded-xl" />
+        ) : (
+          <div
+            className={`grid h-[76px] w-[76px] shrink-0 place-items-center rounded-xl ${lightTheme ? 'bg-sand text-ink-faint' : 'bg-white/10 text-white/45'}`}
+          >
+            <UtensilsCrossed size={22} aria-hidden="true" />
+          </div>
+        )}
+        <span className="min-w-0 py-1">
+          <span className="block truncate text-[16px] font-semibold">{product.name}</span>
+          {product.description ? (
+            <span
+              className={`mt-1 block line-clamp-2 text-xs leading-relaxed ${lightTheme ? 'text-ink-soft' : 'text-white/60'}`}
+            >
+              {product.description}
+            </span>
+          ) : null}
+          <span className="mt-2 flex flex-wrap items-center gap-2">
+            <span
+              className={`tnum text-sm font-semibold ${lightTheme ? 'text-[var(--menu-primary-deep)]' : 'text-[var(--menu-primary)]'}`}
+            >
+              {formatMoney(product.promotionalPrice ?? product.price)}
+            </span>
+            {product.promotionalPrice ? (
+              <span
+                className={`tnum text-xs line-through ${lightTheme ? 'text-ink-faint' : 'text-white/40'}`}
+              >
+                {formatMoney(product.price)}
+              </span>
+            ) : null}
+            {product.availability === 'TEMPORARILY_UNAVAILABLE' ? (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${lightTheme ? 'bg-sand text-ink-faint' : 'bg-white/10 text-white/55'}`}
+              >
+                Indisponível hoje
+              </span>
+            ) : null}
+          </span>
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onOpenShare}
+        aria-label={`Compartilhar ${product.name}`}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition ${lightTheme ? 'text-ink-faint hover:bg-sand hover:text-ink' : 'text-white/55 hover:bg-white/10 hover:text-white'}`}
+      >
+        <Send size={16} aria-hidden="true" />
+      </button>
+    </article>
   );
 }
 
@@ -1106,12 +1455,20 @@ function ProductDetails({
   categoryName,
   lightTheme,
   onInteraction,
+  relatedProducts,
+  relatedPending,
+  relatedError,
+  onOpenRelated,
   onClose,
 }: {
   product: PublicMenuProductResponse;
   categoryName: string;
   lightTheme: boolean;
   onInteraction: (interactionType: AnalyticsInteractionType) => void;
+  relatedProducts: PublicMenuProductResponse[];
+  relatedPending: boolean;
+  relatedError: boolean;
+  onOpenRelated: (product: PublicMenuProductResponse) => void;
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLElement>(null);
@@ -1231,6 +1588,36 @@ function ProductDetails({
                 </div>
               </div>
             ) : null}
+            {relatedPending || relatedError || relatedProducts.length > 0 ? (
+              <div className="mt-8 border-t border-current/10 pt-6">
+                <span
+                  className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}`}
+                >
+                  Você também pode gostar
+                </span>
+                {relatedPending ? (
+                  <div className="mt-3 space-y-2" role="status" aria-label="Carregando sugestões">
+                    <Skeleton className="h-[68px] w-full" />
+                    <Skeleton className="h-[68px] w-full" />
+                  </div>
+                ) : relatedError ? (
+                  <p className={`mt-3 text-sm ${lightTheme ? 'text-ink-faint' : 'text-white/55'}`}>
+                    Não foi possível carregar sugestões agora.
+                  </p>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    {relatedProducts.map((relatedProduct) => (
+                      <RelatedProductCard
+                        key={relatedProduct.id}
+                        product={relatedProduct}
+                        lightTheme={lightTheme}
+                        onClick={() => onOpenRelated(relatedProduct)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={onClose}
@@ -1242,6 +1629,48 @@ function ProductDetails({
         </div>
       </section>
     </div>
+  );
+}
+
+function RelatedProductCard({
+  product,
+  lightTheme,
+  onClick,
+}: {
+  product: PublicMenuProductResponse;
+  lightTheme: boolean;
+  onClick: () => void;
+}) {
+  const image = product.media.find((media) => media.mediaType === 'IMAGE')?.url;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 rounded-xl border p-2 text-left transition ${lightTheme ? 'border-line bg-white/50 hover:border-ink/20' : 'border-white/10 bg-white/[0.06] hover:border-white/20'}`}
+    >
+      {image ? (
+        <FoodImage src={image} alt="" className="h-14 w-14 shrink-0 rounded-lg" />
+      ) : (
+        <div
+          className={`grid h-14 w-14 shrink-0 place-items-center rounded-lg ${lightTheme ? 'bg-sand text-ink-faint' : 'bg-white/10 text-white/45'}`}
+        >
+          <UtensilsCrossed size={18} aria-hidden="true" />
+        </div>
+      )}
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold">{product.name}</span>
+        <span
+          className={`mt-1 block text-sm font-medium ${lightTheme ? 'text-[var(--menu-primary-deep)]' : 'text-[var(--menu-primary)]'}`}
+        >
+          {formatMoney(product.promotionalPrice ?? product.price)}
+        </span>
+      </span>
+      <ArrowRight
+        className={`ml-auto shrink-0 ${lightTheme ? 'text-ink-faint' : 'text-white/45'}`}
+        size={16}
+        aria-hidden="true"
+      />
+    </button>
   );
 }
 
@@ -1331,10 +1760,12 @@ function PublicMenuError({ error, onRetry }: { error?: unknown; onRetry?: () => 
 
 function PublicMenuEmpty({
   categorySelected,
+  searchActive,
   lightTheme,
   onClear,
 }: {
   categorySelected: boolean;
+  searchActive: boolean;
   lightTheme: boolean;
   onClear: () => void;
 }) {
@@ -1346,19 +1777,23 @@ function PublicMenuEmpty({
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--menu-primary-deep)]">
           Pratto
         </p>
-        <h2 className="font-serif text-[32px] leading-tight">Nenhum prato disponível</h2>
+        <h2 className="font-serif text-[32px] leading-tight">
+          {searchActive ? 'Nenhum produto encontrado' : 'Nenhum prato disponível'}
+        </h2>
         <p className={`text-sm leading-6 ${lightTheme ? 'text-ink-soft' : 'text-white/[0.65]'}`}>
-          {categorySelected
-            ? 'Não há produtos publicados nesta categoria.'
-            : 'Este cardápio ainda não possui produtos publicados.'}
+          {searchActive
+            ? 'Tente buscar por outro nome, descrição ou categoria.'
+            : categorySelected
+              ? 'Não há produtos publicados nesta categoria.'
+              : 'Este cardápio ainda não possui produtos publicados.'}
         </p>
-        {categorySelected && (
+        {(categorySelected || searchActive) && (
           <button
             className={`rounded-xl border px-5 py-3 text-sm font-medium ${lightTheme ? 'border-line' : 'border-white/20'}`}
             type="button"
             onClick={onClear}
           >
-            Ver todas as categorias
+            {searchActive ? 'Limpar busca' : 'Ver todas as categorias'}
           </button>
         )}
       </div>

@@ -60,3 +60,7 @@ export interface PublicMenuPageResponse {
   products: PublicMenuProductResponse[];
   nextCursor: string | null;
 }
+
+export interface PublicMenuRelatedProductsResponse {
+  products: PublicMenuProductResponse[];
+}

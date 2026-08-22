@@ -8,6 +8,7 @@ import type {
   PublicMenuMediaResponse,
   PublicMenuPageResponse,
   PublicMenuProductResponse,
+  PublicMenuRelatedProductsResponse,
   PublicProductAvailability,
   StorageService,
 } from '@pratto/contracts';
@@ -17,6 +18,8 @@ import { publicMenuCursorSchema, type PublicMenuQuery } from '@pratto/validation
 import { z } from 'zod';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
+
+import { selectRelatedProducts } from './related-products';
 
 const publicSnapshotSchema = z.object({
   schemaVersion: z.number(),
@@ -79,6 +82,7 @@ type PublicMenuErrorCode =
   | 'PUBLIC_MENU_NOT_PUBLISHED'
   | 'PUBLIC_MENU_CONFIGURATION_INVALID'
   | 'PUBLIC_MENU_CATEGORY_NOT_FOUND'
+  | 'PUBLIC_MENU_PRODUCT_NOT_FOUND'
   | 'PUBLIC_MENU_CURSOR_INVALID'
   | 'PUBLIC_MENU_CURSOR_STALE'
   | 'PUBLIC_MENU_SNAPSHOT_INVALID';
@@ -103,6 +107,90 @@ export class PublicMenuService {
   constructor(@Inject(STORAGE_SERVICE) private readonly storage: StorageService) {}
 
   async getPage(publicId: string, query: PublicMenuQuery): Promise<PublicMenuPageResponse> {
+    const { publication, snapshot } = await this.loadPublishedMenu(publicId);
+    const cursor = query.cursor ? this.decodeCursor(query.cursor) : null;
+    if (cursor && cursor.publicationId !== publication.id) {
+      this.fail(
+        'PUBLIC_MENU_CURSOR_STALE',
+        'A publicação mudou. Recarregue o cardápio para continuar.',
+      );
+    }
+
+    const allVisibleProducts = snapshot.products.filter(
+      (product) => product.availability !== 'HIDDEN',
+    );
+    const category = query.categoryId
+      ? snapshot.categories.find((item) => item.id === query.categoryId)
+      : undefined;
+    if (query.categoryId && !category) {
+      this.fail('PUBLIC_MENU_CATEGORY_NOT_FOUND', 'A categoria não foi encontrada.');
+    }
+
+    const search = normalizeSearch(query.search);
+    const categoryNames = new Map(snapshot.categories.map((item) => [item.id, item.name]));
+    const filteredProducts = allVisibleProducts.filter((product) => {
+      if (query.categoryId && product.categoryId !== query.categoryId) return false;
+      if (!search) return true;
+      return [product.name, product.description, categoryNames.get(product.categoryId)].some(
+        (value) => normalizeSearch(value).includes(search),
+      );
+    });
+    const visibleCategoryIds = new Set(filteredProducts.map((product) => product.categoryId));
+    const categories = snapshot.categories
+      .filter((item) => visibleCategoryIds.has(item.id))
+      .map<PublicMenuCategoryResponse>((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+      }));
+    const startIndex = cursor
+      ? this.findCursorProductIndex(filteredProducts, cursor.productId) + 1
+      : 0;
+    const pageProducts = filteredProducts.slice(startIndex, startIndex + query.limit);
+    const products = await Promise.all(
+      pageProducts.map((product) => this.toProduct(snapshot, product.id)),
+    );
+    const lastProduct = pageProducts.at(-1);
+    const nextCursor =
+      lastProduct && startIndex + pageProducts.length < filteredProducts.length
+        ? this.encodeCursor({ publicationId: publication.id, productId: lastProduct.id })
+        : null;
+
+    return {
+      establishment: await this.toEstablishment(publicId, snapshot.establishment),
+      menu: {
+        name: snapshot.menu.name,
+        publicationId: publication.id,
+        version: publication.version,
+        publishedAt: publication.publishedAt.toISOString(),
+      },
+      categories,
+      products,
+      nextCursor,
+    };
+  }
+
+  async getRelated(
+    publicId: string,
+    productId: string,
+  ): Promise<PublicMenuRelatedProductsResponse> {
+    const { snapshot } = await this.loadPublishedMenu(publicId);
+    const currentProduct = snapshot.products.find((product) => product.id === productId);
+    if (!currentProduct || currentProduct.availability === 'HIDDEN') {
+      this.fail('PUBLIC_MENU_PRODUCT_NOT_FOUND', 'O produto não foi encontrado neste cardápio.');
+    }
+    const relatedProducts = selectRelatedProducts(snapshot.products, currentProduct, 4);
+    return {
+      products: await Promise.all(
+        relatedProducts.map((product) => this.toProduct(snapshot, product.id)),
+      ),
+    };
+  }
+
+  private async loadPublishedMenu(publicId: string): Promise<{
+    publication: { id: string; version: number; publishedAt: Date };
+    snapshot: PublicSnapshot;
+  }> {
     const establishment = await prisma.establishment.findFirst({
       where: { publicId },
       select: { id: true, organizationId: true, status: true },
@@ -143,60 +231,13 @@ export class PublicMenuService {
       this.fail('PUBLIC_MENU_NOT_PUBLISHED', 'Este cardápio ainda não foi publicado.');
     }
 
-    const snapshot = this.parseSnapshot(publication.snapshot);
-    const cursor = query.cursor ? this.decodeCursor(query.cursor) : null;
-    if (cursor && cursor.publicationId !== publication.id) {
-      this.fail(
-        'PUBLIC_MENU_CURSOR_STALE',
-        'A publicação mudou. Recarregue o cardápio para continuar.',
-      );
-    }
-
-    const allVisibleProducts = snapshot.products.filter(
-      (product) => product.availability !== 'HIDDEN',
-    );
-    const category = query.categoryId
-      ? snapshot.categories.find((item) => item.id === query.categoryId)
-      : undefined;
-    if (query.categoryId && !category) {
-      this.fail('PUBLIC_MENU_CATEGORY_NOT_FOUND', 'A categoria não foi encontrada.');
-    }
-
-    const visibleCategoryIds = new Set(allVisibleProducts.map((product) => product.categoryId));
-    const categories = snapshot.categories
-      .filter((item) => visibleCategoryIds.has(item.id))
-      .map<PublicMenuCategoryResponse>((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-      }));
-    const filteredProducts = query.categoryId
-      ? allVisibleProducts.filter((product) => product.categoryId === query.categoryId)
-      : allVisibleProducts;
-    const startIndex = cursor
-      ? this.findCursorProductIndex(filteredProducts, cursor.productId) + 1
-      : 0;
-    const pageProducts = filteredProducts.slice(startIndex, startIndex + query.limit);
-    const products = await Promise.all(
-      pageProducts.map((product) => this.toProduct(snapshot, product.id)),
-    );
-    const lastProduct = pageProducts.at(-1);
-    const nextCursor =
-      lastProduct && startIndex + pageProducts.length < filteredProducts.length
-        ? this.encodeCursor({ publicationId: publication.id, productId: lastProduct.id })
-        : null;
-
     return {
-      establishment: await this.toEstablishment(publicId, snapshot.establishment),
-      menu: {
-        name: snapshot.menu.name,
-        publicationId: publication.id,
+      publication: {
+        id: publication.id,
         version: publication.version,
-        publishedAt: publication.publishedAt.toISOString(),
+        publishedAt: publication.publishedAt,
       },
-      categories,
-      products,
-      nextCursor,
+      snapshot: this.parseSnapshot(publication.snapshot),
     };
   }
 
@@ -329,8 +370,18 @@ export function mapPublicMenuError(error: unknown): never {
         ? HttpStatus.CONFLICT
         : error.code === 'PUBLIC_MENU_CATEGORY_NOT_FOUND' || error.code === 'PUBLIC_MENU_SUSPENDED'
           ? HttpStatus.NOT_FOUND
-          : error.code === 'PUBLIC_MENU_CURSOR_INVALID'
-            ? HttpStatus.BAD_REQUEST
-            : HttpStatus.SERVICE_UNAVAILABLE;
+          : error.code === 'PUBLIC_MENU_PRODUCT_NOT_FOUND'
+            ? HttpStatus.NOT_FOUND
+            : error.code === 'PUBLIC_MENU_CURSOR_INVALID'
+              ? HttpStatus.BAD_REQUEST
+              : HttpStatus.SERVICE_UNAVAILABLE;
   throw new StableHttpException(status, error.code, error.message);
+}
+
+function normalizeSearch(value: string | null | undefined): string {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+    .trim();
 }
