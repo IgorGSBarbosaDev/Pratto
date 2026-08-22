@@ -168,6 +168,61 @@ describe('PublicMenuScreen', () => {
     );
   });
 
+  it('renders contact links and sends anonymous contact events without contact data', async () => {
+    const events: unknown[] = [];
+    const contactPage = page({
+      establishment: {
+        ...page().establishment,
+        phone: '+55 (31) 99999-8888',
+        whatsapp: '+55 (31) 98888-7777',
+      },
+    });
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((input: RequestInfo | URL, options?: RequestInit) => {
+        const url = String(input);
+        if (url.includes('/public/analytics/sessions')) return analyticsResponse(input);
+        if (url.includes('/public/analytics/events')) {
+          const body = JSON.parse(String(options?.body)) as { events: unknown[] };
+          events.push(...body.events);
+          return response({ results: [] });
+        }
+        return response(contactPage);
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderScreen({ initialPage: contactPage });
+    await enterMenu();
+    fireEvent.click(screen.getByRole('button', { name: 'Restaurante' }));
+
+    const phone = screen.getByRole('link', { name: /Telefone/ });
+    const whatsapp = screen.getByRole('link', { name: /WhatsApp/ });
+    expect(phone).toHaveAttribute('href', 'tel:+5531999998888');
+    expect(whatsapp).toHaveAttribute('href', 'https://wa.me/5531988887777');
+
+    phone.addEventListener('click', (event) => event.preventDefault());
+    whatsapp.addEventListener('click', (event) => event.preventDefault());
+    fireEvent.click(phone);
+    fireEvent.click(whatsapp);
+
+    await waitFor(() =>
+      expect(
+        events.filter((event) => (event as { eventType?: string }).eventType === 'contact_clicked'),
+      ).toHaveLength(2),
+    );
+    const contactEvents = events.filter(
+      (event) => (event as { eventType?: string }).eventType === 'contact_clicked',
+    );
+    expect(contactEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ eventType: 'contact_clicked', contactType: 'phone' }),
+        expect.objectContaining({ eventType: 'contact_clicked', contactType: 'whatsapp' }),
+      ]),
+    );
+    expect(JSON.stringify(contactEvents)).not.toContain('99999');
+    expect(JSON.stringify(contactEvents)).not.toContain('88888');
+  });
+
   it('filters categories, supports media details, and shows temporary unavailability', async () => {
     const filtered = page({
       products: [
@@ -267,7 +322,7 @@ describe('PublicMenuScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: /Ver detalhes/ }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(document.activeElement).toHaveAttribute('aria-label', 'Fechar');
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/menu')).length).toBe(
       0,

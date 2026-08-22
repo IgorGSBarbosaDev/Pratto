@@ -41,11 +41,19 @@ const analyticsCategorySelectedSchema = analyticsBaseSchema
   })
   .strict();
 
+const analyticsContactClickedSchema = analyticsBaseSchema
+  .extend({
+    eventType: z.literal('contact_clicked'),
+    contactType: z.enum(['phone', 'whatsapp']),
+  })
+  .strict();
+
 export const analyticsEventSchema = z.discriminatedUnion('eventType', [
   analyticsMenuOpenedSchema,
   analyticsProductObservationSchema,
   analyticsProductInteractionSchema,
   analyticsCategorySelectedSchema,
+  analyticsContactClickedSchema,
 ]);
 
 export const analyticsSessionSchema = z

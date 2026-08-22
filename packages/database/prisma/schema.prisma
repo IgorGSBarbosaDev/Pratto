@@ -51,6 +51,7 @@ enum AnalyticsEventType {
   PRODUCT_VIEWED
   PRODUCT_INTERACTION
   CATEGORY_SELECTED
+  CONTACT_CLICKED
 
   @@map("analytics_event_type")
 }
@@ -363,6 +364,7 @@ model AnalyticsEvent {
   productId         String?            @map("product_id") @db.Uuid
   categoryId        String?            @map("category_id") @db.Uuid
   interactionType   String?            @map("interaction_type") @db.VarChar(40)
+  contactType       String?            @map("contact_type") @db.VarChar(20)
   intersectionRatio Decimal?           @map("intersection_ratio") @db.Decimal(4, 3)
   durationMs        Int?               @map("duration_ms")
   occurredAt        DateTime           @map("occurred_at") @db.Timestamptz(3)

@@ -141,7 +141,14 @@ describe('public menu analytics integration', () => {
       { establishmentPublicId: fixture.tenant.establishment.publicId },
       'ingest-ip',
     );
-    const eventIds = [randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+    const eventIds = [
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+    ];
     const events = [
       {
         eventId: eventIds[0]!,
@@ -175,6 +182,12 @@ describe('public menu analytics integration', () => {
         eventId: eventIds[4]!,
         eventType: 'category_selected' as const,
         categoryId: fixture.category.id,
+        ...eventBase(fixture.publication.id),
+      },
+      {
+        eventId: eventIds[5]!,
+        eventType: 'contact_clicked' as const,
+        contactType: 'whatsapp' as const,
         ...eventBase(fixture.publication.id),
       },
     ];
@@ -211,6 +224,23 @@ describe('public menu analytics integration', () => {
     );
     expect(semanticDuplicate.results[0]).toMatchObject({ status: 'duplicate' });
 
+    const secondContact = await service.ingest(
+      {
+        establishmentPublicId: fixture.tenant.establishment.publicId,
+        sessionId: session.sessionId,
+        events: [
+          {
+            eventId: randomUUID(),
+            eventType: 'contact_clicked',
+            contactType: 'phone',
+            ...eventBase(fixture.publication.id),
+          },
+        ],
+      },
+      'ingest-ip',
+    );
+    expect(secondContact.results[0]).toMatchObject({ status: 'accepted' });
+
     const conflict = await service.ingest(
       {
         establishmentPublicId: fixture.tenant.establishment.publicId,
@@ -229,7 +259,7 @@ describe('public menu analytics integration', () => {
       status: 'rejected',
       code: 'ANALYTICS_IDEMPOTENCY_CONFLICT',
     });
-    await expect(database.analyticsEvent.count()).resolves.toBe(5);
+    await expect(database.analyticsEvent.count()).resolves.toBe(7);
   });
 
   it('returns partial failures for invalid targets and qualification rules', async () => {
@@ -357,6 +387,12 @@ describe('public menu analytics integration', () => {
           },
           {
             eventId: randomUUID(),
+            eventType: 'contact_clicked',
+            contactType: 'phone',
+            ...eventBase(fixture.publication.id),
+          },
+          {
+            eventId: randomUUID(),
             eventType: 'product_impression',
             productId: fixture.secondProduct!.id,
             intersectionRatio: 0.5,
@@ -422,6 +458,7 @@ describe('public menu analytics integration', () => {
       impressions: 2,
       qualifiedViews: 3,
       interactions: 0,
+      contactClicks: 1,
       categoryViews: 3,
     });
     await expect(queryService.products(scope)).resolves.toEqual([
@@ -445,6 +482,7 @@ describe('public menu analytics integration', () => {
       impressions: 1,
       qualifiedViews: 2,
       interactions: 0,
+      contactClicks: 1,
       categoryViews: 2,
     });
     await expect(
@@ -455,6 +493,7 @@ describe('public menu analytics integration', () => {
       impressions: 1,
       qualifiedViews: 1,
       interactions: 0,
+      contactClicks: 1,
       categoryViews: 0,
     });
     const daily = await queryService.daily({
@@ -476,6 +515,7 @@ describe('public menu analytics integration', () => {
       impressions: 0,
       qualifiedViews: 0,
       interactions: 0,
+      contactClicks: 0,
       categoryViews: 0,
     });
   });

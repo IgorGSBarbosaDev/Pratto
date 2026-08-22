@@ -3,9 +3,11 @@ export type AnalyticsEventType =
   | 'product_impression'
   | 'product_viewed'
   | 'product_interaction'
-  | 'category_selected';
+  | 'category_selected'
+  | 'contact_clicked';
 
 export type AnalyticsInteractionType = 'details_opened' | 'media_changed' | 'video_sound_toggled';
+export type AnalyticsContactType = 'phone' | 'whatsapp';
 
 export interface AnalyticsSessionResponse {
   sessionId: string;
@@ -40,17 +42,24 @@ export interface AnalyticsCategorySelectedEvent extends AnalyticsEventBase {
   categoryId: string;
 }
 
+export interface AnalyticsContactClickedEvent extends AnalyticsEventBase {
+  eventType: 'contact_clicked';
+  contactType: AnalyticsContactType;
+}
+
 export type AnalyticsEventInput =
   | AnalyticsMenuOpenedEvent
   | AnalyticsProductObservationEvent
   | AnalyticsProductInteractionEvent
-  | AnalyticsCategorySelectedEvent;
+  | AnalyticsCategorySelectedEvent
+  | AnalyticsContactClickedEvent;
 
 export type AnalyticsTrackEvent =
   | Omit<AnalyticsMenuOpenedEvent, 'eventId' | 'occurredAt' | 'publicationId'>
   | Omit<AnalyticsProductObservationEvent, 'eventId' | 'occurredAt' | 'publicationId'>
   | Omit<AnalyticsProductInteractionEvent, 'eventId' | 'occurredAt' | 'publicationId'>
-  | Omit<AnalyticsCategorySelectedEvent, 'eventId' | 'occurredAt' | 'publicationId'>;
+  | Omit<AnalyticsCategorySelectedEvent, 'eventId' | 'occurredAt' | 'publicationId'>
+  | Omit<AnalyticsContactClickedEvent, 'eventId' | 'occurredAt' | 'publicationId'>;
 
 export interface AnalyticsIngestRequest {
   establishmentPublicId: string;
@@ -76,6 +85,7 @@ export interface AnalyticsSummary {
   impressions: number;
   qualifiedViews: number;
   interactions: number;
+  contactClicks: number;
   categoryViews: number;
 }
 

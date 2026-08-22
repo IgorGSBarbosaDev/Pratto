@@ -50,6 +50,33 @@ describe('AnalyticsController', () => {
     expect(ingest).not.toHaveBeenCalled();
   });
 
+  it('rejects an invalid contact type before calling the service', () => {
+    const ingest = jest.fn();
+    const controller = new AnalyticsController({ ingest } as unknown as AnalyticsService);
+
+    expect(() =>
+      controller.ingest(
+        {
+          establishmentPublicId: 'cafe-aurora-local',
+          sessionId: session.sessionId,
+          events: [
+            {
+              eventId: '22222222-2222-4222-8222-222222222222',
+              eventType: 'contact_clicked',
+              contactType: 'email',
+              publicationId: '33333333-3333-4333-8333-333333333333',
+              occurredAt: '2026-08-09T12:00:00.000Z',
+            },
+          ],
+        },
+        { ip: '127.0.0.1' } as Request,
+      ),
+    ).toThrow(
+      expect.objectContaining({ response: expect.objectContaining({ code: 'VALIDATION_ERROR' }) }),
+    );
+    expect(ingest).not.toHaveBeenCalled();
+  });
+
   it('delegates a valid batch and preserves per-event results', async () => {
     const ingest = jest.fn().mockResolvedValue(ingestion);
     const controller = new AnalyticsController({ ingest } as unknown as AnalyticsService);

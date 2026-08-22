@@ -1,6 +1,7 @@
 'use client';
 
 import type {
+  AnalyticsContactType,
   AnalyticsInteractionType,
   PublicMenuMediaResponse,
   PublicMenuPageResponse,
@@ -24,6 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 
 import { ApiClientError } from '../auth/api-client';
 import { FoodImage, Skeleton } from '../design-system/feedback';
+import { useModalDialog } from '../design-system/use-modal-dialog';
 
 import { PublicMenuAnalyticsClient } from './analytics-client';
 import { publicMenuApi } from './api-client';
@@ -400,7 +402,14 @@ export function PublicMenuScreen({
               />
             ) : null}
             {tab === 'restaurant' ? (
-              <RestaurantInfo page={firstPage} lightTheme={lightTheme} />
+              <RestaurantInfo
+                page={firstPage}
+                lightTheme={lightTheme}
+                onContactClick={(contactType) => {
+                  analyticsRef.current?.track({ eventType: 'contact_clicked', contactType });
+                  analyticsRef.current?.flushNow();
+                }}
+              />
             ) : null}
             <BottomNav
               active={tab}
@@ -584,9 +593,11 @@ function CategoryGrid({
 function RestaurantInfo({
   page,
   lightTheme,
+  onContactClick,
 }: {
   page: PublicMenuPageResponse;
   lightTheme: boolean;
+  onContactClick: (contactType: AnalyticsContactType) => void;
 }) {
   const establishment = page.establishment;
   const open = isOpenNow(establishment.operatingHours);
@@ -682,20 +693,34 @@ function RestaurantInfo({
                 <li
                   className={`flex items-center justify-between rounded-xl px-4 py-3 text-[15px] ${lightTheme ? 'bg-sand' : 'bg-white/[0.08]'}`}
                 >
-                  <span className={lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}>
-                    Telefone
-                  </span>
-                  <span className="font-medium">{establishment.phone}</span>
+                  <a
+                    className="flex w-full items-center justify-between gap-4 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)]"
+                    href={createPhoneHref(establishment.phone)}
+                    onClick={() => onContactClick('phone')}
+                  >
+                    <span className={lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}>
+                      Telefone
+                    </span>
+                    <span className="font-medium">{establishment.phone}</span>
+                  </a>
                 </li>
               ) : null}
               {establishment.whatsapp ? (
                 <li
                   className={`flex items-center justify-between rounded-xl px-4 py-3 text-[15px] ${lightTheme ? 'bg-sand' : 'bg-white/[0.08]'}`}
                 >
-                  <span className={lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}>
-                    WhatsApp
-                  </span>
-                  <span className="font-medium">{establishment.whatsapp}</span>
+                  <a
+                    className="flex w-full items-center justify-between gap-4 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)]"
+                    href={createWhatsAppHref(establishment.whatsapp)}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => onContactClick('whatsapp')}
+                  >
+                    <span className={lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}>
+                      WhatsApp
+                    </span>
+                    <span className="font-medium">{establishment.whatsapp}</span>
+                  </a>
                 </li>
               ) : null}
             </ul>
@@ -1090,49 +1115,11 @@ function ProductDetails({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
   const dragStart = useRef(0);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
 
-  useEffect(() => {
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    closeButtonRef.current?.focus();
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const dialog = dialogRef.current;
-      if (!dialog) return;
-      const focusable = Array.from(
-        dialog.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        ),
-      ).filter((element) => !element.hasAttribute('disabled'));
-      if (focusable.length === 0) return;
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKeyDown);
-      previousFocusRef.current?.focus();
-    };
-  }, [onClose]);
+  useModalDialog(true, dialogRef, onClose);
 
   return (
     <div className="absolute inset-0 z-40" role="presentation">
@@ -1183,8 +1170,8 @@ function ProductDetails({
             />
             <div className="pointer-events-none absolute left-1/2 top-2 z-20 h-1 w-10 -translate-x-1/2 rounded-full bg-white/75" />
             <button
-              ref={closeButtonRef}
               type="button"
+              data-dialog-initial-focus
               aria-label="Fechar"
               onClick={onClose}
               className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink backdrop-blur"
@@ -1458,4 +1445,19 @@ function formatAddress(address: PublicMenuPageResponse['establishment']['address
   const street = [address.street, address.number].filter(Boolean).join(', ');
   const city = [address.neighborhood, address.city, address.state].filter(Boolean).join(' · ');
   return [street, address.complement, city, address.postalCode].filter(Boolean).join(' — ');
+}
+
+function createPhoneHref(value: string): string {
+  const normalized = normalizePhone(value);
+  return `tel:${normalized}`;
+}
+
+function createWhatsAppHref(value: string): string {
+  return `https://wa.me/${normalizePhone(value).replace(/^\+/, '')}`;
+}
+
+function normalizePhone(value: string): string {
+  const trimmed = value.trim();
+  const prefix = trimmed.startsWith('+') ? '+' : '';
+  return `${prefix}${trimmed.replace(/\D/g, '')}`;
 }

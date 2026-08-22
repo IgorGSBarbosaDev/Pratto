@@ -131,7 +131,7 @@ chave devolve a mesma versão sem criar outra publicação.
 | Método | Rota                                | Resultado                                                        |
 | ------ | ----------------------------------- | ---------------------------------------------------------------- |
 | POST   | `/admin/menus/:menuId/publications` | Cria e ativa atomicamente um novo snapshot.                      |
-| GET    | `/admin/menus/:menuId/publication`  | Consulta a publicação ativa, incluindo o snapshot.               |
+| GET    | `/admin/menus/:menuId/publication`  | Consulta publicação, snapshot e alterações não publicadas.       |
 | GET    | `/admin/menus/:menuId/publications` | Lista até 100 versões históricas, da mais recente à mais antiga. |
 
 O snapshot administrativo usa `schemaVersion: 3` e congela estabelecimento, menu, categorias,
@@ -180,9 +180,11 @@ Analytics não exige login e não participa do carregamento do feed. O retorno d
 | POST   | `/public/analytics/events`   | Ingere até 50 eventos e retorna o resultado de cada item. |
 
 Os eventos aceitos são `menu_opened`, `product_impression`, `product_viewed`,
-`product_interaction` e `category_selected`. Uma impressão exige 50% da viewport por 500 ms;
-uma visualização qualificada exige 70% por 2 segundos. Sessões expiram após 30 minutos sem
-atividade. Timestamps devem estar entre 15 minutos no passado e 2 minutos no futuro.
+`product_interaction`, `category_selected` e `contact_clicked`. O evento de contato aceita somente
+`contactType` igual a `phone` ou `whatsapp` e não armazena o número nem a URL de destino. Uma
+impressão exige 50% da viewport por 500 ms; uma visualização qualificada exige 70% por 2 segundos.
+Sessões expiram após 30 minutos sem atividade. Timestamps devem estar entre 15 minutos no passado
+e 2 minutos no futuro.
 
 O servidor valida publicação, sessão, produto e categoria contra o snapshot e o estabelecimento
 resolvido pelo `publicId`. Repetições de `eventId` são idempotentes; impressões, visualizações,

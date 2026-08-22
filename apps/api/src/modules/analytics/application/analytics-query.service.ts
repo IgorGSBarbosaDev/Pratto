@@ -22,6 +22,7 @@ interface SummaryRow {
   impressions: bigint | number;
   qualifiedViews: bigint | number;
   interactions: bigint | number;
+  contactClicks: bigint | number;
   categoryViews: bigint | number;
 }
 
@@ -59,6 +60,7 @@ export class AnalyticsQueryService {
         COUNT(*) FILTER (
           WHERE "event_type" = 'PRODUCT_INTERACTION' AND ${productFilter}
         )::bigint AS "interactions",
+        COUNT(*) FILTER (WHERE "event_type" = 'CONTACT_CLICKED')::bigint AS "contactClicks",
         COUNT(*) FILTER (
           WHERE "event_type" = 'CATEGORY_SELECTED' AND ${categoryFilter}
         )::bigint AS "categoryViews"
@@ -93,6 +95,7 @@ export class AnalyticsQueryService {
           COUNT(*) FILTER (
             WHERE "event_type" = 'PRODUCT_INTERACTION' AND ${productFilter}
           )::bigint AS "interactions",
+          COUNT(*) FILTER (WHERE "event_type" = 'CONTACT_CLICKED')::bigint AS "contactClicks",
           COUNT(*) FILTER (
             WHERE "event_type" = 'CATEGORY_SELECTED' AND ${categoryFilter}
           )::bigint AS "categoryViews"
@@ -107,6 +110,7 @@ export class AnalyticsQueryService {
         COALESCE(aggregates."impressions", 0)::bigint AS "impressions",
         COALESCE(aggregates."qualifiedViews", 0)::bigint AS "qualifiedViews",
         COALESCE(aggregates."interactions", 0)::bigint AS "interactions",
+        COALESCE(aggregates."contactClicks", 0)::bigint AS "contactClicks",
         COALESCE(aggregates."categoryViews", 0)::bigint AS "categoryViews"
       FROM days
       LEFT JOIN aggregates ON aggregates."day" = days."day"
@@ -191,6 +195,7 @@ export class AnalyticsQueryService {
       impressions: this.toNumber(row?.impressions),
       qualifiedViews: this.toNumber(row?.qualifiedViews),
       interactions: this.toNumber(row?.interactions),
+      contactClicks: this.toNumber(row?.contactClicks),
       categoryViews: this.toNumber(row?.categoryViews),
     };
   }

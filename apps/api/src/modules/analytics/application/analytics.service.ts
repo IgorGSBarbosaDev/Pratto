@@ -231,6 +231,7 @@ export class AnalyticsService {
           productId: product?.id,
           categoryId,
           interactionType: event.eventType === 'product_interaction' ? event.interactionType : null,
+          contactType: event.eventType === 'contact_clicked' ? event.contactType : null,
           intersectionRatio:
             'intersectionRatio' in event ? new Prisma.Decimal(event.intersectionRatio) : null,
           durationMs: 'durationMs' in event ? event.durationMs : null,
@@ -312,7 +313,12 @@ export class AnalyticsService {
     publicationId: string;
     categoryId: string | null;
   }): string {
-    if (input.event.eventType === 'product_interaction') return `event:${input.event.eventId}`;
+    if (
+      input.event.eventType === 'product_interaction' ||
+      input.event.eventType === 'contact_clicked'
+    ) {
+      return `event:${input.event.eventId}`;
+    }
     const target =
       'productId' in input.event ? input.event.productId : (input.categoryId ?? 'menu');
     return [input.sessionId, input.publicationId, input.event.eventType, target].join(':');
@@ -329,13 +335,15 @@ export class AnalyticsService {
     | 'PRODUCT_IMPRESSION'
     | 'PRODUCT_VIEWED'
     | 'PRODUCT_INTERACTION'
-    | 'CATEGORY_SELECTED' {
+    | 'CATEGORY_SELECTED'
+    | 'CONTACT_CLICKED' {
     const eventTypes = {
       menu_opened: 'MENU_OPENED',
       product_impression: 'PRODUCT_IMPRESSION',
       product_viewed: 'PRODUCT_VIEWED',
       product_interaction: 'PRODUCT_INTERACTION',
       category_selected: 'CATEGORY_SELECTED',
+      contact_clicked: 'CONTACT_CLICKED',
     } as const;
     return eventTypes[eventType];
   }

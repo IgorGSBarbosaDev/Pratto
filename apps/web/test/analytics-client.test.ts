@@ -96,4 +96,32 @@ describe('PublicMenuAnalyticsClient', () => {
     beaconClient.stop();
     await vi.waitFor(() => expect(sendBeacon).toHaveBeenCalledTimes(1));
   });
+
+  it('flushes a contact event immediately without blocking the caller', async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      if (String(input).includes('/sessions')) {
+        return jsonResponse({
+          sessionId: '44444444-4444-4444-8444-444444444444',
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        });
+      }
+      return jsonResponse({ results: [] });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new PublicMenuAnalyticsClient();
+
+    client.start(context);
+    await vi.waitFor(() => expect(window.localStorage.length).toBe(1));
+    client.track({ eventType: 'contact_clicked', contactType: 'phone' });
+    client.flushNow();
+
+    await vi.waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(([input]) => String(input).includes('/events')),
+      ).toHaveLength(1),
+    );
+    const eventCall = fetchMock.mock.calls.find(([input]) => String(input).includes('/events'));
+    expect(String(eventCall?.[1]?.body)).toContain('contact_clicked');
+    expect(String(eventCall?.[1]?.body)).toContain('phone');
+  });
 });

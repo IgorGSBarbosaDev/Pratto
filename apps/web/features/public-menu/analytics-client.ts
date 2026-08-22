@@ -73,6 +73,10 @@ export class PublicMenuAnalyticsClient {
     void this.flush(true);
   }
 
+  flushNow(): void {
+    void this.flush(true);
+  }
+
   private async ensureSession(): Promise<void> {
     if (this.sessionPromise) return this.sessionPromise;
     const context = this.context;

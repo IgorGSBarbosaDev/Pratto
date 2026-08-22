@@ -6,7 +6,7 @@ import type {
   AnalyticsDailyMetric,
 } from '@pratto/contracts';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, Eye, MousePointerClick, QrCode, ScanSearch } from 'lucide-react';
+import { BarChart3, Eye, MousePointerClick, Phone, QrCode, ScanSearch } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 
@@ -17,7 +17,8 @@ import { SectionLabel, Select } from '../design-system/primitives';
 import { analyticsApi } from './api-client';
 
 type PeriodPreset = '7' | '30' | 'custom';
-type ChartMetric = 'menuAccesses' | 'impressions' | 'qualifiedViews' | 'interactions';
+type ChartMetric =
+  'menuAccesses' | 'impressions' | 'qualifiedViews' | 'interactions' | 'contactClicks';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -26,6 +27,7 @@ const chartMetrics: Array<{ value: ChartMetric; label: string }> = [
   { value: 'impressions', label: 'Impressões' },
   { value: 'qualifiedViews', label: 'Visualizações qualificadas' },
   { value: 'interactions', label: 'Interações' },
+  { value: 'contactClicks', label: 'Cliques em contato' },
 ];
 
 function dateInputValue(date: Date): string {
@@ -292,8 +294,8 @@ function PeriodButton({
 function DashboardLoading() {
   return (
     <div role="status" aria-label="Carregando analytics" className="mt-6 space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {Array.from({ length: 5 }, (_, index) => (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }, (_, index) => (
           <Skeleton key={index} className="h-32 rounded-2xl" />
         ))}
       </div>
@@ -316,7 +318,7 @@ function DashboardContent({
   const hasData = Object.values(data.summary).some((value) => value > 0);
   return (
     <div className="mt-4 space-y-4">
-      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Metric icon={BarChart3} label="Sessões" value={data.summary.sessions} />
         <Metric icon={QrCode} label="Acessos ao cardápio" value={data.summary.menuAccesses} />
         <Metric icon={Eye} label="Impressões" value={data.summary.impressions} />
@@ -326,6 +328,7 @@ function DashboardContent({
           value={data.summary.qualifiedViews}
         />
         <Metric icon={MousePointerClick} label="Interações" value={data.summary.interactions} />
+        <Metric icon={Phone} label="Cliques em contato" value={data.summary.contactClicks} />
       </dl>
 
       {!hasData ? (

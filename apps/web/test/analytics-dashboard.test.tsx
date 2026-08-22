@@ -23,6 +23,7 @@ function dashboardResponse(
       impressions: 25,
       qualifiedViews: 10,
       interactions: 4,
+      contactClicks: 3,
       categoryViews: 7,
     },
     daily: [
@@ -33,6 +34,7 @@ function dashboardResponse(
         impressions: 6,
         qualifiedViews: 2,
         interactions: 1,
+        contactClicks: 1,
         categoryViews: 2,
       },
       {
@@ -42,6 +44,7 @@ function dashboardResponse(
         impressions: 0,
         qualifiedViews: 0,
         interactions: 0,
+        contactClicks: 0,
         categoryViews: 0,
       },
     ],
@@ -96,9 +99,12 @@ describe('AnalyticsDashboard', () => {
     expect(await screen.findByText('Acessos ao cardápio')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Visão geral' })).toBeInTheDocument();
     expect(screen.getByText('18')).toBeInTheDocument();
+    expect(screen.getAllByText('Cliques em contato')).toHaveLength(2);
     expect(screen.getByText('Produtos mais vistos')).toBeInTheDocument();
     expect(screen.getAllByText('Prato da casa')).toHaveLength(2);
     expect(screen.getByText('Evolução diária')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Métrica'), { target: { value: 'contactClicks' } });
+    expect(screen.getByText('Cliques em contato por dia no período.')).toBeInTheDocument();
   });
 
   it('sends the selected period and category/product filters', async () => {
@@ -145,6 +151,7 @@ describe('AnalyticsDashboard', () => {
               impressions: 0,
               qualifiedViews: 0,
               interactions: 0,
+              contactClicks: 0,
               categoryViews: 0,
             },
             products: [],
