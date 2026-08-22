@@ -33,6 +33,7 @@
     "typecheck": "prisma generate && tsc --noEmit"
   },
   "dependencies": {
+    "@pratto/contracts": "workspace:*",
     "@prisma/client": "^6.14.0",
     "argon2": "^0.45.1",
     "zod": "^3.25.76"

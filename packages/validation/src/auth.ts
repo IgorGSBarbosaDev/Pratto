@@ -20,8 +20,11 @@ export const loginSchema = z.object({ email: emailSchema, password: z.string().m
 export const forgotPasswordSchema = z.object({ email: emailSchema });
 export const resetPasswordSchema = z.object({ token: opaqueTokenSchema, password: passwordSchema });
 export const selectOrganizationSchema = z.object({ membershipId: z.string().uuid() });
+export const membershipRoleSchema = z.enum(['OWNER', 'ADMIN', 'MEMBER']);
+export const invitationTokenSchema = opaqueTokenSchema;
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type SelectOrganizationInput = z.infer<typeof selectOrganizationSchema>;
+export type MembershipRoleInput = z.infer<typeof membershipRoleSchema>;

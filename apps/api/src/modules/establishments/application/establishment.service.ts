@@ -6,7 +6,7 @@ import type {
   EstablishmentSettingsResponse,
   StorageService,
 } from '@pratto/contracts';
-import { STORAGE_SERVICE } from '@pratto/contracts';
+import { hasPermission, Permission, STORAGE_SERVICE } from '@pratto/contracts';
 import { Prisma, prisma } from '@pratto/database';
 import {
   DEFAULT_ESTABLISHMENT_OPERATING_HOURS,
@@ -53,7 +53,9 @@ export class EstablishmentService {
     tenant: TenantPrincipal,
     establishmentId: string,
   ): Promise<EstablishmentSettingsResponse> {
-    return this.toResponse(await this.findEstablishment(tenant, establishmentId));
+    const establishment = await this.findEstablishment(tenant, establishmentId);
+    this.assertPermission(tenant, Permission.ESTABLISHMENT_READ);
+    return this.toResponse(establishment);
   }
 
   async updateSettings(
@@ -62,6 +64,7 @@ export class EstablishmentService {
     input: EstablishmentUpdateInput,
   ): Promise<EstablishmentSettingsResponse> {
     const current = await this.findEstablishment(tenant, establishmentId);
+    this.assertPermission(tenant, Permission.ESTABLISHMENT_UPDATE);
     if (Object.keys(input).length === 0) return this.toResponse(current);
 
     const data: Prisma.EstablishmentUpdateInput = {};
@@ -100,6 +103,7 @@ export class EstablishmentService {
     file: EstablishmentUploadFile | undefined,
   ): Promise<EstablishmentSettingsResponse> {
     const current = await this.findEstablishment(tenant, establishmentId);
+    this.assertPermission(tenant, Permission.ESTABLISHMENT_UPDATE);
     this.validateUpload(file);
 
     const extension = this.extensionFor(file!.mimetype);
@@ -136,6 +140,7 @@ export class EstablishmentService {
     kind: EstablishmentAssetKind,
   ): Promise<EstablishmentSettingsResponse> {
     const current = await this.findEstablishment(tenant, establishmentId);
+    this.assertPermission(tenant, Permission.ESTABLISHMENT_UPDATE);
     const oldKey = kind === 'logo' ? current.logoKey : current.coverImageKey;
     const data: Prisma.EstablishmentUpdateInput =
       kind === 'logo'
@@ -202,6 +207,16 @@ export class EstablishmentService {
         : null,
       theme: theme as EstablishmentSettingsResponse['theme'],
     };
+  }
+
+  private assertPermission(tenant: TenantPrincipal, permission: Permission): void {
+    if (hasPermission(tenant.role, permission)) return;
+    throw new StableHttpException(
+      HttpStatus.FORBIDDEN,
+      'PERMISSION_DENIED',
+      'Seu perfil não possui permissão para esta operação.',
+      { permission },
+    );
   }
 
   private jsonObject<T>(value: Prisma.JsonValue, fallback: T): T {

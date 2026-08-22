@@ -23,6 +23,6 @@ import { OriginGuard } from './presentation/origin.guard';
     OriginGuard,
     NoStoreInterceptor,
   ],
-  exports: [AuthService, AuthenticatedGuard, CsrfGuard],
+  exports: [AuthService, AuthenticatedGuard, CsrfGuard, PasswordService],
 })
 export class IdentityModule {}

@@ -19,6 +19,7 @@ import type {
   ProductListResponse,
   ProductResponse,
 } from '@pratto/contracts';
+import { Permission } from '@pratto/contracts';
 import {
   catalogMenuIdSchema,
   categoryCreateSchema,
@@ -33,6 +34,8 @@ import {
 } from '@pratto/validation';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
+import { PermissionGuard } from '../../authorization/presentation/permission.guard';
+import { RequirePermission } from '../../authorization/presentation/require-permission.decorator';
 import type { AuthenticatedRequest } from '../../identity/domain/auth.types';
 import { AuthenticatedGuard } from '../../identity/presentation/authenticated.guard';
 import { CsrfGuard } from '../../identity/presentation/csrf.guard';
@@ -42,11 +45,12 @@ import { CatalogService } from '../application/catalog.service';
 @ApiTags('Catalog')
 @ApiCookieAuth('pratto_session')
 @Controller('admin')
-@UseGuards(AuthenticatedGuard, OrganizationGuard)
+@UseGuards(AuthenticatedGuard, OrganizationGuard, PermissionGuard)
 export class CatalogController {
   constructor(@Inject(CatalogService) private readonly service: CatalogService) {}
 
   @Get('menus/:menuId/categories')
+  @RequirePermission(Permission.CATALOG_READ)
   @ApiOperation({ summary: 'List menu categories for the active organization' })
   @ApiParam({ name: 'menuId', format: 'uuid' })
   listCategories(
@@ -57,6 +61,7 @@ export class CatalogController {
   }
 
   @Get('menus/:menuId/products')
+  @RequirePermission(Permission.CATALOG_READ)
   @ApiOperation({ summary: 'List menu products for the active organization' })
   @ApiParam({ name: 'menuId', format: 'uuid' })
   listProducts(
@@ -67,6 +72,7 @@ export class CatalogController {
   }
 
   @Get('establishments/:establishmentId/menus')
+  @RequirePermission(Permission.CATALOG_READ)
   @ApiOperation({ summary: 'List editable menus available for the establishment' })
   @ApiParam({ name: 'establishmentId', format: 'uuid' })
   listEstablishmentMenus(
@@ -80,6 +86,7 @@ export class CatalogController {
   }
 
   @Post('menus/:menuId/categories')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Create a menu category' })
   @ApiParam({ name: 'menuId', format: 'uuid' })
@@ -99,6 +106,7 @@ export class CatalogController {
   }
 
   @Post('menus/:menuId/products')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Create a menu product' })
   @ApiParam({ name: 'menuId', format: 'uuid' })
@@ -118,6 +126,7 @@ export class CatalogController {
   }
 
   @Patch('menus/:menuId/categories/reorder')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Reorder all non-archived menu categories' })
@@ -137,6 +146,7 @@ export class CatalogController {
   }
 
   @Patch('menus/:menuId/categories/:categoryId')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Edit a menu category' })
   @ApiParam({ name: 'menuId', format: 'uuid' })
@@ -158,6 +168,7 @@ export class CatalogController {
   }
 
   @Post('menus/:menuId/categories/:categoryId/activate')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Activate a menu category' })
@@ -174,6 +185,7 @@ export class CatalogController {
   }
 
   @Post('menus/:menuId/categories/:categoryId/deactivate')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Deactivate a menu category' })
@@ -190,6 +202,7 @@ export class CatalogController {
   }
 
   @Post('menus/:menuId/categories/:categoryId/archive')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Archive a menu category without destructive deletion' })
@@ -206,6 +219,7 @@ export class CatalogController {
   }
 
   @Post('menus/:menuId/products/:productId/activate')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Activate a menu product' })
@@ -222,6 +236,7 @@ export class CatalogController {
   }
 
   @Post('menus/:menuId/products/:productId/deactivate')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Deactivate a menu product' })
@@ -238,6 +253,7 @@ export class CatalogController {
   }
 
   @Post('menus/:menuId/products/:productId/archive')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Archive a menu product without destructive deletion' })
@@ -254,6 +270,7 @@ export class CatalogController {
   }
 
   @Patch('menus/:menuId/products/reorder')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Reorder all non-archived menu products' })
@@ -273,6 +290,7 @@ export class CatalogController {
   }
 
   @Patch('menus/:menuId/products/:productId')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Edit a menu product' })
   @ApiParam({ name: 'menuId', format: 'uuid' })

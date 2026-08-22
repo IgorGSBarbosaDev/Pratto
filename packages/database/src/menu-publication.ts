@@ -1,4 +1,5 @@
-import { LifecycleStatus, MenuStatus, MembershipRole, Prisma } from '@prisma/client';
+import { hasPermission, Permission } from '@pratto/contracts';
+import { LifecycleStatus, MenuStatus, Prisma } from '@prisma/client';
 import type { MenuPublication, PrismaClient } from '@prisma/client';
 
 export type MenuSnapshot = Prisma.InputJsonObject;
@@ -230,13 +231,12 @@ export class MenuPublicationService {
         organizationId: tenant.organizationId,
         userId: tenant.userId,
         status: LifecycleStatus.ACTIVE,
-        role: { in: [MembershipRole.OWNER, MembershipRole.ADMIN] },
         organization: { status: LifecycleStatus.ACTIVE },
         user: { status: LifecycleStatus.ACTIVE },
       },
-      select: { id: true },
+      select: { id: true, role: true },
     });
-    if (!membership) {
+    if (!membership || !hasPermission(membership.role, Permission.PUBLICATION_PUBLISH)) {
       throw new MenuPublicationServiceError(
         'PUBLICATION_ACCESS_DENIED',
         'O usuário não pode publicar neste tenant.',
@@ -256,9 +256,9 @@ export class MenuPublicationService {
         organization: { status: LifecycleStatus.ACTIVE },
         user: { status: LifecycleStatus.ACTIVE },
       },
-      select: { id: true },
+      select: { id: true, role: true },
     });
-    if (!membership) {
+    if (!membership || !hasPermission(membership.role, Permission.PUBLICATION_READ)) {
       throw new MenuPublicationServiceError(
         'PUBLICATION_ACCESS_DENIED',
         'O usuário não pode consultar publicações neste tenant.',

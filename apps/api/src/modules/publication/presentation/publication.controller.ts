@@ -19,14 +19,13 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import type {
-  ActiveMenuPublicationResponse,
-  MenuPublicationHistoryResponse,
-  MenuPublicationResponse,
-} from '@pratto/contracts';
+import type { MenuPublicationHistoryResponse, MenuPublicationResponse } from '@pratto/contracts';
+import { Permission, type ActiveMenuPublicationResponse } from '@pratto/contracts';
 import { catalogMenuIdSchema, publicationIdempotencyKeySchema } from '@pratto/validation';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
+import { PermissionGuard } from '../../authorization/presentation/permission.guard';
+import { RequirePermission } from '../../authorization/presentation/require-permission.decorator';
 import type { AuthenticatedRequest } from '../../identity/domain/auth.types';
 import { AuthenticatedGuard } from '../../identity/presentation/authenticated.guard';
 import { CsrfGuard } from '../../identity/presentation/csrf.guard';
@@ -36,11 +35,12 @@ import { PublicationService } from '../application/publication.service';
 @ApiTags('Publications')
 @ApiCookieAuth('pratto_session')
 @Controller('admin/menus')
-@UseGuards(AuthenticatedGuard, OrganizationGuard)
+@UseGuards(AuthenticatedGuard, OrganizationGuard, PermissionGuard)
 export class PublicationController {
   constructor(@Inject(PublicationService) private readonly service: PublicationService) {}
 
   @Post(':menuId/publications')
+  @RequirePermission(Permission.PUBLICATION_PUBLISH)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Publish an immutable menu snapshot' })
@@ -65,6 +65,7 @@ export class PublicationController {
   }
 
   @Get(':menuId/publication')
+  @RequirePermission(Permission.PUBLICATION_READ)
   @ApiOperation({ summary: 'Read the active publication for a menu' })
   @ApiParam({ name: 'menuId', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Active publication or null' })
@@ -76,6 +77,7 @@ export class PublicationController {
   }
 
   @Get(':menuId/publications')
+  @RequirePermission(Permission.PUBLICATION_READ)
   @ApiOperation({ summary: 'List immutable menu publication versions' })
   @ApiParam({ name: 'menuId', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Publication history' })

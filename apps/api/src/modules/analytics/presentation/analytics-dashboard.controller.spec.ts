@@ -1,6 +1,7 @@
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import type { AnalyticsDashboardResponse } from '@pratto/contracts';
 
+import { PermissionGuard } from '../../authorization/presentation/permission.guard';
 import type { TenantPrincipal } from '../../identity/domain/auth.types';
 import { AuthenticatedGuard } from '../../identity/presentation/authenticated.guard';
 import { OrganizationGuard } from '../../organizations/presentation/organization.guard';
@@ -21,6 +22,7 @@ describe('AnalyticsDashboardController', () => {
     expect(Reflect.getMetadata(GUARDS_METADATA, AnalyticsDashboardController)).toEqual([
       AuthenticatedGuard,
       OrganizationGuard,
+      PermissionGuard,
     ]);
   });
 

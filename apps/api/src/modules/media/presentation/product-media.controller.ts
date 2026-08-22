@@ -23,7 +23,11 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import type { ProductMediaListResponse, ProductMediaResponse } from '@pratto/contracts';
+import {
+  Permission,
+  type ProductMediaListResponse,
+  type ProductMediaResponse,
+} from '@pratto/contracts';
 import {
   catalogMenuIdSchema,
   productIdSchema,
@@ -32,6 +36,8 @@ import {
 } from '@pratto/validation';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
+import { PermissionGuard } from '../../authorization/presentation/permission.guard';
+import { RequirePermission } from '../../authorization/presentation/require-permission.decorator';
 import type { AuthenticatedRequest } from '../../identity/domain/auth.types';
 import { AuthenticatedGuard } from '../../identity/presentation/authenticated.guard';
 import { CsrfGuard } from '../../identity/presentation/csrf.guard';
@@ -45,11 +51,12 @@ import {
 @ApiTags('Product media')
 @ApiCookieAuth('pratto_session')
 @Controller('admin')
-@UseGuards(AuthenticatedGuard, OrganizationGuard)
+@UseGuards(AuthenticatedGuard, OrganizationGuard, PermissionGuard)
 export class ProductMediaController {
   constructor(@Inject(ProductMediaService) private readonly service: ProductMediaService) {}
 
   @Get('menus/:menuId/products/:productId/media')
+  @RequirePermission(Permission.CATALOG_READ)
   @ApiOperation({ summary: 'List product media for the active organization' })
   listMedia(
     @Param('menuId') menuId: string,
@@ -64,6 +71,7 @@ export class ProductMediaController {
   }
 
   @Post('menus/:menuId/products/:productId/media')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @UseGuards(CsrfGuard)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_PRODUCT_MEDIA_SIZE_BYTES } }))
   @ApiConsumes('multipart/form-data')
@@ -92,6 +100,7 @@ export class ProductMediaController {
   }
 
   @Post('menus/:menuId/products/:productId/media/:mediaId/primary')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Set a product media item as primary' })
@@ -110,6 +119,7 @@ export class ProductMediaController {
   }
 
   @Patch('menus/:menuId/products/:productId/media/reorder')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Reorder all product media items' })
@@ -130,6 +140,7 @@ export class ProductMediaController {
   }
 
   @Delete('menus/:menuId/products/:productId/media/:mediaId')
+  @RequirePermission(Permission.CATALOG_WRITE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Remove a product media item' })

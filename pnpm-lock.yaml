@@ -236,6 +236,9 @@ importers:
 
   packages/database:
     dependencies:
+      '@pratto/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@prisma/client':
         specifier: ^6.14.0
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)

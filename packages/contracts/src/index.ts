@@ -1,4 +1,5 @@
 export * from './auth';
+export * from './authorization';
 export * from './analytics';
 export * from './catalog';
 export * from './establishment';
@@ -7,3 +8,4 @@ export * from './http';
 export * from './publication';
 export * from './public-menu';
 export * from './storage';
+export * from './team';

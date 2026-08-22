@@ -1,6 +1,6 @@
 import { createHmac, hkdfSync, randomBytes, timingSafeEqual } from 'node:crypto';
 
-type Purpose = 'session' | 'password-reset' | 'rate-limit' | 'csrf';
+type Purpose = 'session' | 'password-reset' | 'rate-limit' | 'csrf' | 'invitation';
 
 function deriveKey(secret: string, purpose: Purpose): Buffer {
   return Buffer.from(

@@ -16,6 +16,7 @@ import { MediaModule } from './modules/media/media.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { PublicMenuModule } from './modules/public-menu/public-menu.module';
 import { PublicationModule } from './modules/publication/publication.module';
+import { TeamModule } from './modules/team/team.module';
 
 const environment = loadEnvironment();
 
@@ -46,6 +47,7 @@ const environment = loadEnvironment();
     PublicationModule,
     PublicMenuModule,
     HealthModule,
+    TeamModule,
   ],
 })
 export class AppModule {}

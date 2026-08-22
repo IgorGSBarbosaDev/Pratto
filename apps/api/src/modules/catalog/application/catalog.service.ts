@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { hasPermission, Permission } from '@pratto/contracts';
 import type {
   CategoryListResponse,
   CategoryResponse,
@@ -59,8 +60,6 @@ const productSelect = {
 
 type ProductRecord = Prisma.ProductGetPayload<{ select: typeof productSelect }>;
 type DatabaseClient = Prisma.TransactionClient | typeof prisma;
-
-export const CATEGORY_MANAGER_ROLES = new Set(['OWNER', 'ADMIN']);
 
 @Injectable()
 export class CatalogService {
@@ -646,7 +645,7 @@ export class CatalogService {
   }
 
   private assertCanManage(tenant: TenantPrincipal): void {
-    if (!CATEGORY_MANAGER_ROLES.has(tenant.role)) {
+    if (!hasPermission(tenant.role, Permission.CATALOG_WRITE)) {
       throw new StableHttpException(
         HttpStatus.FORBIDDEN,
         'CATALOG_MANAGEMENT_ACCESS_DENIED',

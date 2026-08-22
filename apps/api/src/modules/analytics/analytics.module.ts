@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AuthorizationModule } from '../authorization/authorization.module';
 import { IdentityModule } from '../identity/identity.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 
@@ -12,7 +13,7 @@ import { AnalyticsDashboardController } from './presentation/analytics-dashboard
 import { AnalyticsController } from './presentation/analytics.controller';
 
 @Module({
-  imports: [IdentityModule, OrganizationsModule],
+  imports: [AuthorizationModule, IdentityModule, OrganizationsModule],
   controllers: [AnalyticsController, AnalyticsDashboardController],
   providers: [
     AnalyticsDashboardService,

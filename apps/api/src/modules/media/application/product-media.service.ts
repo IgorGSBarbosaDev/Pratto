@@ -8,6 +8,7 @@ import type {
   ProductMediaType,
   StorageService,
 } from '@pratto/contracts';
+import { hasPermission, Permission } from '@pratto/contracts';
 import { STORAGE_SERVICE } from '@pratto/contracts';
 import { prisma } from '@pratto/database';
 import type { Prisma } from '@pratto/database';
@@ -108,8 +109,6 @@ const MEDIA_RULES: ReadonlyMap<string, MediaRule> = new Map([
     },
   ],
 ]);
-
-const MEDIA_MANAGER_ROLES = new Set(['OWNER', 'ADMIN']);
 
 @Injectable()
 export class ProductMediaService {
@@ -416,7 +415,7 @@ export class ProductMediaService {
   }
 
   private assertCanManage(tenant: TenantPrincipal): void {
-    if (!MEDIA_MANAGER_ROLES.has(tenant.role)) {
+    if (!hasPermission(tenant.role, Permission.CATALOG_WRITE)) {
       throw new StableHttpException(
         HttpStatus.FORBIDDEN,
         'PRODUCT_MEDIA_MANAGEMENT_ACCESS_DENIED',

@@ -25,6 +25,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { EstablishmentSettingsResponse } from '@pratto/contracts';
+import { Permission } from '@pratto/contracts';
 import {
   establishmentAssetKindSchema,
   establishmentIdSchema,
@@ -32,6 +33,8 @@ import {
 } from '@pratto/validation';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
+import { PermissionGuard } from '../../authorization/presentation/permission.guard';
+import { RequirePermission } from '../../authorization/presentation/require-permission.decorator';
 import type { AuthenticatedRequest } from '../../identity/domain/auth.types';
 import { AuthenticatedGuard } from '../../identity/presentation/authenticated.guard';
 import { CsrfGuard } from '../../identity/presentation/csrf.guard';
@@ -44,11 +47,12 @@ import {
 @ApiTags('Establishments')
 @ApiCookieAuth('pratto_session')
 @Controller('admin/establishments')
-@UseGuards(AuthenticatedGuard, OrganizationGuard)
+@UseGuards(AuthenticatedGuard, OrganizationGuard, PermissionGuard)
 export class EstablishmentController {
   constructor(@Inject(EstablishmentService) private readonly service: EstablishmentService) {}
 
   @Get(':establishmentId/settings')
+  @RequirePermission(Permission.ESTABLISHMENT_READ)
   @ApiOperation({ summary: 'Read the current organization establishment settings' })
   @ApiParam({ name: 'establishmentId', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Establishment settings' })
@@ -60,6 +64,7 @@ export class EstablishmentController {
   }
 
   @Patch(':establishmentId/settings')
+  @RequirePermission(Permission.ESTABLISHMENT_UPDATE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Update public establishment settings' })
@@ -77,6 +82,7 @@ export class EstablishmentController {
   }
 
   @Post(':establishmentId/assets/:assetKind')
+  @RequirePermission(Permission.ESTABLISHMENT_UPDATE)
   @UseGuards(CsrfGuard)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
@@ -108,6 +114,7 @@ export class EstablishmentController {
   }
 
   @Delete(':establishmentId/assets/:assetKind')
+  @RequirePermission(Permission.ESTABLISHMENT_UPDATE)
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Remove the establishment logo or cover image' })

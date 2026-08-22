@@ -1,4 +1,5 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { hasPermission, Permission } from '@pratto/contracts';
 import type {
   AnalyticsDashboardCategoryMetric,
   AnalyticsDashboardProductMetric,
@@ -24,6 +25,14 @@ export class AnalyticsDashboardService {
     input: AnalyticsDashboardQueryInput,
   ): Promise<AnalyticsDashboardResponse> {
     await this.assertEstablishment(tenant, establishmentId);
+    if (!hasPermission(tenant.role, Permission.ANALYTICS_READ)) {
+      throw new StableHttpException(
+        HttpStatus.FORBIDDEN,
+        'PERMISSION_DENIED',
+        'Seu perfil não possui permissão para esta operação.',
+        { permission: Permission.ANALYTICS_READ },
+      );
+    }
     await this.assertFilters(tenant.organizationId, establishmentId, input);
 
     const scope: AnalyticsQueryScope = {

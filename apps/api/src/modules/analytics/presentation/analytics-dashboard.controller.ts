@@ -7,10 +7,12 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import type { AnalyticsDashboardResponse } from '@pratto/contracts';
+import { Permission, type AnalyticsDashboardResponse } from '@pratto/contracts';
 import { analyticsDashboardQuerySchema, establishmentIdSchema } from '@pratto/validation';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
+import { PermissionGuard } from '../../authorization/presentation/permission.guard';
+import { RequirePermission } from '../../authorization/presentation/require-permission.decorator';
 import type { AuthenticatedRequest } from '../../identity/domain/auth.types';
 import { AuthenticatedGuard } from '../../identity/presentation/authenticated.guard';
 import { OrganizationGuard } from '../../organizations/presentation/organization.guard';
@@ -19,13 +21,14 @@ import { AnalyticsDashboardService } from '../application/analytics-dashboard.se
 @ApiTags('Analytics')
 @ApiCookieAuth('pratto_session')
 @Controller('admin/establishments')
-@UseGuards(AuthenticatedGuard, OrganizationGuard)
+@UseGuards(AuthenticatedGuard, OrganizationGuard, PermissionGuard)
 export class AnalyticsDashboardController {
   constructor(
     @Inject(AnalyticsDashboardService) private readonly service: AnalyticsDashboardService,
   ) {}
 
   @Get(':establishmentId/analytics')
+  @RequirePermission(Permission.ANALYTICS_READ)
   @ApiOperation({ summary: 'Read aggregated analytics for an establishment' })
   @ApiParam({ name: 'establishmentId', format: 'uuid' })
   @ApiQuery({ name: 'from', required: true, format: 'date-time' })
