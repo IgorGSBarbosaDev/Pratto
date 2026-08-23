@@ -13,6 +13,8 @@ jest.mock('@pratto/database', () => ({
   prisma: {
     establishment: { findFirst: jest.fn() },
     membership: { findFirst: jest.fn(), count: jest.fn(), update: jest.fn() },
+    membershipInvitation: { findFirst: jest.fn(), updateMany: jest.fn() },
+    user: { findUnique: jest.fn() },
     $transaction: jest.fn(),
     $queryRaw: jest.fn(),
   },
@@ -21,6 +23,8 @@ jest.mock('@pratto/database', () => ({
 const database = prisma as unknown as {
   establishment: { findFirst: jest.Mock };
   membership: { findFirst: jest.Mock; count: jest.Mock; update: jest.Mock };
+  membershipInvitation: { findFirst: jest.Mock; updateMany: jest.Mock };
+  user: { findUnique: jest.Mock };
   $transaction: jest.Mock;
   $queryRaw: jest.Mock;
 };
@@ -104,7 +108,10 @@ describe('TeamService authorization', () => {
         role: 'ADMIN',
       }),
     ).rejects.toMatchObject({
-      response: expect.objectContaining({ code: 'TEAM_MEMBER_MANAGEMENT_DENIED' }),
+      response: expect.objectContaining({
+        code: 'PERMISSION_DENIED',
+        details: { permission: 'establishment:ownership:manage' },
+      }),
     });
     expect(database.membership.update).not.toHaveBeenCalled();
   });
@@ -129,5 +136,37 @@ describe('TeamService authorization', () => {
       response: expect.objectContaining({ code: 'SELF_MANAGEMENT_NOT_ALLOWED' }),
     });
     expect(database.membership.update).not.toHaveBeenCalled();
+  });
+
+  it('prevents administrators from replacing or canceling a pending owner invitation', async () => {
+    database.user.findUnique.mockResolvedValue(null);
+    database.membershipInvitation.findFirst.mockResolvedValue({
+      id: 'owner-invitation',
+      establishmentId: 'establishment-id',
+      email: 'owner@example.com',
+      role: 'OWNER',
+      status: 'PENDING',
+      expiresAt: new Date(Date.now() + 60_000),
+      acceptedAt: null,
+      canceledAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const service = new TeamService(email, passwords as never);
+
+    await expect(
+      service.invite(tenant('ADMIN'), 'establishment-id', {
+        email: 'owner@example.com',
+        role: 'MEMBER',
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'TEAM_MEMBER_MANAGEMENT_DENIED' }),
+    });
+    await expect(
+      service.cancel(tenant('ADMIN'), 'establishment-id', 'owner-invitation'),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'TEAM_MEMBER_MANAGEMENT_DENIED' }),
+    });
+    expect(database.membershipInvitation.updateMany).not.toHaveBeenCalled();
   });
 });
