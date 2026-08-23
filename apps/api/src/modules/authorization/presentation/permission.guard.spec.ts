@@ -15,30 +15,86 @@ function contextFor(request: AuthenticatedRequest) {
 }
 
 describe('PermissionGuard', () => {
-  it('allows permissions granted to the active role', () => {
-    const reflector = { getAllAndOverride: jest.fn().mockReturnValue(Permission.TEAM_INVITE) };
-    const guard = new PermissionGuard(reflector as never);
-    const request = { tenant: { role: 'ADMIN' } } as AuthenticatedRequest;
+  const authorization = {
+    requirePermission: jest.fn(),
+    requireEstablishmentPermission: jest.fn(),
+    requireMenuPermission: jest.fn(),
+  };
 
-    expect(guard.canActivate(contextFor(request))).toBe(true);
+  beforeEach(() => {
+    jest.clearAllMocks();
+    authorization.requirePermission.mockResolvedValue({
+      membershipId: 'membership-id',
+      role: 'ADMIN',
+    });
   });
 
-  it('rejects a role without the required permission', () => {
+  it('allows permissions granted by the current active membership', async () => {
     const reflector = { getAllAndOverride: jest.fn().mockReturnValue(Permission.TEAM_INVITE) };
-    const guard = new PermissionGuard(reflector as never);
+    const guard = new PermissionGuard(reflector as never, authorization as never);
+    const originalTenant = { role: 'MEMBER' } as never;
+    const request = { tenant: originalTenant } as unknown as AuthenticatedRequest;
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(authorization.requirePermission).toHaveBeenCalledWith(
+      originalTenant,
+      Permission.TEAM_INVITE,
+    );
+    expect(request.tenant?.role).toBe('ADMIN');
+  });
+
+  it('propagates a permission denial from the active membership lookup', async () => {
+    const reflector = { getAllAndOverride: jest.fn().mockReturnValue(Permission.TEAM_INVITE) };
+    authorization.requirePermission.mockRejectedValue(
+      new StableHttpException(HttpStatus.FORBIDDEN, 'PERMISSION_DENIED', 'Permissão negada.'),
+    );
+    const guard = new PermissionGuard(reflector as never, authorization as never);
     const request = { tenant: { role: 'MEMBER' } } as AuthenticatedRequest;
 
-    expect(() => guard.canActivate(contextFor(request))).toThrow(StableHttpException);
-    try {
-      guard.canActivate(contextFor(request));
-    } catch (error) {
-      expect(error).toMatchObject({
-        response: expect.objectContaining({
-          statusCode: HttpStatus.FORBIDDEN,
-          code: 'PERMISSION_DENIED',
-        }),
-      });
-    }
+    await expect(guard.canActivate(contextFor(request))).rejects.toMatchObject({
+      response: expect.objectContaining({
+        statusCode: HttpStatus.FORBIDDEN,
+        code: 'PERMISSION_DENIED',
+      }),
+    });
+  });
+
+  it('authorizes valid establishment and menu route targets before the handler', async () => {
+    const reflector = { getAllAndOverride: jest.fn().mockReturnValue(Permission.CATALOG_WRITE) };
+    authorization.requireEstablishmentPermission.mockResolvedValue({
+      membershipId: 'membership-id',
+      role: 'OWNER',
+    });
+    authorization.requireMenuPermission.mockResolvedValue({
+      membershipId: 'membership-id',
+      role: 'ADMIN',
+    });
+    const guard = new PermissionGuard(reflector as never, authorization as never);
+    const tenant = { role: 'ADMIN' } as never;
+
+    await guard.canActivate(
+      contextFor({
+        tenant,
+        params: { establishmentId: '11111111-1111-4111-8111-111111111111' },
+      } as unknown as AuthenticatedRequest),
+    );
+    await guard.canActivate(
+      contextFor({
+        tenant,
+        params: { menuId: '22222222-2222-4222-8222-222222222222' },
+      } as unknown as AuthenticatedRequest),
+    );
+
+    expect(authorization.requireEstablishmentPermission).toHaveBeenCalledWith(
+      tenant,
+      '11111111-1111-4111-8111-111111111111',
+      Permission.CATALOG_WRITE,
+    );
+    expect(authorization.requireMenuPermission).toHaveBeenCalledWith(
+      tenant,
+      '22222222-2222-4222-8222-222222222222',
+      Permission.CATALOG_WRITE,
+    );
   });
 
   it('keeps sensitive establishment permissions exclusive to owners', () => {

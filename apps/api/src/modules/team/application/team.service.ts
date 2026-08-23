@@ -155,6 +155,7 @@ export class TeamService {
         'Já existe um convite pendente para este e-mail.',
       );
     }
+    if (pending) this.assertCanManageTarget(tenant.role, pending.role, input.role);
 
     const token = createOpaqueToken();
     const now = new Date();
@@ -213,6 +214,7 @@ export class TeamService {
         'Somente convites pendentes podem ser reenviados.',
       );
     }
+    this.assertCanManageTarget(tenant.role, current.role);
     const token = createOpaqueToken();
     const updated = await prisma.membershipInvitation.update({
       where: { id: current.id },
@@ -233,6 +235,12 @@ export class TeamService {
   ): Promise<void> {
     this.assertPermission(tenant, Permission.TEAM_INVITE);
     await this.findEstablishment(tenant, establishmentId);
+    const current = await prisma.membershipInvitation.findFirst({
+      where: { id: invitationId, organizationId: tenant.organizationId, establishmentId },
+      select: { role: true, status: true },
+    });
+    if (!current || current.status !== 'PENDING') this.invitationNotFound();
+    this.assertCanManageTarget(tenant.role, current.role);
     const canceled = await prisma.membershipInvitation.updateMany({
       where: {
         id: invitationId,
@@ -240,7 +248,11 @@ export class TeamService {
         establishmentId,
         status: 'PENDING',
       },
-      data: { status: 'CANCELED', canceledAt: new Date() },
+      data: {
+        status: 'CANCELED',
+        canceledAt: new Date(),
+        tokenHash: this.hashInvitationToken(createOpaqueToken()),
+      },
     });
     if (canceled.count !== 1) this.invitationNotFound();
   }
@@ -256,6 +268,9 @@ export class TeamService {
     const updated = await prisma.$transaction(async (transaction) => {
       const current = await this.findMember(tenant, membershipId, transaction);
       if (current.userId === tenant.userId) this.selfManagementNotAllowed();
+      if (current.role === 'OWNER' || input.role === 'OWNER') {
+        this.assertPermission(tenant, Permission.OWNERSHIP_MANAGE);
+      }
       this.assertCanManageTarget(tenant.role, current.role, input.role);
       if (current.role === 'OWNER' && input.role !== 'OWNER') {
         await this.assertAnotherOwner(transaction, tenant.organizationId, current.userId);
@@ -280,6 +295,9 @@ export class TeamService {
     await prisma.$transaction(async (transaction) => {
       const current = await this.findMember(tenant, membershipId, transaction);
       if (current.userId === tenant.userId) this.selfManagementNotAllowed();
+      if (current.role === 'OWNER') {
+        this.assertPermission(tenant, Permission.OWNERSHIP_MANAGE);
+      }
       this.assertCanManageTarget(tenant.role, current.role);
       if (current.role === 'OWNER') {
         await this.assertAnotherOwner(transaction, tenant.organizationId, current.userId);
@@ -299,7 +317,10 @@ export class TeamService {
         role: true,
         status: true,
         expiresAt: true,
-        establishment: { select: { name: true } },
+        organization: { select: { status: true } },
+        establishment: {
+          select: { name: true, organizationId: true, status: true },
+        },
       },
     });
     this.assertInvitationUsable(invitation);
@@ -328,6 +349,8 @@ export class TeamService {
           expiresAt: true,
           establishmentId: true,
           organizationId: true,
+          organization: { select: { status: true } },
+          establishment: { select: { id: true, organizationId: true, status: true } },
         },
       });
       this.assertInvitationUsable(invitation);
@@ -385,7 +408,12 @@ export class TeamService {
 
       const accepted = await transaction.membershipInvitation.updateMany({
         where: { id: invitation.id, status: 'PENDING', expiresAt: { gt: now } },
-        data: { status: 'ACCEPTED', acceptedAt: now, acceptedUserId: user.id },
+        data: {
+          status: 'ACCEPTED',
+          acceptedAt: now,
+          acceptedUserId: user.id,
+          tokenHash: this.hashInvitationToken(createOpaqueToken()),
+        },
       });
       if (accepted.count !== 1) this.invitationInvalid();
       return { email: invitation.email, createdAccount };
@@ -474,13 +502,30 @@ export class TeamService {
     );
   }
 
-  private assertInvitationUsable(
-    invitation: {
+  private assertInvitationUsable<
+    T extends {
       status: string;
       expiresAt: Date;
-    } | null,
-  ): asserts invitation is { status: 'PENDING'; expiresAt: Date } {
-    if (!invitation || invitation.status !== 'PENDING' || invitation.expiresAt <= new Date()) {
+      organization?: { status: string };
+      establishment?: { id?: string; organizationId: string; status: string };
+      establishmentId?: string;
+      organizationId?: string;
+    },
+  >(invitation: T | null): asserts invitation is T & { status: 'PENDING'; expiresAt: Date } {
+    const inactiveScope =
+      invitation?.organization?.status !== undefined &&
+      (invitation.organization.status !== 'ACTIVE' ||
+        invitation.establishment?.status !== 'ACTIVE' ||
+        (invitation.establishmentId !== undefined &&
+          invitation.establishment?.id !== invitation.establishmentId) ||
+        (invitation.organizationId !== undefined &&
+          invitation.establishment?.organizationId !== invitation.organizationId));
+    if (
+      !invitation ||
+      invitation.status !== 'PENDING' ||
+      invitation.expiresAt <= new Date() ||
+      inactiveScope
+    ) {
       this.invitationInvalid();
     }
   }
