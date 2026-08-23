@@ -29,14 +29,18 @@ selecionada automaticamente; com várias, a sessão permanece autenticada sem te
 membership alheia no próprio banco.
 
 Em toda resolução tenant-aware, o guard revalida usuário, membership, organização e
-estabelecimentos ativos. IDs enviados pelo cliente nunca substituem o contexto resolvido. As
-permissões são centrais em `packages/contracts/src/authorization.ts` e aplicadas pelo
-`PermissionGuard`: OWNER tem controle completo, inclusive configurações e ownership; ADMIN opera e
-gerencia membros não proprietários; e MEMBER tem acesso operacional de consulta. Configurações e
-ações de ownership usam permissões próprias e não ficam disponíveis para ADMIN/MEMBER.
+estabelecimentos ativos. IDs enviados pelo cliente nunca substituem o contexto resolvido. Para cada
+rota administrativa, o `PermissionGuard` resolve o estabelecimento diretamente ou pelo menu,
+restringe a consulta à organização da sessão e relê a membership ativa para usar o papel atual do
+banco. As permissões são centrais em `packages/contracts/src/authorization.ts`: OWNER tem controle
+completo, inclusive configurações e ownership; ADMIN opera e gerencia membros não proprietários; e
+MEMBER tem acesso operacional de consulta. Configurações e ações de ownership usam permissões
+próprias e não ficam disponíveis para ADMIN/MEMBER.
 
 Convites de equipe usam `membership_invitations`, armazenam somente o HMAC do token, expiram em sete
-dias e são aceitos em uma transação que cria ou reativa a membership sem duplicá-la.
+dias e são aceitos em uma transação que cria ou reativa a membership sem duplicá-la. O papel vem
+exclusivamente do convite validado; aceitar ou cancelar rotaciona o hash, e administradores não
+podem manipular convites destinados a proprietários.
 
 ## Recuperação, limite e auditoria
 

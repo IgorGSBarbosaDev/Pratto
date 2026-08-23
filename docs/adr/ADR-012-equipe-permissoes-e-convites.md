@@ -18,7 +18,10 @@ introduzir seleção por unidade ou duplicar memberships; a seleção por estabe
 fase de múltiplas unidades.
 
 As permissões são definidas em `packages/contracts/src/authorization.ts` e aplicadas por
-`PermissionGuard` nas rotas, com as regras de alvo de equipe reutilizadas no serviço. `OWNER` tem
+`PermissionGuard` nas rotas. O guard resolve o estabelecimento informado diretamente ou por meio do
+menu, sempre dentro da organização selecionada, e revalida no PostgreSQL a membership ativa e seu
+papel atual antes de liberar o handler. As regras de alvo de equipe continuam reutilizadas no
+serviço. `OWNER` tem
 controle completo, incluindo `SETTINGS_MANAGE` e `OWNERSHIP_MANAGE`; `ADMIN` gerencia a operação e
 membros não proprietários; `MEMBER` tem acesso de consulta ao estabelecimento e catálogo. A
 interface filtra a navegação e deixa as mutações de catálogo em modo somente leitura quando o papel
@@ -33,7 +36,9 @@ cria a membership ativa, e marca o convite como aceito.
 ## Consequências
 
 - Contas e memberships de proprietários existentes não precisam de backfill adicional.
-- Reenvio substitui o hash e a validade do convite sem expor o token ao painel.
+- Reenvio substitui o hash e a validade do convite sem expor o token ao painel; cancelamento e
+  aceitação também rotacionam o hash para invalidar imediatamente o token entregue.
 - A remoção de membros é lógica; o banco preserva o vínculo histórico e a unicidade por usuário.
 - O último proprietário não pode ser removido ou rebaixado.
+- Administradores não podem criar, substituir, reenviar ou cancelar convites de proprietário.
 - Mailpit continua sendo o adaptador de e-mail local; não há filas, workers ou provedor externo.
