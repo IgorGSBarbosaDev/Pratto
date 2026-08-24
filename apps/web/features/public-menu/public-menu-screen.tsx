@@ -352,63 +352,24 @@ export function PublicMenuScreen({
           <>
             {tab === 'menu' ? (
               <div
-                className="fade-in absolute inset-0"
+                className="fade-in absolute inset-0 flex flex-col"
                 key={`${categoryId ?? 'all'}-${viewMode}-${searchTerm}`}
               >
+                <MenuDiscoveryControls
+                  value={searchInput}
+                  viewMode={viewMode}
+                  lightTheme={lightTheme}
+                  overlay={viewMode === 'feed'}
+                  onChange={setSearchInput}
+                  onViewModeChange={setViewMode}
+                  onClear={clearDiscovery}
+                />
                 {viewMode === 'feed' ? (
                   <>
-                    {products.length === 0 ? (
-                      <PublicMenuEmpty
-                        categorySelected={Boolean(categoryId)}
-                        searchActive={Boolean(searchTerm)}
-                        lightTheme={lightTheme}
-                        onClear={clearDiscovery}
-                      />
-                    ) : (
-                      <div
-                        ref={feedRef}
-                        className="snap-y-feed no-scrollbar flex h-full flex-col overflow-y-scroll overscroll-y-contain"
-                        role="feed"
-                        tabIndex={0}
-                        aria-label="Produtos publicados"
-                        aria-busy={isFetchingNextPage}
-                      >
-                        {products.map((product, index) => (
-                          <ProductCard
-                            key={product.id}
-                            product={product}
-                            categoryName={categoryName(product.categoryId)}
-                            active={activeProductId === product.id}
-                            near={
-                              Math.abs(
-                                index - products.findIndex((item) => item.id === activeProductId),
-                              ) <= 2
-                            }
-                            lightTheme={lightTheme}
-                            showHint={
-                              index === 0 && products.length > 1 && activeProductId === product.id
-                            }
-                            onOpenDetails={() => openProduct(product)}
-                            onOpenShare={() => setShareProduct(product)}
-                            onInteraction={(interactionType) =>
-                              analyticsRef.current?.track({
-                                eventType: 'product_interaction',
-                                productId: product.id,
-                                interactionType,
-                              })
-                            }
-                          />
-                        ))}
-                        {isFetchingNextPage ? <FeedLoadingCard lightTheme={lightTheme} /> : null}
-                        {query.error ? (
-                          <FeedError lightTheme={lightTheme} onRetry={() => void fetchNextPage()} />
-                        ) : null}
-                      </div>
-                    )}
                     {categories.length > 0 ? (
-                      <div className="pointer-events-none absolute inset-x-0 top-[108px] z-20 pt-2">
+                      <div className="relative z-20 shrink-0 bg-black/25 backdrop-blur-md">
                         <nav
-                          className="no-scrollbar pointer-events-auto flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 py-1 [mask-image:linear-gradient(to_right,transparent,#000_18px,#000_calc(100%-24px),transparent)]"
+                          className="no-scrollbar flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 py-1 [mask-image:linear-gradient(to_right,transparent,#000_18px,#000_calc(100%-24px),transparent)]"
                           aria-label="Categorias do cardápio"
                         >
                           <CategoryButton
@@ -428,6 +389,59 @@ export function PublicMenuScreen({
                         </nav>
                       </div>
                     ) : null}
+                    <div className="min-h-0 flex-1">
+                      {products.length === 0 ? (
+                        <PublicMenuEmpty
+                          categorySelected={Boolean(categoryId)}
+                          searchActive={Boolean(searchTerm)}
+                          lightTheme={lightTheme}
+                          onClear={clearDiscovery}
+                        />
+                      ) : (
+                        <div
+                          ref={feedRef}
+                          className="snap-y-feed no-scrollbar flex h-full flex-col overflow-y-scroll overscroll-y-contain"
+                          role="feed"
+                          tabIndex={0}
+                          aria-label="Produtos publicados"
+                          aria-busy={isFetchingNextPage}
+                        >
+                          {products.map((product, index) => (
+                            <ProductCard
+                              key={product.id}
+                              product={product}
+                              categoryName={categoryName(product.categoryId)}
+                              active={activeProductId === product.id}
+                              near={
+                                Math.abs(
+                                  index - products.findIndex((item) => item.id === activeProductId),
+                                ) <= 2
+                              }
+                              lightTheme={lightTheme}
+                              showHint={
+                                index === 0 && products.length > 1 && activeProductId === product.id
+                              }
+                              onOpenDetails={() => openProduct(product)}
+                              onOpenShare={() => setShareProduct(product)}
+                              onInteraction={(interactionType) =>
+                                analyticsRef.current?.track({
+                                  eventType: 'product_interaction',
+                                  productId: product.id,
+                                  interactionType,
+                                })
+                              }
+                            />
+                          ))}
+                          {isFetchingNextPage ? <FeedLoadingCard lightTheme={lightTheme} /> : null}
+                          {query.error ? (
+                            <FeedError
+                              lightTheme={lightTheme}
+                              onRetry={() => void fetchNextPage()}
+                            />
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <TraditionalMenu
@@ -440,15 +454,6 @@ export function PublicMenuScreen({
                     onOpenShare={setShareProduct}
                   />
                 )}
-                <MenuDiscoveryControls
-                  value={searchInput}
-                  viewMode={viewMode}
-                  lightTheme={lightTheme}
-                  overlay={viewMode === 'feed'}
-                  onChange={setSearchInput}
-                  onViewModeChange={setViewMode}
-                  onClear={clearDiscovery}
-                />
               </div>
             ) : null}
             {tab === 'categories' ? (
@@ -553,7 +558,7 @@ function MenuDiscoveryControls({
       ? 'text-ink-faint hover:bg-sand'
       : 'text-white/55 hover:bg-white/10';
   return (
-    <div className={`absolute inset-x-0 top-0 z-30 px-4 pb-3 pt-3 ${surface}`}>
+    <div className={`relative z-30 h-16 shrink-0 px-4 py-3 ${surface}`}>
       <div className="flex items-center gap-2">
         <label className="relative min-w-0 flex-1">
           <Search
@@ -590,7 +595,6 @@ function MenuDiscoveryControls({
             type="button"
             aria-pressed={viewMode === 'feed'}
             aria-label="Ver feed"
-            title="Feed vertical"
             onClick={() => onViewModeChange('feed')}
             className={`flex h-9 items-center justify-center gap-1 rounded-[10px] px-2 transition ${viewMode === 'feed' ? 'bg-[var(--menu-primary)] text-white shadow-sm' : inactiveText}`}
           >
@@ -600,8 +604,7 @@ function MenuDiscoveryControls({
           <button
             type="button"
             aria-pressed={viewMode === 'traditional'}
-            aria-label="Ver menu tradicional"
-            title="Menu tradicional"
+            aria-label="Ver lista"
             onClick={() => onViewModeChange('traditional')}
             className={`flex h-9 items-center justify-center gap-1 rounded-[10px] px-2 transition ${viewMode === 'traditional' ? 'bg-[var(--menu-primary)] text-white shadow-sm' : inactiveText}`}
           >
@@ -609,12 +612,6 @@ function MenuDiscoveryControls({
             <span className="text-[11px] font-medium">Lista</span>
           </button>
         </div>
-      </div>
-      <div
-        className={`mt-1 text-[11px] ${overlay ? 'text-white/60' : lightTheme ? 'text-ink-faint' : 'text-white/45'}`}
-      >
-        {viewMode === 'feed' ? 'Feed vertical' : 'Menu tradicional'}
-        {value.trim() ? ' · buscando produtos' : ''}
       </div>
     </div>
   );
@@ -648,7 +645,7 @@ function TraditionalMenu({
   if (products.length === 0) {
     return (
       <div
-        className={`h-full overflow-y-auto px-6 pb-28 pt-36 text-center ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
+        className={`min-h-0 flex-1 overflow-y-auto px-6 pb-28 text-center ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
       >
         <div className="mx-auto max-w-xs">
           <div
@@ -671,7 +668,7 @@ function TraditionalMenu({
 
   return (
     <div
-      className={`no-scrollbar h-full overflow-y-auto px-4 pb-28 pt-36 ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
+      className={`no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-28 ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
     >
       {groups.length > 1 ? (
         <nav
