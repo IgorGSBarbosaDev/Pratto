@@ -53,18 +53,18 @@ The identity is:
 
 The normative CSS variables are defined in `design-reference/src/index.css` and were confirmed from computed browser styles.
 
-| Token | Value | Primary use |
-| --- | --- | --- |
-| `--color-cream` | `#fff9f4` | Main Customer and Admin surfaces, sheets, dialogs, inputs |
-| `--color-sand` | `#f3ebe3` | App background, secondary surfaces, skeletons, soft buttons |
-| `--color-sand-deep` | `#e9ded2` | Hover/pressed surfaces, inactive toggle track, image fallback |
-| `--color-ink` | `#181716` | Primary text, active Admin navigation, dark buttons |
-| `--color-ink-soft` | `#4a4642` | Body and secondary text |
-| `--color-ink-faint` | `#8a827a` | Labels, hints, metadata, inactive navigation |
-| `--color-accent` | `#f45b3d` | Primary CTA, selected highlights, validation, chart emphasis |
-| `--color-accent-deep` | `#d8452a` | Accent text and hover state |
-| `--color-herb` | `#3f7652` | Open/active/success states and availability toggles |
-| `--color-line` | `#eadfd4` | Hairline borders and dividers |
+| Token                 | Value     | Primary use                                                   |
+| --------------------- | --------- | ------------------------------------------------------------- |
+| `--color-cream`       | `#fff9f4` | Main Customer and Admin surfaces, sheets, dialogs, inputs     |
+| `--color-sand`        | `#f3ebe3` | App background, secondary surfaces, skeletons, soft buttons   |
+| `--color-sand-deep`   | `#e9ded2` | Hover/pressed surfaces, inactive toggle track, image fallback |
+| `--color-ink`         | `#181716` | Primary text, active Admin navigation, dark buttons           |
+| `--color-ink-soft`    | `#4a4642` | Body and secondary text                                       |
+| `--color-ink-faint`   | `#8a827a` | Labels, hints, metadata, inactive navigation                  |
+| `--color-accent`      | `#f45b3d` | Primary CTA, selected highlights, validation, chart emphasis  |
+| `--color-accent-deep` | `#d8452a` | Accent text and hover state                                   |
+| `--color-herb`        | `#3f7652` | Open/active/success states and availability toggles           |
+| `--color-line`        | `#eadfd4` | Hairline borders and dividers                                 |
 
 Additional chart accents are terracotta `#e08a4a`, olive `#7a8a5c`, clay `#c96a4a`, and warm gray `#a8a099`. Warning toast uses `#c07a1b`.
 
@@ -82,19 +82,19 @@ The reference imports Google Fonts:
 
 Observed hierarchy:
 
-| Role | Typical treatment |
-| --- | --- |
-| Restaurant entry name | Instrument Serif, 42 px, line-height 1 |
-| Customer feed dish title | Instrument Serif, 34 px, line-height 1.05 |
-| Customer screen title | Instrument Serif, 32–34 px |
-| Customer detail title | Instrument Serif, 30 px |
-| Admin page title | Instrument Serif, 34 px |
-| Drawer title | Instrument Serif, 24 px |
-| Metric value | Instrument Sans, 30 px, semibold |
-| Primary body | Instrument Sans, 15 px, relaxed line-height where descriptive |
-| Control text | 14–15 px, medium/semibold |
-| Section label | 11 px, semibold, uppercase, tracking 0.14–0.22 em |
-| Price | 15–20 px, semibold, tabular numerals |
+| Role                     | Typical treatment                                             |
+| ------------------------ | ------------------------------------------------------------- |
+| Restaurant entry name    | Instrument Serif, 42 px, line-height 1                        |
+| Customer feed dish title | Instrument Serif, 34 px, line-height 1.05                     |
+| Customer screen title    | Instrument Serif, 32–34 px                                    |
+| Customer detail title    | Instrument Serif, 30 px                                       |
+| Admin page title         | Instrument Serif, 34 px                                       |
+| Drawer title             | Instrument Serif, 24 px                                       |
+| Metric value             | Instrument Sans, 30 px, semibold                              |
+| Primary body             | Instrument Sans, 15 px, relaxed line-height where descriptive |
+| Control text             | 14–15 px, medium/semibold                                     |
+| Section label            | 11 px, semibold, uppercase, tracking 0.14–0.22 em             |
+| Price                    | 15–20 px, semibold, tabular numerals                          |
 
 Serif is not used for dense operational copy, table labels, form labels, or buttons. It supplies editorial identity at headings only.
 
@@ -482,31 +482,31 @@ The 1024 px dashboard remains usable with the collapsed 76 px sidebar and three 
 
 ## 10. Important state coverage
 
-| State | Implemented and reachable | Notes |
-| --- | --- | --- |
-| Customer entry loading | Yes | Warm layout-preserving skeleton |
-| Customer feed loading | Yes | Full image, chips, and overlay skeleton |
-| Image loading/failure | Yes | Generic `FoodImage` behavior |
-| Category with no dishes | Yes in component | Requires empty data to reach |
-| Restaurant hours empty | Yes in component | Requires all days closed |
-| Public unavailable | Yes | Dedicated harness view |
-| Customer general/network error | Component exists, not wired to CustomerApp | No reachable retry state in mock flow |
-| Detail loading | No distinct state | Sheet uses already-loaded mock data |
-| Dashboard loading | Yes | Reachable on mount |
-| Dashboard error | Component exists, intentionally unreachable | `failed` is hardcoded false |
-| Dishes loading | Yes | Reachable on view mount |
-| Dishes empty | Yes in component | Not reachable from seeded UI without deleting data |
-| Search empty | Yes | Reachable and captured |
-| Categories loading | Yes | Reachable on view mount |
-| Categories empty | Yes in component | Not reachable from seeded UI |
-| Form validation | Yes | Inline + toast |
-| Form saving/success | Yes | Simulated delays and toast |
-| Backend save failure | No realistic path | Mock store cannot fail |
-| Upload empty/uploading/failure | Yes in component | Failure only on FileReader error |
-| Confirmation | Yes | Category archive |
-| Dragging | Yes | Dishes/categories |
-| Publication states | Store only | No rendered UI |
-| Unpublished preview | No | Required by embedded brief but absent |
+| State                          | Implemented and reachable                   | Notes                                              |
+| ------------------------------ | ------------------------------------------- | -------------------------------------------------- |
+| Customer entry loading         | Yes                                         | Warm layout-preserving skeleton                    |
+| Customer feed loading          | Yes                                         | Full image, chips, and overlay skeleton            |
+| Image loading/failure          | Yes                                         | Generic `FoodImage` behavior                       |
+| Category with no dishes        | Yes in component                            | Requires empty data to reach                       |
+| Restaurant hours empty         | Yes in component                            | Requires all days closed                           |
+| Public unavailable             | Yes                                         | Dedicated harness view                             |
+| Customer general/network error | Component exists, not wired to CustomerApp  | No reachable retry state in mock flow              |
+| Detail loading                 | No distinct state                           | Sheet uses already-loaded mock data                |
+| Dashboard loading              | Yes                                         | Reachable on mount                                 |
+| Dashboard error                | Component exists, intentionally unreachable | `failed` is hardcoded false                        |
+| Dishes loading                 | Yes                                         | Reachable on view mount                            |
+| Dishes empty                   | Yes in component                            | Not reachable from seeded UI without deleting data |
+| Search empty                   | Yes                                         | Reachable and captured                             |
+| Categories loading             | Yes                                         | Reachable on view mount                            |
+| Categories empty               | Yes in component                            | Not reachable from seeded UI                       |
+| Form validation                | Yes                                         | Inline + toast                                     |
+| Form saving/success            | Yes                                         | Simulated delays and toast                         |
+| Backend save failure           | No realistic path                           | Mock store cannot fail                             |
+| Upload empty/uploading/failure | Yes in component                            | Failure only on FileReader error                   |
+| Confirmation                   | Yes                                         | Category archive                                   |
+| Dragging                       | Yes                                         | Dishes/categories                                  |
+| Publication states             | Store only                                  | No rendered UI                                     |
+| Unpublished preview            | No                                          | Required by embedded brief but absent              |
 
 ## 11. Screenshot inventory
 
@@ -638,20 +638,20 @@ The following real functions must be preserved and adapted, not removed:
 
 These differences cannot be solved by copying reference types:
 
-| Reference model | Real PRATTO contract | Implementation consequence |
-| --- | --- | --- |
-| `price: number` | Decimal string | Keep string parsing/validation end-to-end; format for display only |
-| `available: boolean` | `AVAILABLE`, `TEMPORARILY_UNAVAILABLE`, `HIDDEN` plus product active/inactive | Reference toggle alone is insufficient; retain complete state controls |
-| `short` and `description` | One `description` field | Exact overlay/detail copy split needs a product/contract decision; do not silently add a client-only field |
-| Dietary tag array | `allergens` and `ingredients` strings | Badge derivation needs an explicit supported vocabulary or conservative text display |
-| `image` + URL array | Ordered media objects with IMAGE/VIDEO and primary flag | Render real media and preserve media management semantics |
-| Numeric mock views/clicks | Real analytics summary, filters, daily series, rankings | Restyle without reducing metric coverage |
-| Category status includes `archived` | ACTIVE/INACTIVE plus `archivedAt` | Map archived appearance from `archivedAt`, not a fabricated status enum |
-| Tagline, Instagram, website | Not present in current establishment contract | Do not persist unsupported fields; resolve scope before adding backend fields |
-| Single string address | Structured address | Keep structured form and compose display text |
-| Accent + computed deep accent | Theme mode + primary color | Derive darker UI tone client-side; preserve LIGHT/DARK mode |
-| Local published snapshot | Real versioned immutable publication | Use current publication endpoints/history/idempotency |
-| No menu selector | Explicit `menuId` required | Integrate a visible menu context selector into the reference Admin shell/screens |
+| Reference model                     | Real PRATTO contract                                                          | Implementation consequence                                                                                 |
+| ----------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `price: number`                     | Decimal string                                                                | Keep string parsing/validation end-to-end; format for display only                                         |
+| `available: boolean`                | `AVAILABLE`, `TEMPORARILY_UNAVAILABLE`, `HIDDEN` plus product active/inactive | Reference toggle alone is insufficient; retain complete state controls                                     |
+| `short` and `description`           | One `description` field                                                       | Exact overlay/detail copy split needs a product/contract decision; do not silently add a client-only field |
+| Dietary tag array                   | `allergens` and `ingredients` strings                                         | Badge derivation needs an explicit supported vocabulary or conservative text display                       |
+| `image` + URL array                 | Ordered media objects with IMAGE/VIDEO and primary flag                       | Render real media and preserve media management semantics                                                  |
+| Numeric mock views/clicks           | Real analytics summary, filters, daily series, rankings                       | Restyle without reducing metric coverage                                                                   |
+| Category status includes `archived` | ACTIVE/INACTIVE plus `archivedAt`                                             | Map archived appearance from `archivedAt`, not a fabricated status enum                                    |
+| Tagline, Instagram, website         | Not present in current establishment contract                                 | Do not persist unsupported fields; resolve scope before adding backend fields                              |
+| Single string address               | Structured address                                                            | Keep structured form and compose display text                                                              |
+| Accent + computed deep accent       | Theme mode + primary color                                                    | Derive darker UI tone client-side; preserve LIGHT/DARK mode                                                |
+| Local published snapshot            | Real versioned immutable publication                                          | Use current publication endpoints/history/idempotency                                                      |
+| No menu selector                    | Explicit `menuId` required                                                    | Integrate a visible menu context selector into the reference Admin shell/screens                           |
 
 ## 14. Reuse, replace, and adapt map
 
