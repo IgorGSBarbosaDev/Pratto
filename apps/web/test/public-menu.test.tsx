@@ -310,7 +310,7 @@ describe('PublicMenuScreen', () => {
 
     renderScreen({ initialPage: first });
     await enterMenu();
-    fireEvent.click(screen.getByRole('button', { name: 'Ver menu tradicional' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ver lista' }));
 
     expect(await screen.findByText('Arroz cremoso')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Pratos' })).toBeInTheDocument();
