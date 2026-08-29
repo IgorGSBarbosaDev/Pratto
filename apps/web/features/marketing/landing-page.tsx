@@ -144,7 +144,7 @@ export function LandingPage() {
             <LandingNavLink href="#produto">Produto</LandingNavLink>
             <LandingNavLink href="#como-funciona">Como funciona</LandingNavLink>
             <LandingNavLink href="#recursos">Recursos</LandingNavLink>
-            <LandingNavLink href="#planos">Planos</LandingNavLink>
+            <LandingNavLink href="/plans">Planos</LandingNavLink>
             <LandingNavLink href="#faq">FAQ</LandingNavLink>
           </nav>
 
@@ -155,7 +155,7 @@ export function LandingPage() {
             >
               Entrar
             </Link>
-            <LandingButton href="#planos" size="small">
+            <LandingButton href="/plans" size="small">
               Ver planos <ArrowUpRight size={16} aria-hidden="true" />
             </LandingButton>
           </div>
@@ -187,7 +187,7 @@ export function LandingPage() {
               <MobileNavLink href="#recursos" onClick={closeMobileMenu}>
                 Recursos
               </MobileNavLink>
-              <MobileNavLink href="#planos" onClick={closeMobileMenu}>
+              <MobileNavLink href="/plans" onClick={closeMobileMenu}>
                 Planos
               </MobileNavLink>
               <MobileNavLink href="#faq" onClick={closeMobileMenu}>
@@ -202,7 +202,7 @@ export function LandingPage() {
               >
                 Entrar
               </Link>
-              <LandingButton href="#planos" size="small" onClick={closeMobileMenu}>
+              <LandingButton href="/plans" size="small" onClick={closeMobileMenu}>
                 Ver planos <ArrowUpRight size={16} aria-hidden="true" />
               </LandingButton>
             </div>
@@ -229,7 +229,7 @@ export function LandingPage() {
               atualizar — para o cliente descobrir mais do que uma lista de produtos.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <LandingButton href="#planos">
+              <LandingButton href="/plans">
                 Ver planos <ArrowRight size={18} aria-hidden="true" />
               </LandingButton>
               <a
@@ -558,99 +558,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="planos" className="bg-sand" aria-labelledby="pricing-title">
-        <div className="mx-auto max-w-[1240px] px-5 py-20 sm:px-8 sm:py-28 lg:px-10">
-          <Reveal className="max-w-2xl">
-            <h2
-              id="pricing-title"
-              className="font-serif text-5xl leading-[0.94] tracking-[-0.025em] sm:text-6xl"
-            >
-              Um menu melhor começa com uma conversa clara.
-            </h2>
-            <p className="mt-6 max-w-xl text-base leading-7 text-ink-soft">
-              A tabela comercial do Pratto ainda não foi publicada. Em vez de inventar preços ou
-              condições, deixamos transparente o que já existe e abrimos espaço para você acompanhar
-              os próximos passos.
-            </p>
-          </Reveal>
-          <Reveal className="mt-12 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-2xl border border-ink bg-ink p-7 text-cream sm:p-9">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
-                    Planos comerciais
-                  </p>
-                  <h3 className="mt-4 font-serif text-4xl">Em definição</h3>
-                </div>
-                <span className="rounded-full border border-cream/20 px-3 py-1 text-xs text-cream/70">
-                  Sem preço publicado
-                </span>
-              </div>
-              <p className="mt-5 max-w-lg text-sm leading-6 text-cream/70">
-                O produto está sendo construído para restaurantes que querem apresentar melhor seus
-                pratos e acompanhar a descoberta do menu.
-              </p>
-              <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                <PlanFeature>Catálogo administrável</PlanFeature>
-                <PlanFeature>Feed visual mobile-first</PlanFeature>
-                <PlanFeature>Publicação versionada</PlanFeature>
-                <PlanFeature>QR Code e URL pública</PlanFeature>
-                <PlanFeature>Analytics anônimo</PlanFeature>
-                <PlanFeature>Gestão de mídia</PlanFeature>
-              </div>
-              <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <button
-                  type="button"
-                  disabled
-                  className="inline-flex h-12 cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-cream/15 px-5 text-sm font-semibold text-cream/45"
-                  aria-label="Escolher plano, indisponível até a publicação dos preços"
-                >
-                  Escolher plano <ArrowRight size={17} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  disabled
-                  className="inline-flex h-12 cursor-not-allowed items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-cream/45"
-                  aria-label="Ver comparação completa, indisponível até a publicação dos planos"
-                >
-                  Ver comparação completa
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-cream transition hover:bg-cream/10"
-                  onClick={() => setContactOpen(true)}
-                >
-                  Falar com a gente <MessageCircle size={17} aria-hidden="true" />
-                </button>
-              </div>
-              <p className="mt-4 text-xs leading-5 text-cream/45">
-                Escolha de plano e comparação serão liberadas quando a tabela comercial for
-                publicada.
-              </p>
-            </div>
-            <div className="flex flex-col justify-between rounded-2xl border border-line bg-cream p-7 sm:p-9">
-              <div>
-                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-sand text-accent-deep">
-                  <Store size={22} aria-hidden="true" />
-                </span>
-                <h3 className="mt-6 font-serif text-4xl leading-none">Por que falar agora?</h3>
-                <p className="mt-5 text-sm leading-6 text-ink-soft">
-                  Para entender o momento do seu restaurante, acompanhar a definição comercial e ver
-                  como o Pratto se encaixa na sua operação.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="mt-10 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-ink px-5 text-sm font-semibold text-ink transition hover:bg-sand"
-                onClick={() => setContactOpen(true)}
-              >
-                Abrir contato <ArrowUpRight size={17} aria-hidden="true" />
-              </button>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
       <section id="faq" className="bg-cream" aria-labelledby="faq-title">
         <div className="mx-auto grid max-w-[1240px] gap-12 px-5 py-20 sm:px-8 sm:py-28 lg:grid-cols-[0.7fr_1.3fr] lg:gap-24 lg:px-10">
           <Reveal>
@@ -736,7 +643,7 @@ export function LandingPage() {
             </p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <LandingButton href="#planos" variant="light">
+            <LandingButton href="/plans" variant="light">
               Ver planos <ArrowRight size={18} aria-hidden="true" />
             </LandingButton>
             <button
@@ -769,7 +676,7 @@ export function LandingPage() {
           <FooterColumn title="Produto">
             <FooterLink href="#produto">Produto</FooterLink>
             <FooterLink href="#recursos">Recursos</FooterLink>
-            <FooterLink href="#planos">Planos</FooterLink>
+            <FooterLink href="/plans">Planos</FooterLink>
           </FooterColumn>
           <FooterColumn title="Explore">
             <FooterLink href="#como-funciona">Como funciona</FooterLink>
@@ -1177,15 +1084,6 @@ function Step({
       <h3 className="mt-10 font-serif text-4xl leading-none">{title}</h3>
       <p className="mt-4 max-w-xs text-sm leading-6 text-ink-soft">{description}</p>
     </div>
-  );
-}
-
-function PlanFeature({ children }: { children: ReactNode }) {
-  return (
-    <span className="flex items-start gap-2 text-sm text-cream/75">
-      <Check size={16} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
-      {children}
-    </span>
   );
 }
 
