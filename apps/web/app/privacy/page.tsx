@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacidade"
-      description="A política de privacidade do Pratto será publicada nesta página antes do início da operação comercial."
+      description="O Pratto está em desenvolvimento como projeto de portfólio. A política definitiva ainda está em preparação e será publicada antes de qualquer operação comercial."
     />
   );
 }

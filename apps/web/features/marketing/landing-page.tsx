@@ -13,13 +13,11 @@ import {
   LayoutDashboard,
   LineChart,
   Menu as MenuIcon,
-  MessageCircle,
   MousePointerClick,
   Palette,
   Phone,
   QrCode,
   Search,
-  Send,
   Settings2,
   Share2,
   Sparkles,
@@ -30,7 +28,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 const dishImages = {
   main: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=85',
@@ -110,14 +108,14 @@ const faqs = [
       'Ainda não. O foco atual é apresentar o cardápio e facilitar a descoberta dos pratos, sem carrinho ou checkout.',
   },
   {
-    question: 'Como funciona o suporte?',
+    question: 'O Pratto já está disponível para contratação?',
     answer:
-      'O canal comercial será configurado conforme a operação do produto. Enquanto isso, você pode abrir o contato abaixo para preparar uma mensagem.',
+      'Ainda não. O Pratto está em desenvolvimento como projeto de portfólio; cadastro, atendimento comercial e planos não estão disponíveis.',
   },
   {
-    question: 'Posso cancelar meu plano?',
+    question: 'Há preços ou planos publicados?',
     answer:
-      'A tabela comercial e as condições de assinatura ainda não foram publicadas. Fale com a gente para acompanhar essa definição.',
+      'Não. Preços e condições comerciais ainda não foram definidos, então esta página não recebe pedidos de contratação.',
   },
 ];
 
@@ -125,7 +123,6 @@ export function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeShowcase, setActiveShowcase] = useState<ShowcaseTab>('discovery');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [contactOpen, setContactOpen] = useState(false);
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
@@ -144,7 +141,7 @@ export function LandingPage() {
             <LandingNavLink href="#produto">Produto</LandingNavLink>
             <LandingNavLink href="#como-funciona">Como funciona</LandingNavLink>
             <LandingNavLink href="#recursos">Recursos</LandingNavLink>
-            <LandingNavLink href="/plans">Planos</LandingNavLink>
+            <LandingNavLink href="#projeto">Projeto</LandingNavLink>
             <LandingNavLink href="#faq">FAQ</LandingNavLink>
           </nav>
 
@@ -155,8 +152,8 @@ export function LandingPage() {
             >
               Entrar
             </Link>
-            <LandingButton href="/plans" size="small">
-              Ver planos <ArrowUpRight size={16} aria-hidden="true" />
+            <LandingButton href="#projeto" size="small">
+              Sobre o projeto <ArrowUpRight size={16} aria-hidden="true" />
             </LandingButton>
           </div>
 
@@ -187,8 +184,8 @@ export function LandingPage() {
               <MobileNavLink href="#recursos" onClick={closeMobileMenu}>
                 Recursos
               </MobileNavLink>
-              <MobileNavLink href="/plans" onClick={closeMobileMenu}>
-                Planos
+              <MobileNavLink href="#projeto" onClick={closeMobileMenu}>
+                Projeto
               </MobileNavLink>
               <MobileNavLink href="#faq" onClick={closeMobileMenu}>
                 FAQ
@@ -202,8 +199,8 @@ export function LandingPage() {
               >
                 Entrar
               </Link>
-              <LandingButton href="/plans" size="small" onClick={closeMobileMenu}>
-                Ver planos <ArrowUpRight size={16} aria-hidden="true" />
+              <LandingButton href="#projeto" size="small" onClick={closeMobileMenu}>
+                Sobre o projeto <ArrowUpRight size={16} aria-hidden="true" />
               </LandingButton>
             </div>
           </div>
@@ -229,8 +226,8 @@ export function LandingPage() {
               atualizar — para o cliente descobrir mais do que uma lista de produtos.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <LandingButton href="/plans">
-                Ver planos <ArrowRight size={18} aria-hidden="true" />
+              <LandingButton href="#projeto">
+                Sobre o projeto <ArrowRight size={18} aria-hidden="true" />
               </LandingButton>
               <a
                 className="group inline-flex h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-ink transition hover:bg-sand"
@@ -558,6 +555,66 @@ export function LandingPage() {
         </div>
       </section>
 
+      <section id="projeto" className="bg-sand" aria-labelledby="project-title">
+        <div className="mx-auto max-w-[1240px] px-5 py-20 sm:px-8 sm:py-28 lg:px-10">
+          <Reveal className="max-w-2xl">
+            <h2
+              id="project-title"
+              className="font-serif text-5xl leading-[0.94] tracking-[-0.025em] sm:text-6xl"
+            >
+              Uma experiência de cardápio pensada para ser explorada.
+            </h2>
+            <p className="mt-6 max-w-xl text-base leading-7 text-ink-soft">
+              O Pratto é um projeto de portfólio em desenvolvimento. Não há cadastro ou operação
+              comercial; preços e planos não foram definidos.
+            </p>
+          </Reveal>
+          <Reveal className="mt-12 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="rounded-2xl border border-ink bg-ink p-7 text-cream sm:p-9">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+                    Projeto de portfólio
+                  </p>
+                  <h3 className="mt-4 font-serif text-4xl">Produto em desenvolvimento</h3>
+                </div>
+                <span className="rounded-full border border-cream/20 px-3 py-1 text-xs text-cream/70">
+                  Sem contratação
+                </span>
+              </div>
+              <p className="mt-5 max-w-lg text-sm leading-6 text-cream/70">
+                A experiência demonstra como um estabelecimento poderá apresentar pratos e
+                acompanhar a descoberta do menu.
+              </p>
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                <PlanFeature>Catálogo administrável</PlanFeature>
+                <PlanFeature>Feed visual mobile-first</PlanFeature>
+                <PlanFeature>Publicação versionada</PlanFeature>
+                <PlanFeature>QR Code e URL pública</PlanFeature>
+                <PlanFeature>Analytics anônimo</PlanFeature>
+                <PlanFeature>Gestão de mídia</PlanFeature>
+              </div>
+            </div>
+            <div className="flex flex-col justify-between rounded-2xl border border-line bg-cream p-7 sm:p-9">
+              <div>
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-sand text-accent-deep">
+                  <Store size={22} aria-hidden="true" />
+                </span>
+                <h3 className="mt-6 font-serif text-4xl leading-none">Estado do projeto</h3>
+                <p className="mt-5 text-sm leading-6 text-ink-soft">
+                  O site apresenta um produto em construção para demonstrar sua proposta, interface
+                  e fluxo principal.
+                </p>
+              </div>
+              <p className="mt-8 border-t border-line pt-5 text-sm leading-6 text-ink-faint">
+                Os documentos legais e canais de atendimento serão definidos antes de qualquer
+                operação comercial.
+              </p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       <section id="faq" className="bg-cream" aria-labelledby="faq-title">
         <div className="mx-auto grid max-w-[1240px] gap-12 px-5 py-20 sm:px-8 sm:py-28 lg:grid-cols-[0.7fr_1.3fr] lg:gap-24 lg:px-10">
           <Reveal>
@@ -568,7 +625,8 @@ export function LandingPage() {
               Perguntas que aparecem antes do primeiro acesso.
             </h2>
             <p className="mt-6 max-w-sm text-base leading-7 text-ink-soft">
-              Se a sua dúvida não estiver aqui, fale com a gente.
+              As informações comerciais permanecem indisponíveis enquanto o projeto estiver em
+              portfólio.
             </p>
           </Reveal>
           <Reveal className="border-t border-line">
@@ -601,34 +659,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="contato" className="bg-accent-deep text-white" aria-labelledby="contact-title">
-        <div className="mx-auto flex max-w-[1240px] flex-col gap-8 px-5 py-20 sm:px-8 sm:py-24 lg:flex-row lg:items-end lg:justify-between lg:px-10">
-          <Reveal>
-            <p className="mb-5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
-              <span className="h-px w-8 bg-white/70" aria-hidden="true" /> Vamos conversar
-            </p>
-            <h2
-              id="contact-title"
-              className="max-w-[11ch] font-serif text-5xl leading-[0.94] tracking-[-0.025em] sm:text-6xl"
-            >
-              Ainda tem alguma dúvida?
-            </h2>
-            <p className="mt-6 max-w-lg text-base leading-7 text-white/75">
-              Conte um pouco sobre o seu restaurante e o que você espera de um cardápio melhor.
-            </p>
-          </Reveal>
-          <Reveal>
-            <button
-              type="button"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-accent-deep transition hover:bg-cream active:scale-[0.98]"
-              onClick={() => setContactOpen(true)}
-            >
-              Falar com a gente <ArrowUpRight size={18} aria-hidden="true" />
-            </button>
-          </Reveal>
-        </div>
-      </section>
-
       <section className="bg-ink text-cream" aria-labelledby="closing-title">
         <div className="mx-auto flex max-w-[1240px] flex-col items-start gap-8 px-5 py-20 sm:px-8 sm:py-28 lg:flex-row lg:items-end lg:justify-between lg:px-10">
           <div>
@@ -643,16 +673,15 @@ export function LandingPage() {
             </p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <LandingButton href="/plans" variant="light">
-              Ver planos <ArrowRight size={18} aria-hidden="true" />
+            <LandingButton href="#produto" variant="light">
+              Conhecer recursos <ArrowRight size={18} aria-hidden="true" />
             </LandingButton>
-            <button
-              type="button"
+            <a
+              href="#projeto"
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-cream transition hover:bg-cream/10"
-              onClick={() => setContactOpen(true)}
             >
-              Falar com a gente <MessageCircle size={17} aria-hidden="true" />
-            </button>
+              Sobre o projeto <ArrowUpRight size={17} aria-hidden="true" />
+            </a>
           </div>
         </div>
       </section>
@@ -676,12 +705,12 @@ export function LandingPage() {
           <FooterColumn title="Produto">
             <FooterLink href="#produto">Produto</FooterLink>
             <FooterLink href="#recursos">Recursos</FooterLink>
-            <FooterLink href="/plans">Planos</FooterLink>
+            <FooterLink href="#projeto">Projeto</FooterLink>
           </FooterColumn>
           <FooterColumn title="Explore">
             <FooterLink href="#como-funciona">Como funciona</FooterLink>
             <FooterLink href="#faq">FAQ</FooterLink>
-            <FooterLink href="#contato">Contato</FooterLink>
+            <FooterLink href="#projeto">Sobre o projeto</FooterLink>
           </FooterColumn>
           <FooterColumn title="Acesso">
             <FooterLink href="/login">Entrar</FooterLink>
@@ -694,8 +723,6 @@ export function LandingPage() {
           <span>Uma experiência visual para descobrir pratos.</span>
         </div>
       </footer>
-
-      <ContactDialog open={contactOpen} onClose={() => setContactOpen(false)} />
     </main>
   );
 }
@@ -1087,6 +1114,15 @@ function Step({
   );
 }
 
+function PlanFeature({ children }: { children: ReactNode }) {
+  return (
+    <span className="flex items-start gap-2 text-sm text-cream/75">
+      <Check size={16} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
+      {children}
+    </span>
+  );
+}
+
 function AnalyticsPreview() {
   const metrics = [
     { label: 'Acessos', icon: <LayoutDashboard size={16} aria-hidden="true" /> },
@@ -1220,161 +1256,6 @@ function Reveal({ children, className = '' }: { children: ReactNode; className?:
       className={`${className} landing-reveal ${visible ? 'landing-reveal-visible' : ''}`}
     >
       {children}
-    </div>
-  );
-}
-
-function ContactDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const firstFieldRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<'idle' | 'not-configured' | 'copied'>('idle');
-  const [form, setForm] = useState({ name: '', establishment: '', contact: '', message: '' });
-  const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
-
-  useEffect(() => {
-    if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    const previousFocus = document.activeElement as HTMLElement | null;
-    document.body.style.overflow = 'hidden';
-    window.setTimeout(() => firstFieldRef.current?.focus(), 0);
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', onKeyDown);
-      previousFocus?.focus();
-    };
-  }, [onClose, open]);
-
-  if (!open) return null;
-
-  const update = (field: keyof typeof form, value: string) =>
-    setForm((current) => ({ ...current, [field]: value }));
-
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const subject = `Interesse no Pratto — ${form.establishment || form.name}`;
-    const body = `Nome: ${form.name}\nEstabelecimento: ${form.establishment}\nContato: ${form.contact}\n\n${form.message}`;
-    if (!contactEmail) {
-      setStatus('not-configured');
-      return;
-    }
-    window.location.href = `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  };
-
-  const copyMessage = async () => {
-    const body = `Nome: ${form.name}\nEstabelecimento: ${form.establishment}\nContato: ${form.contact}\n\n${form.message}`;
-    try {
-      await navigator.clipboard.writeText(body);
-      setStatus('copied');
-    } catch {
-      setStatus('not-configured');
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/55 p-0 sm:items-center sm:p-6"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[24px] bg-cream p-6 shadow-[0_28px_70px_-30px_rgba(24,23,22,.6)] sm:rounded-[24px] sm:p-8"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="contact-dialog-title"
-      >
-        <div className="flex items-start justify-between gap-5">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent-deep">
-              Contato
-            </p>
-            <h2 id="contact-dialog-title" className="mt-3 font-serif text-4xl leading-none">
-              Vamos conversar sobre o seu menu.
-            </h2>
-          </div>
-          <button
-            type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line text-ink-soft transition hover:bg-sand"
-            aria-label="Fechar contato"
-            onClick={onClose}
-          >
-            <X size={18} aria-hidden="true" />
-          </button>
-        </div>
-        <form className="mt-8 space-y-4" onSubmit={submit}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-[13px] font-medium text-ink">
-              Nome
-              <input
-                ref={firstFieldRef}
-                required
-                value={form.name}
-                onChange={(event) => update('name', event.target.value)}
-                className="pratto-input mt-2"
-                autoComplete="name"
-              />
-            </label>
-            <label className="block text-[13px] font-medium text-ink">
-              Estabelecimento
-              <input
-                required
-                value={form.establishment}
-                onChange={(event) => update('establishment', event.target.value)}
-                className="pratto-input mt-2"
-              />
-            </label>
-          </div>
-          <label className="block text-[13px] font-medium text-ink">
-            E-mail ou telefone
-            <input
-              required
-              value={form.contact}
-              onChange={(event) => update('contact', event.target.value)}
-              className="pratto-input mt-2"
-              autoComplete="email"
-            />
-          </label>
-          <label className="block text-[13px] font-medium text-ink">
-            Mensagem
-            <textarea
-              required
-              value={form.message}
-              onChange={(event) => update('message', event.target.value)}
-              className="pratto-input mt-2 min-h-28"
-            />
-          </label>
-          <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center">
-            <button
-              type="submit"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-accent-deep px-5 text-sm font-semibold text-white transition hover:bg-ink"
-            >
-              {contactEmail ? 'Preparar mensagem' : 'Preparar contato'}{' '}
-              <Send size={17} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-ink transition hover:bg-sand"
-              onClick={copyMessage}
-            >
-              Copiar mensagem
-            </button>
-          </div>
-          {status === 'not-configured' ? (
-            <p className="rounded-xl bg-sand p-3 text-sm leading-6 text-ink-soft" role="status">
-              O canal de envio ainda não foi configurado neste ambiente. Você pode copiar a mensagem
-              e encaminhá-la pelo seu canal preferido.
-            </p>
-          ) : null}
-          {status === 'copied' ? (
-            <p className="rounded-xl bg-herb/10 p-3 text-sm leading-6 text-herb" role="status">
-              Mensagem copiada. Agora é só colar no seu canal de contato.
-            </p>
-          ) : null}
-        </form>
-      </div>
     </div>
   );
 }

@@ -8,7 +8,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Termos de uso"
-      description="As condições de uso do Pratto serão publicadas nesta página quando o produto estiver pronto para operação comercial."
+      description="O Pratto está em desenvolvimento como projeto de portfólio. Os termos definitivos serão publicados antes de qualquer operação comercial."
     />
   );
 }

@@ -45,10 +45,10 @@ export function LegalPage({
           {children}
         </div>
         <Link
-          href="/#contato"
+          href="/#produto"
           className="mt-8 inline-flex h-12 items-center justify-center rounded-xl bg-ink px-5 text-sm font-semibold text-cream transition hover:bg-accent-deep"
         >
-          Falar com a gente
+          Voltar ao projeto
         </Link>
       </section>
       <footer className="border-t border-line px-5 py-8 text-center text-xs text-ink-faint sm:px-8">

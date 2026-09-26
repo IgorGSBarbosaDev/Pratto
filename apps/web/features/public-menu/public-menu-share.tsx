@@ -154,9 +154,9 @@ export function PublicMenuShare({
 
       {preview ? (
         <div className="mt-6 grid items-start gap-8 lg:grid-cols-[400px_1fr]">
-          <div className="mx-auto rounded-[44px] border-[10px] border-ink bg-ink shadow-[0_30px_60px_-24px_rgba(24,23,22,0.5)]">
+          <div className="mx-auto w-full max-w-[370px] rounded-[44px] border-[10px] border-ink bg-ink shadow-[0_30px_60px_-24px_rgba(24,23,22,0.5)]">
             <iframe
-              className="h-[720px] w-[350px] rounded-[34px] bg-cream"
+              className="h-[720px] max-h-[75vh] w-full rounded-[34px] bg-cream"
               src={publicUrl}
               title={`Prévia do cardápio de ${settingsQuery.data.name}`}
             />

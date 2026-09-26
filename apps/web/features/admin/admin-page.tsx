@@ -183,6 +183,7 @@ export function AdminPage({ publicMenuBaseUrl }: { publicMenuBaseUrl: string }) 
               ) : (
                 <AdminWorkspace
                   establishmentId={establishment.id}
+                  timeZone={establishment.timeZone}
                   actorId={context.user.id}
                   actorRole={actorRole}
                   view={activeView}
@@ -211,6 +212,7 @@ export function AdminPage({ publicMenuBaseUrl }: { publicMenuBaseUrl: string }) 
 
 function AdminWorkspace({
   establishmentId,
+  timeZone,
   actorId,
   actorRole,
   view,
@@ -221,6 +223,7 @@ function AdminWorkspace({
   publicMenuBaseUrl,
 }: {
   establishmentId: string;
+  timeZone: string;
   actorId: string;
   actorRole: MembershipRole;
   view: AdminView;
@@ -280,7 +283,9 @@ function AdminWorkspace({
         </div>
       ) : null}
 
-      {view === 'overview' ? <AnalyticsDashboard establishmentId={establishmentId} /> : null}
+      {view === 'overview' ? (
+        <AnalyticsDashboard establishmentId={establishmentId} timeZone={timeZone} />
+      ) : null}
       {view === 'dishes' ? (
         <ProductManagement
           establishmentId={establishmentId}
