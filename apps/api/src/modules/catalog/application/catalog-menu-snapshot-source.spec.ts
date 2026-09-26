@@ -1,4 +1,5 @@
 import type { MenuSnapshotInput } from '@pratto/database';
+import { DEFAULT_ESTABLISHMENT_OPERATING_HOURS } from '@pratto/validation';
 
 import { CatalogMenuSnapshotSource } from './catalog-menu-snapshot-source';
 
@@ -16,7 +17,8 @@ describe('CatalogMenuSnapshotSource', () => {
         phone: '3133334444',
         whatsapp: '5531999999999',
         address: { city: 'Belo Horizonte' },
-        operatingHours: { monday: { closed: false, open: '08:00', close: '18:00' } },
+        operatingHours: DEFAULT_ESTABLISHMENT_OPERATING_HOURS,
+        timeZone: 'America/Sao_Paulo',
         logoKey: 'establishments/logo.png',
         logoContentType: 'image/png',
         coverImageKey: 'establishments/cover.webp',
@@ -77,6 +79,7 @@ describe('CatalogMenuSnapshotSource', () => {
             whatsapp: true,
             address: true,
             operatingHours: true,
+            timeZone: true,
             logoKey: true,
             logoContentType: true,
             coverImageKey: true,
@@ -137,7 +140,7 @@ describe('CatalogMenuSnapshotSource', () => {
       },
     });
     expect(snapshot).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       establishment: {
         id: 'establishment-id',
         publicId: 'establishment-public-id',
@@ -147,7 +150,8 @@ describe('CatalogMenuSnapshotSource', () => {
         phone: '3133334444',
         whatsapp: '5531999999999',
         address: { city: 'Belo Horizonte' },
-        operatingHours: { monday: { closed: false, open: '08:00', close: '18:00' } },
+        operatingHours: DEFAULT_ESTABLISHMENT_OPERATING_HOURS,
+        timeZone: 'America/Sao_Paulo',
         logo: { storageKey: 'establishments/logo.png', contentType: 'image/png' },
         coverImage: {
           storageKey: 'establishments/cover.webp',
@@ -194,6 +198,7 @@ describe('CatalogMenuSnapshotSource', () => {
             whatsapp: null,
             address: null,
             operatingHours: {},
+            timeZone: 'America/Sao_Paulo',
             logoKey: null,
             logoContentType: null,
             coverImageKey: null,
@@ -241,7 +246,7 @@ describe('CatalogMenuSnapshotSource', () => {
     });
 
     expect(snapshot).toMatchObject({
-      schemaVersion: 3,
+      schemaVersion: 4,
       media: [
         {
           id: 'media-id',

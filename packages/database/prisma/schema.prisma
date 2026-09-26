@@ -65,20 +65,20 @@ enum AnalyticsEventType {
 }
 
 model User {
-  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                String                @unique(map: "users_email_key") @db.VarChar(320)
-  name                 String                @db.VarChar(120)
-  status               LifecycleStatus       @default(ACTIVE)
-  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt            DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
-  sessions             Session[]
-  memberships          Membership[]
-  sentInvitations      MembershipInvitation[] @relation("MembershipInvitationInviter")
-  acceptedInvitations  MembershipInvitation[] @relation("MembershipInvitationAcceptedUser")
-  credential           PasswordCredential?
-  passwordResetToken   PasswordResetToken?
-  authenticationEvents AuthenticationEvent[]
-  publishedPublications MenuPublication[] @relation("MenuPublicationPublisher")
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                 String                 @unique(map: "users_email_key") @db.VarChar(320)
+  name                  String                 @db.VarChar(120)
+  status                LifecycleStatus        @default(ACTIVE)
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions              Session[]
+  memberships           Membership[]
+  sentInvitations       MembershipInvitation[] @relation("MembershipInvitationInviter")
+  acceptedInvitations   MembershipInvitation[] @relation("MembershipInvitationAcceptedUser")
+  credential            PasswordCredential?
+  passwordResetToken    PasswordResetToken?
+  authenticationEvents  AuthenticationEvent[]
+  publishedPublications MenuPublication[]      @relation("MenuPublicationPublisher")
 
   @@map("users")
 }
@@ -163,11 +163,11 @@ model AuthenticationEvent {
 }
 
 model Organization {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name           String          @db.VarChar(120)
-  status         LifecycleStatus @default(ACTIVE)
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id             String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String                 @db.VarChar(120)
+  status         LifecycleStatus        @default(ACTIVE)
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
   memberships    Membership[]
   establishments Establishment[]
   invitations    MembershipInvitation[]
@@ -176,16 +176,16 @@ model Organization {
 }
 
 model Membership {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId String          @map("organization_id") @db.Uuid
-  userId         String          @map("user_id") @db.Uuid
-  role           MembershipRole
-  status         LifecycleStatus @default(ACTIVE)
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  activeSessions Session[]       @relation("ActiveMembership")
+  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String            @map("organization_id") @db.Uuid
+  userId                String            @map("user_id") @db.Uuid
+  role                  MembershipRole
+  status                LifecycleStatus   @default(ACTIVE)
+  createdAt             DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization          Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  activeSessions        Session[]         @relation("ActiveMembership")
   publishedPublications MenuPublication[] @relation("MenuPublicationPublisherMembership")
 
   @@unique([organizationId, userId], map: "memberships_organization_id_user_id_key")
@@ -196,25 +196,26 @@ model Membership {
 }
 
 model Establishment {
-  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId        String          @map("organization_id") @db.Uuid
-  publicId              String          @unique(map: "establishments_public_id_key") @default(cuid()) @map("public_id") @db.VarChar(30)
-  name                  String          @db.VarChar(120)
-  slug                  String          @db.VarChar(80)
-  description           String?         @db.Text
-  phone                 String?         @db.VarChar(30)
-  whatsapp              String?         @db.VarChar(30)
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String                 @map("organization_id") @db.Uuid
+  publicId              String                 @unique(map: "establishments_public_id_key") @default(cuid()) @map("public_id") @db.VarChar(30)
+  name                  String                 @db.VarChar(120)
+  slug                  String                 @db.VarChar(80)
+  description           String?                @db.Text
+  phone                 String?                @db.VarChar(30)
+  whatsapp              String?                @db.VarChar(30)
   address               Json?
-  operatingHours        Json            @default("{}") @map("operating_hours")
-  logoKey               String?         @map("logo_key") @db.VarChar(512)
-  logoContentType       String?         @map("logo_content_type") @db.VarChar(100)
-  coverImageKey         String?         @map("cover_image_key") @db.VarChar(512)
-  coverImageContentType String?         @map("cover_image_content_type") @db.VarChar(100)
-  themeSettings         Json            @default("{\"mode\":\"LIGHT\",\"primaryColor\":\"#166534\"}") @map("theme_settings")
-  status                LifecycleStatus @default(ACTIVE)
-  createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt             DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
-  organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  operatingHours        Json                   @default("{}") @map("operating_hours")
+  timeZone              String                 @default("America/Sao_Paulo") @map("time_zone") @db.VarChar(64)
+  logoKey               String?                @map("logo_key") @db.VarChar(512)
+  logoContentType       String?                @map("logo_content_type") @db.VarChar(100)
+  coverImageKey         String?                @map("cover_image_key") @db.VarChar(512)
+  coverImageContentType String?                @map("cover_image_content_type") @db.VarChar(100)
+  themeSettings         Json                   @default("{\"mode\":\"LIGHT\",\"primaryColor\":\"#166534\"}") @map("theme_settings")
+  status                LifecycleStatus        @default(ACTIVE)
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   menus                 Menu[]
   analyticsSessions     AnalyticsSession[]
   analyticsEvents       AnalyticsEvent[]
@@ -227,24 +228,24 @@ model Establishment {
 }
 
 model MembershipInvitation {
-  id               String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId   String                    @map("organization_id") @db.Uuid
-  establishmentId  String                    @map("establishment_id") @db.Uuid
-  invitedByUserId  String                    @map("invited_by_user_id") @db.Uuid
-  acceptedUserId   String?                   @map("accepted_user_id") @db.Uuid
-  email            String                    @db.VarChar(320)
-  role             MembershipRole
-  status           MembershipInvitationStatus @default(PENDING)
-  tokenHash        String                    @unique(map: "membership_invitations_token_hash_key") @map("token_hash") @db.VarChar(128)
-  expiresAt        DateTime                  @map("expires_at") @db.Timestamptz(3)
-  acceptedAt       DateTime?                 @map("accepted_at") @db.Timestamptz(3)
-  canceledAt       DateTime?                 @map("canceled_at") @db.Timestamptz(3)
-  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  organization     Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  establishment    Establishment             @relation(fields: [establishmentId, organizationId], references: [id, organizationId], onDelete: Cascade, onUpdate: Cascade)
-  invitedBy        User                      @relation("MembershipInvitationInviter", fields: [invitedByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  acceptedUser     User?                     @relation("MembershipInvitationAcceptedUser", fields: [acceptedUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  id              String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String                     @map("organization_id") @db.Uuid
+  establishmentId String                     @map("establishment_id") @db.Uuid
+  invitedByUserId String                     @map("invited_by_user_id") @db.Uuid
+  acceptedUserId  String?                    @map("accepted_user_id") @db.Uuid
+  email           String                     @db.VarChar(320)
+  role            MembershipRole
+  status          MembershipInvitationStatus @default(PENDING)
+  tokenHash       String                     @unique(map: "membership_invitations_token_hash_key") @map("token_hash") @db.VarChar(128)
+  expiresAt       DateTime                   @map("expires_at") @db.Timestamptz(3)
+  acceptedAt      DateTime?                  @map("accepted_at") @db.Timestamptz(3)
+  canceledAt      DateTime?                  @map("canceled_at") @db.Timestamptz(3)
+  createdAt       DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization    Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  establishment   Establishment              @relation(fields: [establishmentId, organizationId], references: [id, organizationId], onDelete: Cascade, onUpdate: Cascade)
+  invitedBy       User                       @relation("MembershipInvitationInviter", fields: [invitedByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  acceptedUser    User?                      @relation("MembershipInvitationAcceptedUser", fields: [acceptedUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([organizationId, establishmentId, status, expiresAt], map: "membership_invitations_team_status_idx")
   @@index([email, status], map: "membership_invitations_email_status_idx")
@@ -252,25 +253,26 @@ model MembershipInvitation {
 }
 
 model Menu {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId  String        @map("organization_id") @db.Uuid
-  establishmentId String        @map("establishment_id") @db.Uuid
-  name            String        @db.VarChar(120)
-  status          MenuStatus    @default(DRAFT)
-  activePublicationId String?    @map("active_publication_id") @db.Uuid
-  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  establishment   Establishment @relation(fields: [establishmentId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
-  activePublication MenuPublication? @relation("MenuActivePublication", fields: [activePublicationId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
-  publications      MenuPublication[] @relation("MenuPublications")
-  categories        Category[]
-  products          Product[]
-  analyticsEvents   AnalyticsEvent[]
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId      String            @map("organization_id") @db.Uuid
+  establishmentId     String            @map("establishment_id") @db.Uuid
+  name                String            @db.VarChar(120)
+  status              MenuStatus        @default(DRAFT)
+  activePublicationId String?           @map("active_publication_id") @db.Uuid
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  establishment       Establishment     @relation(fields: [establishmentId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  activePublication   MenuPublication?  @relation("MenuActivePublication", fields: [activePublicationId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  publications        MenuPublication[] @relation("MenuPublications")
+  categories          Category[]
+  products            Product[]
+  analyticsEvents     AnalyticsEvent[]
 
   @@unique([establishmentId, name], map: "menus_establishment_id_name_key")
   @@unique([id, organizationId], map: "menus_id_organization_id_key")
   @@unique([id, organizationId, establishmentId], map: "menus_id_organization_id_establishment_id_key")
   @@unique([activePublicationId, organizationId], map: "menus_active_publication_id_organization_id_key")
+  // Partial unique index is defined in the migration to allow multiple unpublished drafts.
   @@index([organizationId, establishmentId, status], map: "menus_organization_id_establishment_id_status_idx")
   @@map("menus")
 }
@@ -298,26 +300,26 @@ model Category {
 }
 
 model Product {
-  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId    String             @map("organization_id") @db.Uuid
-  menuId            String             @map("menu_id") @db.Uuid
-  categoryId        String             @map("category_id") @db.Uuid
-  name              String             @db.VarChar(180)
-  description       String?            @db.Text
-  price             Decimal            @db.Decimal(10, 2)
-  promotionalPrice  Decimal?           @map("promotional_price") @db.Decimal(10, 2)
-  ingredients       String?            @db.Text
-  allergens         String?            @db.Text
-  availability      ProductAvailability @default(AVAILABLE)
-  featured          Boolean            @default(false)
-  status            LifecycleStatus    @default(ACTIVE)
-  archivedAt        DateTime?          @map("archived_at") @db.Timestamptz(3)
-  displayOrder      Int                @default(0) @map("display_order")
-  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
-  menu              Menu               @relation(fields: [menuId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
-  category          Category           @relation(fields: [categoryId, organizationId, menuId], references: [id, organizationId, menuId], onDelete: Restrict, onUpdate: Cascade)
-  media             ProductMedia[]
+  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String              @map("organization_id") @db.Uuid
+  menuId           String              @map("menu_id") @db.Uuid
+  categoryId       String              @map("category_id") @db.Uuid
+  name             String              @db.VarChar(180)
+  description      String?             @db.Text
+  price            Decimal             @db.Decimal(10, 2)
+  promotionalPrice Decimal?            @map("promotional_price") @db.Decimal(10, 2)
+  ingredients      String?             @db.Text
+  allergens        String?             @db.Text
+  availability     ProductAvailability @default(AVAILABLE)
+  featured         Boolean             @default(false)
+  status           LifecycleStatus     @default(ACTIVE)
+  archivedAt       DateTime?           @map("archived_at") @db.Timestamptz(3)
+  displayOrder     Int                 @default(0) @map("display_order")
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  menu             Menu                @relation(fields: [menuId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  category         Category            @relation(fields: [categoryId, organizationId, menuId], references: [id, organizationId, menuId], onDelete: Restrict, onUpdate: Cascade)
+  media            ProductMedia[]
 
   @@unique([id, organizationId], map: "products_id_organization_id_key")
   @@unique([id, organizationId, menuId], map: "products_id_organization_id_menu_id_key")
@@ -327,20 +329,20 @@ model Product {
 }
 
 model ProductMedia {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId String          @map("organization_id") @db.Uuid
-  menuId         String          @map("menu_id") @db.Uuid
-  productId      String          @map("product_id") @db.Uuid
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  menuId         String           @map("menu_id") @db.Uuid
+  productId      String           @map("product_id") @db.Uuid
   mediaType      ProductMediaType @map("media_type")
-  contentType    String          @map("content_type") @db.VarChar(100)
-  originalName   String          @map("original_name") @db.VarChar(255)
-  storageKey     String          @unique(map: "product_media_storage_key_key") @map("storage_key") @db.VarChar(512)
-  sizeBytes      Int             @map("size_bytes")
-  displayOrder   Int             @default(0) @map("display_order")
-  isPrimary      Boolean         @default(false) @map("is_primary")
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
-  product        Product         @relation(fields: [productId, organizationId, menuId], references: [id, organizationId, menuId], onDelete: Restrict, onUpdate: Cascade)
+  contentType    String           @map("content_type") @db.VarChar(100)
+  originalName   String           @map("original_name") @db.VarChar(255)
+  storageKey     String           @unique(map: "product_media_storage_key_key") @map("storage_key") @db.VarChar(512)
+  sizeBytes      Int              @map("size_bytes")
+  displayOrder   Int              @default(0) @map("display_order")
+  isPrimary      Boolean          @default(false) @map("is_primary")
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  product        Product          @relation(fields: [productId, organizationId, menuId], references: [id, organizationId, menuId], onDelete: Restrict, onUpdate: Cascade)
 
   @@unique([id, organizationId], map: "product_media_id_organization_id_key")
   @@index([organizationId, menuId, productId, displayOrder], map: "product_media_org_menu_product_order_idx")
@@ -349,19 +351,19 @@ model ProductMedia {
 }
 
 model MenuPublication {
-  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId   String       @map("organization_id") @db.Uuid
-  menuId           String       @map("menu_id") @db.Uuid
-  version          Int
-  snapshot         Json
-  publishedAt      DateTime     @default(now()) @map("published_at") @db.Timestamptz(3)
-  publishedBy      String       @map("published_by") @db.Uuid
-  idempotencyKey   String       @map("idempotency_key") @db.VarChar(128)
-  menu             Menu         @relation("MenuPublications", fields: [menuId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
-  publisher        User         @relation("MenuPublicationPublisher", fields: [publishedBy], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  publisherMembership Membership @relation("MenuPublicationPublisherMembership", fields: [organizationId, publishedBy], references: [organizationId, userId], onDelete: Restrict, onUpdate: Cascade)
-  activeMenu       Menu?        @relation("MenuActivePublication")
-  analyticsEvents  AnalyticsEvent[]
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId      String           @map("organization_id") @db.Uuid
+  menuId              String           @map("menu_id") @db.Uuid
+  version             Int
+  snapshot            Json
+  publishedAt         DateTime         @default(now()) @map("published_at") @db.Timestamptz(3)
+  publishedBy         String           @map("published_by") @db.Uuid
+  idempotencyKey      String           @map("idempotency_key") @db.VarChar(128)
+  menu                Menu             @relation("MenuPublications", fields: [menuId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  publisher           User             @relation("MenuPublicationPublisher", fields: [publishedBy], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  publisherMembership Membership       @relation("MenuPublicationPublisherMembership", fields: [organizationId, publishedBy], references: [organizationId, userId], onDelete: Restrict, onUpdate: Cascade)
+  activeMenu          Menu?            @relation("MenuActivePublication")
+  analyticsEvents     AnalyticsEvent[]
 
   @@unique([id, organizationId], map: "menu_publications_id_organization_id_key")
   @@unique([id, organizationId, menuId], map: "menu_publications_id_organization_id_menu_id_key")
@@ -373,16 +375,16 @@ model MenuPublication {
 }
 
 model AnalyticsSession {
-  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId String       @map("organization_id") @db.Uuid
-  establishmentId String      @map("establishment_id") @db.Uuid
-  firstSeenAt    DateTime     @default(now()) @map("first_seen_at") @db.Timestamptz(3)
-  lastSeenAt     DateTime     @default(now()) @map("last_seen_at") @db.Timestamptz(3)
-  expiresAt      DateTime     @map("expires_at") @db.Timestamptz(3)
-  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  establishment  Establishment @relation(fields: [establishmentId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
-  events         AnalyticsEvent[]
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String           @map("organization_id") @db.Uuid
+  establishmentId String           @map("establishment_id") @db.Uuid
+  firstSeenAt     DateTime         @default(now()) @map("first_seen_at") @db.Timestamptz(3)
+  lastSeenAt      DateTime         @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  expiresAt       DateTime         @map("expires_at") @db.Timestamptz(3)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  establishment   Establishment    @relation(fields: [establishmentId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  events          AnalyticsEvent[]
 
   @@unique([id, organizationId, establishmentId], map: "analytics_sessions_id_organization_id_establishment_id_key")
   @@index([organizationId, establishmentId, lastSeenAt], map: "analytics_sessions_org_establishment_last_seen_idx")
@@ -408,7 +410,7 @@ model AnalyticsEvent {
   receivedAt        DateTime           @default(now()) @map("received_at") @db.Timestamptz(3)
   payloadHash       String             @map("payload_hash") @db.VarChar(64)
   dedupeKey         String             @unique(map: "analytics_events_dedupe_key_key") @map("dedupe_key") @db.VarChar(512)
-  establishment     Establishment     @relation(fields: [establishmentId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
+  establishment     Establishment      @relation(fields: [establishmentId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
   menu              Menu               @relation(fields: [menuId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Cascade)
   publication       MenuPublication    @relation(fields: [publicationId, organizationId, menuId], references: [id, organizationId, menuId], onDelete: Restrict, onUpdate: Cascade)
   session           AnalyticsSession   @relation(fields: [sessionId, organizationId, establishmentId], references: [id, organizationId, establishmentId], onDelete: Restrict, onUpdate: Cascade)

@@ -8,6 +8,7 @@ import {
   ProductMediaService,
   type ProductMediaUploadFile,
 } from '../../../../apps/api/src/modules/media/application/product-media.service';
+import { PublicMenuService } from '../../../../apps/api/src/modules/public-menu/application/public-menu.service';
 import { MenuPublicationService } from '../../src/menu-publication';
 import { clearDatabase, createTenantFixture } from '../../src/testing';
 
@@ -106,6 +107,21 @@ describe('product media management', () => {
     await expect(
       database.productMedia.findMany({ where: { organizationId: tenant.organization.id } }),
     ).resolves.toHaveLength(2);
+  });
+
+  it('keeps an uploaded object when only generating its response URL fails', async () => {
+    const tenant = await createTenantFixture(database, { label: 'Media URL failure' });
+    const { context, product } = await createProduct(tenant);
+    const storage = createStorage();
+    storage.getReadUrl = jest.fn().mockRejectedValue(new Error('signed URL unavailable'));
+    const service = new ProductMediaService(storage);
+
+    await expect(
+      service.uploadMedia(context, tenant.menu.id, product.id, pngFile()),
+    ).rejects.toThrow('signed URL unavailable');
+
+    expect(await database.productMedia.count({ where: { productId: product.id } })).toBe(1);
+    expect(storage.delete).not.toHaveBeenCalled();
   });
 
   it('supports primary selection, complete reordering and safe removal with promotion', async () => {
@@ -248,7 +264,7 @@ describe('product media management', () => {
     });
 
     expect(first.snapshot).toMatchObject({
-      schemaVersion: 3,
+      schemaVersion: 4,
       media: [expect.objectContaining({ id: image.id, productId: product.id, isPrimary: true })],
     });
     expect(second.snapshot).toMatchObject({
@@ -259,5 +275,33 @@ describe('product media management', () => {
     });
     expect(first.snapshot).toMatchObject({ media: [expect.objectContaining({ id: image.id })] });
     expect((first.snapshot as { media: unknown[] }).media).toHaveLength(1);
+  });
+
+  it('keeps public media readable after the editable media reference is removed', async () => {
+    const tenant = await createTenantFixture(database, { label: 'Published media retention' });
+    const { context, product } = await createProduct(tenant);
+    const storage = createStorage();
+    const mediaService = new ProductMediaService(storage);
+    const uploaded = await mediaService.uploadMedia(context, tenant.menu.id, product.id, pngFile());
+    const publicationService = new MenuPublicationService(
+      database,
+      new CatalogMenuSnapshotSource(),
+    );
+    const publication = await publicationService.publish({
+      menuId: tenant.menu.id,
+      tenant: { organizationId: tenant.organization.id, userId: tenant.user.id },
+      idempotencyKey: 'published-media-retention',
+    });
+    const storageKey = (publication.snapshot as { media: Array<{ storageKey: string }> }).media[0]!
+      .storageKey;
+
+    await mediaService.removeMedia(context, tenant.menu.id, product.id, uploaded.id);
+    const publicMenu = await new PublicMenuService(storage).getPage(tenant.establishment.publicId, {
+      limit: 6,
+    });
+
+    expect(storage.delete).not.toHaveBeenCalledWith(storageKey);
+    expect(publicMenu.products[0]?.media[0]?.url).toBe(`http://storage.test/signed/${storageKey}`);
+    expect(storage.getReadUrl).toHaveBeenCalledWith(storageKey);
   });
 });

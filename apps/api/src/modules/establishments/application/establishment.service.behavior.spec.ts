@@ -2,8 +2,13 @@ import type { StorageService } from '@pratto/contracts';
 
 import type { TenantPrincipal } from '../../identity/domain/auth.types';
 
+const mockPublicationReferencesStorageKey = jest.fn();
 const mockPrisma = { establishment: { findFirst: jest.fn(), update: jest.fn() } };
-jest.mock('@pratto/database', () => ({ prisma: mockPrisma, Prisma: { DbNull: Symbol('DbNull') } }));
+jest.mock('@pratto/database', () => ({
+  prisma: mockPrisma,
+  Prisma: { DbNull: Symbol('DbNull') },
+  publicationReferencesStorageKey: mockPublicationReferencesStorageKey,
+}));
 
 import { EstablishmentService } from './establishment.service';
 
@@ -29,6 +34,7 @@ const record = {
   whatsapp: null,
   address: null,
   operatingHours: {},
+  timeZone: 'America/Sao_Paulo',
   logoKey: 'old-logo.png',
   logoContentType: 'image/png',
   coverImageKey: null,
@@ -55,6 +61,7 @@ describe('EstablishmentService behavior', () => {
     };
     service = new EstablishmentService(storage);
     mockPrisma.establishment.findFirst.mockResolvedValue(record);
+    mockPublicationReferencesStorageKey.mockResolvedValue(false);
     mockPrisma.establishment.update.mockResolvedValue({
       ...record,
       logoKey: 'new-logo.png',

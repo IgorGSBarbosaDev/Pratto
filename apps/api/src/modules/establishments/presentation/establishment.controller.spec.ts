@@ -14,6 +14,7 @@ const settings = {
   id: '11111111-1111-4111-8111-111111111111',
   publicId: 'public-a',
   name: 'Casa A',
+  timeZone: 'America/Sao_Paulo',
 } as EstablishmentSettingsResponse;
 
 describe('EstablishmentController', () => {

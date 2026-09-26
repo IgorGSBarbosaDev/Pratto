@@ -5,6 +5,7 @@ import type { TenantPrincipal } from '../../identity/domain/auth.types';
 
 const mockFindFirst = jest.fn();
 const mockUpdate = jest.fn();
+const mockPublicationReferencesStorageKey = jest.fn();
 
 jest.mock('@pratto/database', () => ({
   prisma: {
@@ -13,6 +14,7 @@ jest.mock('@pratto/database', () => ({
       update: mockUpdate,
     },
   },
+  publicationReferencesStorageKey: mockPublicationReferencesStorageKey,
 }));
 
 import { EstablishmentService } from './establishment.service';
@@ -39,6 +41,7 @@ const currentRecord = {
   whatsapp: null,
   address: null,
   operatingHours: {},
+  timeZone: 'America/Sao_Paulo',
   logoKey: null,
   logoContentType: null,
   coverImageKey: null,
@@ -60,6 +63,7 @@ function createService() {
 describe('EstablishmentService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPublicationReferencesStorageKey.mockResolvedValue(false);
   });
 
   it('reads only an active establishment from the current organization', async () => {

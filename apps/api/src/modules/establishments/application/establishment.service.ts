@@ -7,7 +7,7 @@ import type {
   StorageService,
 } from '@pratto/contracts';
 import { hasPermission, Permission, STORAGE_SERVICE } from '@pratto/contracts';
-import { Prisma, prisma } from '@pratto/database';
+import { Prisma, prisma, publicationReferencesStorageKey } from '@pratto/database';
 import {
   DEFAULT_ESTABLISHMENT_OPERATING_HOURS,
   DEFAULT_ESTABLISHMENT_THEME,
@@ -30,6 +30,7 @@ const establishmentSelect = {
   whatsapp: true,
   address: true,
   operatingHours: true,
+  timeZone: true,
   logoKey: true,
   logoContentType: true,
   coverImageKey: true,
@@ -80,6 +81,7 @@ export class EstablishmentService {
     if (input.operatingHours !== undefined) {
       data.operatingHours = input.operatingHours as Prisma.InputJsonValue;
     }
+    if (input.timeZone !== undefined) data.timeZone = input.timeZone;
     if (input.theme !== undefined) {
       data.themeSettings = input.theme as Prisma.InputJsonValue;
     }
@@ -120,18 +122,19 @@ export class EstablishmentService {
         ? { logoKey: stored.key, logoContentType: stored.contentType }
         : { coverImageKey: stored.key, coverImageContentType: stored.contentType };
 
+    let updated: EstablishmentRecord;
     try {
-      const updated = await prisma.establishment.update({
+      updated = await prisma.establishment.update({
         where: { id_organizationId: { id: current.id, organizationId: tenant.organizationId } },
         data,
         select: establishmentSelect,
       });
-      await this.deletePreviousAsset(current, kind);
-      return this.toResponse(updated);
     } catch (error) {
       await this.deleteStoredAsset(stored.key);
       this.handlePersistenceError(error);
     }
+    await this.deletePreviousAsset(current, kind);
+    return this.toResponse(updated);
   }
 
   async removeAsset(
@@ -152,7 +155,9 @@ export class EstablishmentService {
       data,
       select: establishmentSelect,
     });
-    if (oldKey) await this.deleteStoredAsset(oldKey);
+    if (oldKey && !(await publicationReferencesStorageKey(prisma, oldKey))) {
+      await this.deleteStoredAsset(oldKey);
+    }
     return this.toResponse(updated);
   }
 
@@ -193,6 +198,7 @@ export class EstablishmentService {
           ? (record.address as unknown as EstablishmentSettingsResponse['address'])
           : null,
       operatingHours: operatingHours as EstablishmentSettingsResponse['operatingHours'],
+      timeZone: record.timeZone,
       logo: record.logoKey
         ? {
             url: this.storage.getPublicUrl(record.logoKey),
@@ -254,7 +260,9 @@ export class EstablishmentService {
     kind: EstablishmentAssetKind,
   ): Promise<void> {
     const oldKey = kind === 'logo' ? current.logoKey : current.coverImageKey;
-    if (oldKey) await this.deleteStoredAsset(oldKey);
+    if (oldKey && !(await publicationReferencesStorageKey(prisma, oldKey))) {
+      await this.deleteStoredAsset(oldKey);
+    }
   }
 
   private async deleteStoredAsset(key: string): Promise<void> {

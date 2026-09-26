@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { MenuSnapshot, MenuSnapshotInput, MenuSnapshotSource, Prisma } from '@pratto/database';
+import { DEFAULT_ESTABLISHMENT_OPERATING_HOURS } from '@pratto/validation';
 
 @Injectable()
 export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
@@ -23,6 +24,7 @@ export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
             whatsapp: true,
             address: true,
             operatingHours: true,
+            timeZone: true,
             logoKey: true,
             logoContentType: true,
             coverImageKey: true,
@@ -109,7 +111,7 @@ export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
     );
 
     return {
-      schemaVersion: 3,
+      schemaVersion: 4,
       establishment: {
         id: menu.establishment.id,
         publicId: menu.establishment.publicId,
@@ -119,7 +121,10 @@ export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
         phone: menu.establishment.phone,
         whatsapp: menu.establishment.whatsapp,
         address: menu.establishment.address as Prisma.InputJsonValue | null,
-        operatingHours: menu.establishment.operatingHours as Prisma.InputJsonValue,
+        operatingHours: normalizedOperatingHours(
+          menu.establishment.operatingHours,
+        ) as Prisma.InputJsonValue,
+        timeZone: menu.establishment.timeZone,
         logo: menu.establishment.logoKey
           ? {
               storageKey: menu.establishment.logoKey,
@@ -164,6 +169,18 @@ export class CatalogMenuSnapshotSource implements MenuSnapshotSource {
       })),
     };
   }
+}
+
+function normalizedOperatingHours(value: Prisma.JsonValue): unknown {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.keys(value).length === 0
+  ) {
+    return DEFAULT_ESTABLISHMENT_OPERATING_HOURS;
+  }
+  return value;
 }
 
 function formatSnapshotMoney(value: { toFixed: (digits: number) => string } | string): string {

@@ -143,6 +143,16 @@ export class MenuPublicationService {
               },
             });
 
+            await transaction.menu.updateMany({
+              where: {
+                organizationId: input.tenant.organizationId,
+                establishmentId: menu.establishment_id,
+                id: { not: input.menuId },
+                activePublicationId: { not: null },
+              },
+              data: { activePublicationId: null, status: MenuStatus.DRAFT },
+            });
+
             const activation = await transaction.menu.updateMany({
               where: {
                 id: input.menuId,

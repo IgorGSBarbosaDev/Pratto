@@ -43,6 +43,7 @@ export interface PublicEstablishmentResponse {
   whatsapp: string | null;
   address: EstablishmentAddress | null;
   operatingHours: EstablishmentOperatingHours;
+  timeZone: string;
   logo: EstablishmentAsset | null;
   coverImage: EstablishmentAsset | null;
   theme: EstablishmentThemeSettings;

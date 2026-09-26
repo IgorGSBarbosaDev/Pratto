@@ -14,7 +14,13 @@ import type {
 } from '@pratto/contracts';
 import { STORAGE_SERVICE } from '@pratto/contracts';
 import { prisma } from '@pratto/database';
-import { publicMenuCursorSchema, type PublicMenuQuery } from '@pratto/validation';
+import {
+  DEFAULT_ESTABLISHMENT_OPERATING_HOURS,
+  establishmentOperatingHoursSchema,
+  establishmentTimeZoneSchema,
+  publicMenuCursorSchema,
+  type PublicMenuQuery,
+} from '@pratto/validation';
 import { z } from 'zod';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
@@ -31,7 +37,17 @@ const publicSnapshotSchema = z.object({
     phone: z.string().nullable(),
     whatsapp: z.string().nullable(),
     address: z.unknown().nullable(),
-    operatingHours: z.unknown(),
+    operatingHours: z.preprocess(
+      (value) =>
+        value &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        Object.keys(value).length === 0
+          ? DEFAULT_ESTABLISHMENT_OPERATING_HOURS
+          : value,
+      establishmentOperatingHoursSchema,
+    ),
+    timeZone: establishmentTimeZoneSchema.optional().default('America/Sao_Paulo'),
     logo: z.object({ storageKey: z.string(), contentType: z.string().nullable() }).nullable(),
     coverImage: z.object({ storageKey: z.string(), contentType: z.string().nullable() }).nullable(),
     theme: z.object({
@@ -254,6 +270,7 @@ export class PublicMenuService {
       whatsapp: establishment.whatsapp,
       address: establishment.address as EstablishmentAddress | null,
       operatingHours: establishment.operatingHours as EstablishmentOperatingHours,
+      timeZone: establishment.timeZone,
       logo: establishment.logo ? await this.toAsset(establishment.logo) : null,
       coverImage: establishment.coverImage ? await this.toAsset(establishment.coverImage) : null,
       theme: establishment.theme as EstablishmentThemeSettings,

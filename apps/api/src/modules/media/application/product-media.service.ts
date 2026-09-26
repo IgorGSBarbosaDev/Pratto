@@ -10,7 +10,7 @@ import type {
 } from '@pratto/contracts';
 import { hasPermission, Permission } from '@pratto/contracts';
 import { STORAGE_SERVICE } from '@pratto/contracts';
-import { prisma } from '@pratto/database';
+import { prisma, publicationReferencesStorageKey } from '@pratto/database';
 import type { Prisma } from '@pratto/database';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
@@ -148,8 +148,9 @@ export class ProductMediaService {
       contentLength: validated.sizeBytes,
     });
 
+    let created: ProductMediaRecord;
     try {
-      const created = await this.database.$transaction(async (transaction) => {
+      created = await this.database.$transaction(async (transaction) => {
         await this.lockProduct(transaction, tenant, menuId, productId);
         const latest = await transaction.productMedia.aggregate({
           where: { organizationId: tenant.organizationId, menuId, productId },
@@ -175,11 +176,11 @@ export class ProductMediaService {
           select: mediaSelect,
         });
       });
-      return await this.toResponse(created);
     } catch (error) {
       await this.deleteStoredAsset(stored.key);
       throw error;
     }
+    return await this.toResponse(created);
   }
 
   async setPrimary(
@@ -248,7 +249,9 @@ export class ProductMediaService {
       }
       return this.listMediaWithClient(transaction, tenant.organizationId, productId, menuId);
     });
-    if (removedKey) await this.deleteStoredAsset(removedKey);
+    if (removedKey && !(await publicationReferencesStorageKey(this.database, removedKey))) {
+      await this.deleteStoredAsset(removedKey);
+    }
     return result;
   }
 
@@ -301,6 +304,15 @@ export class ProductMediaService {
     menuId: string,
     productId: string,
   ): Promise<void> {
+    const menus = await database.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "menus"
+      WHERE "id" = ${menuId}::uuid
+        AND "organization_id" = ${tenant.organizationId}::uuid
+      FOR UPDATE
+    `;
+    if (!menus[0]) this.productNotFound();
+
     const products = await database.$queryRaw<
       Array<{ id: string; status: string; archived_at: Date | null }>
     >`

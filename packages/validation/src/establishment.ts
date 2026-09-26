@@ -23,6 +23,20 @@ const contactSchema = () =>
 
 const addressText = (max: number) => z.string().trim().max(max);
 
+export const establishmentTimeZoneSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(64)
+  .refine((timeZone) => {
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone });
+      return true;
+    } catch {
+      return false;
+    }
+  }, 'Selecione um fuso horário IANA válido.');
+
 export const establishmentAddressSchema = z
   .object({
     street: addressText(160).min(1),
@@ -50,7 +64,16 @@ const nullableAddressSchema = z.preprocess((value) => {
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Informe um horário válido.');
 const dayHoursSchema = z
   .object({ closed: z.boolean(), open: timeSchema, close: timeSchema })
-  .strict();
+  .strict()
+  .superRefine((hours, context) => {
+    if (!hours.closed && hours.open === hours.close) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['close'],
+        message: 'A abertura e o fechamento não podem ser iguais.',
+      });
+    }
+  });
 
 export const establishmentOperatingHoursSchema = z
   .object({
@@ -89,6 +112,7 @@ export const establishmentUpdateSchema = z
     whatsapp: contactSchema().optional(),
     address: nullableAddressSchema.optional(),
     operatingHours: establishmentOperatingHoursSchema.optional(),
+    timeZone: establishmentTimeZoneSchema.optional(),
     theme: establishmentThemeSchema.optional(),
   })
   .strict();

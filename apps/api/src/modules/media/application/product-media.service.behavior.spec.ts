@@ -16,7 +16,11 @@ const mockPrisma = {
   $transaction: jest.fn(),
   $queryRaw: jest.fn(),
 };
-jest.mock('@pratto/database', () => ({ prisma: mockPrisma }));
+const mockPublicationReferencesStorageKey = jest.fn();
+jest.mock('@pratto/database', () => ({
+  prisma: mockPrisma,
+  publicationReferencesStorageKey: mockPublicationReferencesStorageKey,
+}));
 
 import { ProductMediaService } from './product-media.service';
 
@@ -84,6 +88,7 @@ describe('ProductMediaService behavior', () => {
     mockPrisma.$queryRaw.mockResolvedValue([
       { id: 'product-id', status: 'ACTIVE', archived_at: null },
     ]);
+    mockPublicationReferencesStorageKey.mockResolvedValue(false);
     mockPrisma.product.findFirst.mockResolvedValue(product);
     mockPrisma.productMedia.findMany.mockResolvedValue([]);
     mockPrisma.productMedia.findFirst.mockResolvedValue(null);
@@ -159,6 +164,19 @@ describe('ProductMediaService behavior', () => {
         data: expect.objectContaining({ displayOrder: 0, isPrimary: true }),
       }),
     );
+  });
+
+  it('retains storage objects referenced by immutable publications', async () => {
+    mockPrisma.productMedia.findFirst.mockResolvedValue(media('published-media'));
+    mockPublicationReferencesStorageKey.mockResolvedValue(true);
+
+    await service.removeMedia(tenant(), 'menu-id', 'product-id', 'published-media');
+
+    expect(mockPublicationReferencesStorageKey).toHaveBeenCalledWith(
+      mockPrisma,
+      'published-media.png',
+    );
+    expect(storage.delete).not.toHaveBeenCalled();
   });
 
   it('reorders exactly all media and rejects duplicates or unknown ids', async () => {

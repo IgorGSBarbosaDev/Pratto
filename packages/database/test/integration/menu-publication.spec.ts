@@ -88,6 +88,43 @@ describe('versioned menu publications', () => {
     expect(source.calls).toBe(2);
   });
 
+  it('moves the single public menu to the newly published draft atomically', async () => {
+    const tenant = await createTenantFixture(database, { label: 'Single public menu' });
+    const service = createService();
+    const firstPublication = await service.publish({
+      menuId: tenant.menu.id,
+      tenant: { organizationId: tenant.organization.id, userId: tenant.user.id },
+      idempotencyKey: 'single-public-menu-first',
+    });
+    const secondMenu = await createMenu(database, {
+      organizationId: tenant.organization.id,
+      establishmentId: tenant.establishment.id,
+      name: 'Menu alternativo',
+    });
+    const secondPublication = await service.publish({
+      menuId: secondMenu.id,
+      tenant: { organizationId: tenant.organization.id, userId: tenant.user.id },
+      idempotencyKey: 'single-public-menu-second',
+    });
+    const [previousMenu, activeMenus] = await Promise.all([
+      database.menu.findUniqueOrThrow({ where: { id: tenant.menu.id } }),
+      database.menu.findMany({
+        where: { establishmentId: tenant.establishment.id, activePublicationId: { not: null } },
+      }),
+    ]);
+
+    expect(previousMenu).toMatchObject({ status: MenuStatus.DRAFT, activePublicationId: null });
+    expect(activeMenus.map(({ id, activePublicationId }) => [id, activePublicationId])).toEqual([
+      [secondMenu.id, secondPublication.id],
+    ]);
+    await expect(
+      database.menu.update({
+        where: { id: tenant.menu.id },
+        data: { status: MenuStatus.ACTIVE, activePublicationId: firstPublication.id },
+      }),
+    ).rejects.toMatchObject({ code: 'P2002' });
+  });
+
   it('is idempotent and does not consume another version on retry', async () => {
     const tenant = await createTenantFixture(database, { label: 'Idempotency' });
     const source = new MenuSnapshotFixture();
@@ -222,7 +259,7 @@ describe('versioned menu publications', () => {
     });
 
     expect(first.snapshot).toMatchObject({
-      schemaVersion: 3,
+      schemaVersion: 4,
       establishment: {
         id: tenant.establishment.id,
         description: 'Descrição original',
