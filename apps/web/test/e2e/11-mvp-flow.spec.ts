@@ -1,8 +1,51 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 const cafeMenuId = '50000000-0000-4000-8000-000000000002';
 
 test.setTimeout(120_000);
+
+async function createPlayableWebm(page: Page): Promise<Buffer> {
+  const bytes = await page.evaluate(async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas 2D is unavailable.');
+
+    const stream = canvas.captureStream(5);
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8' });
+    const chunks: Blob[] = [];
+    recorder.addEventListener('dataavailable', (event) => {
+      if (event.data.size > 0) chunks.push(event.data);
+    });
+    const stopped = new Promise<void>((resolve, reject) => {
+      recorder.addEventListener('stop', () => resolve(), { once: true });
+      recorder.addEventListener('error', () => reject(new Error('Video recording failed.')), {
+        once: true,
+      });
+    });
+
+    let frame = 0;
+    const drawFrame = () => {
+      context.fillStyle = frame % 2 === 0 ? '#d8452a' : '#3f7652';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      frame += 1;
+    };
+    drawFrame();
+    const interval = window.setInterval(drawFrame, 200);
+    recorder.start();
+    await new Promise((resolve) => window.setTimeout(resolve, 1_000));
+    window.clearInterval(interval);
+    recorder.stop();
+    await stopped;
+    stream.getTracks().forEach((track) => track.stop());
+
+    return Array.from(new Uint8Array(await new Blob(chunks, { type: 'video/webm' }).arrayBuffer()));
+  });
+
+  return Buffer.from(bytes);
+}
 
 test('completes the real MVP flow from setup to dashboard', async ({ page }) => {
   const suffix = Date.now().toString();
@@ -55,6 +98,13 @@ test('completes the real MVP flow from setup to dashboard', async ({ page }) => 
   });
   await mediaDialog.getByRole('button', { name: 'Enviar mídia' }).click();
   await expect(mediaDialog.getByText('produto-e2e.png')).toBeVisible();
+  await mediaDialog.getByLabel('Arquivo de imagem ou vídeo').setInputFiles({
+    name: 'produto-e2e.webm',
+    mimeType: 'video/webm',
+    buffer: await createPlayableWebm(page),
+  });
+  await mediaDialog.getByRole('button', { name: 'Enviar mídia' }).click();
+  await expect(mediaDialog.getByText('produto-e2e.webm')).toBeVisible();
   await mediaDialog.getByRole('button', { name: 'Fechar' }).click();
 
   await page.getByRole('button', { name: 'Publicação', exact: true }).click();
@@ -82,6 +132,14 @@ test('completes the real MVP flow from setup to dashboard', async ({ page }) => 
   await page.getByRole('button', { name: 'Explorar o menu' }).click();
   await expect(page.getByRole('feed', { name: 'Produtos publicados' })).toBeVisible();
   await expect(page.getByRole('heading', { name: productName })).toBeVisible();
+  await page.getByRole('button', { name: 'Mostrar mídia 2 de 2' }).click();
+  const video = page.getByLabel(`Vídeo de ${productName}`);
+  await expect(video).toBeVisible();
+  await expect
+    .poll(() => video.evaluate((element) => (element as HTMLVideoElement).currentTime), {
+      timeout: 10_000,
+    })
+    .toBeGreaterThan(0);
   await page.getByRole('button', { name: `Compartilhar ${productName}` }).click();
   const shareDialog = page.getByRole('dialog', { name: 'Compartilhar prato' });
   await expect(shareDialog).toBeVisible();
