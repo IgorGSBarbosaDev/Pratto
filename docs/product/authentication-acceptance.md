@@ -11,4 +11,4 @@
 - [x] Logs e auditoria não contêm senha, token, cookie, e-mail ou IP em claro.
 - [x] Frontend confirma a sessão na API e oferece estados acessíveis de erro e carregamento.
 - [x] Swagger e documentação descrevem os contratos.
-- [x] Nenhuma entidade, rota ou interface de Category, Product, Media ou Analytics foi iniciada.
+- [x] As funcionalidades de categorias, produtos, mídia e analytics estão integradas ao tenant ativo; os critérios de domínio e fluxo E2E estão em `domain-database-acceptance.md` e `apps/web/test/e2e/11-mvp-flow.spec.ts`.

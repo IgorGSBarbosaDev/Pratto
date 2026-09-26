@@ -49,7 +49,7 @@ nunca troca o tenant informado pelos guards.
 | Método | Rota                                                       | Resultado                                                        |
 | ------ | ---------------------------------------------------------- | ---------------------------------------------------------------- |
 | GET    | `/admin/establishments/:establishmentId/settings`          | Consulta os dados públicos do estabelecimento.                   |
-| PATCH  | `/admin/establishments/:establishmentId/settings`          | Atualiza nome, slug, contatos, endereço, horários e tema.        |
+| PATCH  | `/admin/establishments/:establishmentId/settings`          | Atualiza nome, slug, contatos, endereço, horários, fuso e tema.  |
 | POST   | `/admin/establishments/:establishmentId/assets/:assetKind` | Substitui logo ou capa com imagem JPEG, PNG ou WebP de até 5 MB. |
 | DELETE | `/admin/establishments/:establishmentId/assets/:assetKind` | Remove a referência de logo ou capa.                             |
 
@@ -104,13 +104,13 @@ As rotas de mídia exigem sessão autenticada, organização ativa e CSRF nas mu
 MIME, extensão, assinatura básica do conteúdo e tamanho antes de gravar no MinIO. Imagens JPEG,
 PNG e WebP têm limite de 5 MB; vídeos MP4, WebM e MOV têm limite de 50 MB.
 
-| Método | Rota                                                              | Resultado                                |
-| ------ | ----------------------------------------------------------------- | ---------------------------------------- |
-| GET    | `/admin/menus/:menuId/products/:productId/media`                  | Lista as mídias do produto no tenant.    |
-| POST   | `/admin/menus/:menuId/products/:productId/media`                  | Faz upload multipart no campo `file`.    |
-| POST   | `/admin/menus/:menuId/products/:productId/media/:mediaId/primary` | Define a mídia principal.                |
-| PATCH  | `/admin/menus/:menuId/products/:productId/media/reorder`          | Recebe todos os IDs na nova ordem.       |
-| DELETE | `/admin/menus/:menuId/products/:productId/media/:mediaId`         | Remove a referência e o objeto do MinIO. |
+| Método | Rota                                                              | Resultado                                                    |
+| ------ | ----------------------------------------------------------------- | ------------------------------------------------------------ |
+| GET    | `/admin/menus/:menuId/products/:productId/media`                  | Lista as mídias do produto no tenant.                        |
+| POST   | `/admin/menus/:menuId/products/:productId/media`                  | Faz upload multipart no campo `file`.                        |
+| POST   | `/admin/menus/:menuId/products/:productId/media/:mediaId/primary` | Define a mídia principal.                                    |
+| PATCH  | `/admin/menus/:menuId/products/:productId/media/reorder`          | Recebe todos os IDs na nova ordem.                           |
+| DELETE | `/admin/menus/:menuId/products/:productId/media/:mediaId`         | Remove a referência e preserva objetos usados por snapshots. |
 
 As chaves de armazenamento são aleatórias e escopadas por organização, menu e produto. Todas as
 consultas administrativas combinam esses três escopos; mídias de produtos arquivados não podem ser
@@ -118,9 +118,11 @@ gerenciadas. O primeiro upload torna-se principal, e a remoção da principal pr
 mídia restante. O bucket MinIO permanece privado e o GET devolve URL de preview assinada e
 temporária.
 
-Uma nova publicação usa `schemaVersion: 3` e inclui a lista de mídias dos produtos ativos no
+Uma nova publicação usa `schemaVersion: 4` e inclui a lista de mídias dos produtos ativos no
 snapshot usando `storageKey`, sem congelar uma URL assinada expirável. Publicações anteriores
-continuam imutáveis; o feed público materializa URLs assinadas somente para a publicação ativa.
+continuam imutáveis; objetos de mídia permanecem no MinIO enquanto qualquer snapshot histórico os
+referenciar. O feed público materializa URLs assinadas somente para a publicação ativa. Snapshots
+`schemaVersion: 3` continuam legíveis com o fuso padrão `America/Sao_Paulo`.
 
 ## Publicação administrativa
 
@@ -134,10 +136,11 @@ chave devolve a mesma versão sem criar outra publicação.
 | GET    | `/admin/menus/:menuId/publication`  | Consulta publicação, snapshot e alterações não publicadas.       |
 | GET    | `/admin/menus/:menuId/publications` | Lista até 100 versões históricas, da mais recente à mais antiga. |
 
-O snapshot administrativo usa `schemaVersion: 3` e congela estabelecimento, menu, categorias,
+O snapshot administrativo usa `schemaVersion: 4` e congela estabelecimento, menu, categorias,
 produtos e mídias. Referências de mídia usam `storageKey`, nunca URL assinada temporária. A troca
 da publicação ativa e a criação da versão acontecem na mesma transação serializável; falhas
-descartam o snapshot e a ativação. Rollback ainda não é exposto.
+descartam o snapshot e a ativação. Ao publicar outro menu do mesmo estabelecimento, o anterior
+deixa de ser ativo e volta a rascunho sem apagar o histórico. Rollback ainda não é exposto.
 
 ## Cardápio público
 
@@ -162,7 +165,9 @@ estabelecimento inexistente retorna `PUBLIC_MENU_NOT_FOUND` (404); um estabeleci
 retorna `PUBLIC_MENU_SUSPENDED` (404); ausência de publicação retorna
 `PUBLIC_MENU_NOT_PUBLISHED` (404); snapshots inválidos e falhas temporárias retornam erro estável
 sem expor detalhes internos. Se houver mais de um menu publicado para o mesmo estabelecimento, a
-API retorna `PUBLIC_MENU_CONFIGURATION_INVALID` em vez de escolher um menu implicitamente.
+API retorna `PUBLIC_MENU_CONFIGURATION_INVALID` como proteção contra dados legados; a transação de
+publicação e o índice único parcial impedem essa configuração. O snapshot congela o fuso IANA do
+estabelecimento, e versões antigas usam `America/Sao_Paulo`.
 
 O card administrativo constrói o link sem novo endpoint ou tabela usando
 `PUBLIC_MENU_BASE_URL`, `publicId` e o slug atual. O QR Code é gerado localmente no navegador em
@@ -173,6 +178,10 @@ usam a área de transferência como fallback.
 
 Analytics não exige login e não participa do carregamento do feed. O retorno do cardápio inclui
 `menu.publicationId`, usado pelo cliente para atribuir cada evento à publicação imutável correta.
+
+O dashboard recebe `fromDate` e `toDate` como datas inclusivas (`YYYY-MM-DD`). O servidor converte
+os limites à meia-noite do fuso do estabelecimento, e a série agrupa cada evento pelo mesmo fuso;
+isso preserva os dias locais inclusive quando há transição de horário de verão.
 
 | Método | Rota                         | Resultado                                                 |
 | ------ | ---------------------------- | --------------------------------------------------------- |

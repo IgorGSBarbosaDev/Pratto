@@ -35,9 +35,15 @@ O mecanismo próprio do PRATTO é combinar publicação versionada de um catálo
 - Categorias, produtos, preços decimais como strings, estados de disponibilidade, destaque, ingredientes e alergênicos.
 - Mídias ordenadas de imagem e vídeo, com definição de principal e fluxo real de upload e remoção.
 - Publicação idempotente e versionada, histórico imutável, URL pública, QR Code e compartilhamento.
-- Feed vertical com snap obrigatório, galeria horizontal, filtros por categoria, detalhes, analytics anônimos, estados de carregamento, vazio, erro e indisponibilidade.
-- O produto não inclui carrinho, checkout, pagamento, pedidos, entrega, seletores de quantidade, login de cliente, favoritos, avaliações, recomendações ou CTAs de compra.
+- Feed vertical com snap obrigatório, galeria horizontal, busca, filtros por categoria, detalhes, itens relacionados por categoria, analytics anônimos e estados de carregamento, vazio, erro e indisponibilidade.
+- O produto não inclui carrinho, checkout, pagamento, pedidos, entrega, seletores de quantidade, login de cliente, favoritos, avaliações, recomendações personalizadas ou CTAs de compra.
+- Analytics e horários públicos usam o fuso IANA configurado por estabelecimento, com padrão `America/Sao_Paulo`.
 - A arquitetura real, contratos, regras de autorização, tenant isolation, rotas e integrações backend não podem ser alterados para acomodar modelos mockados da referência.
+
+## Pendências de alinhamento de escopo
+
+- `AGENTS.md` mantém permissões avançadas fora do escopo, mas a implementação e o ADR-012 já contêm papéis de equipe, convites e controles granulares. Não ampliar esse recurso até decidir se será removido/deferido ou promovido formalmente ao MVP.
+- A pasta `design-reference/` é ignorada pelo Git e não acompanha clones do repositório. `docs/design-reference-analysis.md` é o registro versionado disponível; restaurar a referência e o arquivo `.figma/make/site.json` antes de declarar o Vite de referência reproduzível.
 
 ## Brand Commitments
 

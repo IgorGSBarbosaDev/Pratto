@@ -18,7 +18,7 @@
 - A publicação congela estabelecimento, categorias, produtos e mídias em um snapshot serializável.
 - O cardápio público lê somente a publicação ativa e não expõe dados do catálogo editável.
 - Produtos ocultos não aparecem no feed público; produtos temporariamente indisponíveis permanecem identificados.
-- A rota pública por `publicId` não exige autenticação e rejeita configuração ambígua com múltiplos menus publicados.
+- A rota pública por `publicId` não exige autenticação; apenas um menu por estabelecimento pode ter publicação ativa, e a troca de menu ocorre atomicamente.
 - Estabelecimento inexistente, suspenso, sem publicação e snapshot inválido produzem estados públicos estáveis;
   slug antigo redireciona para o slug canônico sem alterar o `publicId`.
 - QR Code administrativo deriva do link público estável e permite PNG, SVG, download e compartilhamento/fallback de cópia.

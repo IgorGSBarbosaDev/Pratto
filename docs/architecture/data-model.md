@@ -34,14 +34,20 @@ O `publicId` é globalmente único e imutável no banco. O `slug` é mutável, v
 dentro da organização; ele não é usado como chave estrangeira nem identidade permanente.
 
 `Establishment` também mantém a descrição, telefone, WhatsApp, endereço estruturado, horários de
-funcionamento e configurações básicas de tema em JSONB validado no limite da API. Logo e capa são
-referências compostas por chave e tipo MIME, armazenadas no próprio estabelecimento e materializadas
-como URL pelo `StorageService`.
+funcionamento, fuso IANA e configurações básicas de tema em JSONB validado no limite da API. Logo e
+capa são referências compostas por chave e tipo MIME, armazenadas no próprio estabelecimento e
+materializadas como URL pelo `StorageService`.
 
 `ProductMedia` mantém a chave privada do objeto, tipo MIME, nome original, tamanho, ordem e mídia
 principal. A administração recebe somente URLs de leitura assinadas e temporárias. Snapshots de
 publicação guardam a `storageKey`, preservando a referência histórica sem congelar uma URL que
-expiraria.
+expiraria. A remoção de uma mídia editável não apaga o objeto enquanto qualquer publicação
+imutável ainda o referenciar; logo e capa seguem a mesma regra. A alteração de mídia é serializada
+com a captura do snapshot para impedir referências publicadas a objetos já apagados.
+
+Cada estabelecimento mantém no máximo um menu com publicação ativa. A troca desativa o menu
+anterior e ativa o novo na mesma transação. Um índice único parcial reforça essa regra no banco e
+permite manter vários menus em rascunho.
 
 ## Isolamento e integridade
 
