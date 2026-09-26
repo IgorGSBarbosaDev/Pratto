@@ -106,8 +106,8 @@ export interface AnalyticsCategoryMetric {
 }
 
 export interface AnalyticsDashboardQuery {
-  from: string;
-  to: string;
+  fromDate: string;
+  toDate: string;
   categoryId?: string;
   productId?: string;
 }

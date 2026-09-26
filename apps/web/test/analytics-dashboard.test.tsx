@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AnalyticsDashboard } from '../features/analytics/analytics-dashboard';
+import { dateRangeForDays } from '../features/analytics/date-range';
 
 const establishmentId = '11111111-1111-4111-8111-111111111111';
 const categoryId = '22222222-2222-4222-8222-222222222222';
@@ -14,8 +15,8 @@ function dashboardResponse(
 ): AnalyticsDashboardResponse {
   return {
     period: {
-      from: '2026-08-01T00:00:00.000Z',
-      to: '2026-08-10T00:00:00.000Z',
+      from: '2026-08-01T03:00:00.000Z',
+      to: '2026-08-11T03:00:00.000Z',
     },
     summary: {
       sessions: 12,
@@ -77,13 +78,14 @@ function response(value: unknown, status = 200) {
   );
 }
 
-function renderDashboard() {
+function renderDashboard(timeZone = 'America/Sao_Paulo') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={queryClient}>
-      <AnalyticsDashboard establishmentId={establishmentId} />
+      <AnalyticsDashboard establishmentId={establishmentId} timeZone={timeZone} />
     </QueryClientProvider>,
   );
+  return { ...view, queryClient };
 }
 
 afterEach(() => cleanup());
@@ -124,8 +126,26 @@ describe('AnalyticsDashboard', () => {
     expect(requestUrl.pathname).toBe(`/admin/establishments/${establishmentId}/analytics`);
     expect(requestUrl.searchParams.get('categoryId')).toBe(categoryId);
     expect(requestUrl.searchParams.get('productId')).toBe(productId);
-    expect(requestUrl.searchParams.get('from')).toBe('2026-08-01T00:00:00.000Z');
-    expect(requestUrl.searchParams.get('to')).toBe('2026-08-10T00:00:00.000Z');
+    expect(requestUrl.searchParams.get('fromDate')).toBe('2026-08-01');
+    expect(requestUrl.searchParams.get('toDate')).toBe('2026-08-09');
+  });
+
+  it('recalculates a preset date range when the establishment time zone changes', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response(dashboardResponse()));
+    vi.stubGlobal('fetch', fetchMock);
+    const view = renderDashboard('Pacific/Honolulu');
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const expectedToDate = dateRangeForDays(30, 'Asia/Tokyo').toDate;
+
+    view.rerender(
+      <QueryClientProvider client={view.queryClient}>
+        <AnalyticsDashboard establishmentId={establishmentId} timeZone="Asia/Tokyo" />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const requestUrl = new URL(String(fetchMock.mock.calls[1]?.[0]));
+    expect(requestUrl.searchParams.get('toDate')).toBe(expectedToDate);
   });
 
   it('shows loading and empty states', async () => {

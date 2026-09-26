@@ -7,6 +7,7 @@ import type {
   PublicMenuPageResponse,
   PublicMenuProductResponse,
 } from '@pratto/contracts';
+import { accessibleThemeColors } from '@pratto/validation';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   ArrowRight,
@@ -33,6 +34,7 @@ import { useModalDialog } from '../design-system/use-modal-dialog';
 
 import { PublicMenuAnalyticsClient } from './analytics-client';
 import { publicMenuApi } from './api-client';
+import { isOpenNow } from './operating-hours';
 import {
   ProductShareButton,
   ProductShareSheet,
@@ -298,9 +300,14 @@ export function PublicMenuScreen({
   if (!firstPage) return <PublicMenuError onRetry={() => void query.refetch()} />;
 
   const lightTheme = firstPage.establishment.theme.mode === 'LIGHT';
+  const themeColors = accessibleThemeColors(firstPage.establishment.theme.primaryColor);
   const themeStyle = {
     '--menu-primary': firstPage.establishment.theme.primaryColor,
-    '--menu-primary-deep': darkenColor(firstPage.establishment.theme.primaryColor),
+    '--menu-primary-on': themeColors.onPrimary,
+    '--menu-primary-readable': lightTheme
+      ? themeColors.readableOnLight
+      : themeColors.readableOnDark,
+    '--menu-primary-readable-light': themeColors.readableOnLight,
     colorScheme: lightTheme ? 'light' : 'dark',
   } as CSSProperties;
 
@@ -569,7 +576,7 @@ function MenuDiscoveryControls({
           <input
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            className={`h-10 w-full rounded-xl border py-2 pl-9 pr-9 text-sm outline-none transition focus:border-[var(--menu-primary)] focus:ring-2 focus:ring-[var(--menu-primary)]/30 ${inputSurface}`}
+            className={`h-10 w-full rounded-xl border py-2 pl-9 pr-9 text-sm outline-none transition focus:border-[var(--menu-primary-readable)] focus:ring-2 focus:ring-[var(--menu-primary-readable)]/50 ${inputSurface}`}
             type="search"
             aria-label="Buscar produtos"
             placeholder="Buscar no cardápio"
@@ -596,7 +603,7 @@ function MenuDiscoveryControls({
             aria-pressed={viewMode === 'feed'}
             aria-label="Ver feed"
             onClick={() => onViewModeChange('feed')}
-            className={`flex h-9 items-center justify-center gap-1 rounded-[10px] px-2 transition ${viewMode === 'feed' ? 'bg-[var(--menu-primary)] text-white shadow-sm' : inactiveText}`}
+            className={`flex h-9 items-center justify-center gap-1 rounded-[10px] px-2 transition ${viewMode === 'feed' ? 'bg-[var(--menu-primary)] text-[var(--menu-primary-on)] shadow-sm' : inactiveText}`}
           >
             <BookOpen size={15} aria-hidden="true" />
             <span className="text-[11px] font-medium">Feed</span>
@@ -606,7 +613,7 @@ function MenuDiscoveryControls({
             aria-pressed={viewMode === 'traditional'}
             aria-label="Ver lista"
             onClick={() => onViewModeChange('traditional')}
-            className={`flex h-9 items-center justify-center gap-1 rounded-[10px] px-2 transition ${viewMode === 'traditional' ? 'bg-[var(--menu-primary)] text-white shadow-sm' : inactiveText}`}
+            className={`flex h-9 items-center justify-center gap-1 rounded-[10px] px-2 transition ${viewMode === 'traditional' ? 'bg-[var(--menu-primary)] text-[var(--menu-primary-on)] shadow-sm' : inactiveText}`}
           >
             <List size={15} aria-hidden="true" />
             <span className="text-[11px] font-medium">Lista</span>
@@ -747,7 +754,7 @@ function TraditionalProductRow({
       <button
         type="button"
         onClick={onOpenDetails}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)]"
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary-readable)]"
         aria-label={`Abrir detalhes de ${product.name}`}
       >
         {image ? (
@@ -769,9 +776,7 @@ function TraditionalProductRow({
             </span>
           ) : null}
           <span className="mt-2 flex flex-wrap items-center gap-2">
-            <span
-              className={`tnum text-sm font-semibold ${lightTheme ? 'text-[var(--menu-primary-deep)]' : 'text-[var(--menu-primary)]'}`}
-            >
+            <span className="tnum text-sm font-semibold text-[var(--menu-primary-readable)]">
               {formatMoney(product.promotionalPrice ?? product.price)}
             </span>
             {product.promotionalPrice ? (
@@ -813,7 +818,7 @@ function RestaurantEntry({
   onEnter: () => void;
 }) {
   const establishment = page.establishment;
-  const open = isOpenNow(establishment.operatingHours);
+  const open = isOpenNow(establishment.operatingHours, establishment.timeZone);
   const location = [establishment.address?.neighborhood, establishment.address?.city]
     .filter(Boolean)
     .join(', ');
@@ -848,7 +853,7 @@ function RestaurantEntry({
           {open ? 'Aberto agora' : 'Fechado agora'}
         </span>
         <h1 className="mt-3 font-serif text-[42px] leading-none">{establishment.name}</h1>
-        <p className="mt-1 text-[15px] font-medium uppercase tracking-[0.16em] text-[var(--menu-primary-deep)]">
+        <p className="mt-1 text-[15px] font-medium uppercase tracking-[0.16em] text-[var(--menu-primary-readable)]">
           {page.menu.name}
         </p>
         {establishment.description ? (
@@ -869,7 +874,7 @@ function RestaurantEntry({
         <button
           type="button"
           onClick={onEnter}
-          className="group mt-8 inline-flex items-center gap-2 rounded-full bg-[var(--menu-primary)] px-7 py-3.5 text-[16px] font-medium text-white shadow-[0_14px_30px_-12px_var(--menu-primary)] transition-all hover:brightness-90 active:scale-[0.98]"
+          className="group mt-8 inline-flex items-center gap-2 rounded-full bg-[var(--menu-primary)] px-7 py-3.5 text-[16px] font-medium text-[var(--menu-primary-on)] shadow-[0_14px_30px_-12px_var(--menu-primary)] transition-all hover:brightness-90 active:scale-[0.98]"
         >
           Explorar o menu{' '}
           <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />
@@ -946,7 +951,7 @@ function RestaurantInfo({
   onContactClick: (contactType: AnalyticsContactType) => void;
 }) {
   const establishment = page.establishment;
-  const open = isOpenNow(establishment.operatingHours);
+  const open = isOpenNow(establishment.operatingHours, establishment.timeZone);
   const address = formatAddress(establishment.address);
   return (
     <div
@@ -983,7 +988,7 @@ function RestaurantInfo({
         ) : null}
         <div className="mt-7">
           <div className="mb-3 flex items-center gap-2">
-            <Clock3 size={16} className="text-[var(--menu-primary-deep)]" />
+            <Clock3 size={16} className="text-[var(--menu-primary-readable)]" />
             <span
               className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}`}
             >
@@ -1015,7 +1020,7 @@ function RestaurantInfo({
         {address ? (
           <div className="mt-7">
             <div className="mb-2 flex items-center gap-2">
-              <MapPin size={16} className="text-[var(--menu-primary-deep)]" />
+              <MapPin size={16} className="text-[var(--menu-primary-readable)]" />
               <span
                 className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${lightTheme ? 'text-ink-faint' : 'text-white/[0.55]'}`}
               >
@@ -1040,7 +1045,7 @@ function RestaurantInfo({
                   className={`flex items-center justify-between rounded-xl px-4 py-3 text-[15px] ${lightTheme ? 'bg-sand' : 'bg-white/[0.08]'}`}
                 >
                   <a
-                    className="flex w-full items-center justify-between gap-4 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)]"
+                    className="flex w-full items-center justify-between gap-4 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary-readable)]"
                     href={createPhoneHref(establishment.phone)}
                     onClick={() => onContactClick('phone')}
                   >
@@ -1056,7 +1061,7 @@ function RestaurantInfo({
                   className={`flex items-center justify-between rounded-xl px-4 py-3 text-[15px] ${lightTheme ? 'bg-sand' : 'bg-white/[0.08]'}`}
                 >
                   <a
-                    className="flex w-full items-center justify-between gap-4 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)]"
+                    className="flex w-full items-center justify-between gap-4 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary-readable)]"
                     href={createWhatsAppHref(establishment.whatsapp)}
                     target="_blank"
                     rel="noreferrer"
@@ -1106,9 +1111,7 @@ function BottomNav({
             ? 'text-white'
             : 'text-white/[0.55]'
           : selected
-            ? lightTheme
-              ? 'text-[var(--menu-primary-deep)]'
-              : 'text-[var(--menu-primary)]'
+            ? 'text-[var(--menu-primary-readable)]'
             : lightTheme
               ? 'text-ink-faint'
               : 'text-white/[0.55]';
@@ -1142,7 +1145,7 @@ function CategoryButton({
 }) {
   return (
     <button
-      className={`shrink-0 snap-start rounded-full px-3.5 py-1.5 text-sm font-medium backdrop-blur-md transition-all duration-150 active:scale-95 ${active ? 'bg-white text-[var(--menu-primary-deep)] shadow-sm' : 'bg-white/15 text-white/90 hover:bg-white/25'}`}
+      className={`shrink-0 snap-start rounded-full px-3.5 py-1.5 text-sm font-medium backdrop-blur-md transition-all duration-150 active:scale-95 ${active ? 'bg-white text-[var(--menu-primary-readable-light)] shadow-sm' : 'bg-white/15 text-white/90 hover:bg-white/25'}`}
       type="button"
       aria-pressed={active}
       onClick={onClick}
@@ -1543,7 +1546,7 @@ function ProductDetails({
               <h2 id="product-details-title" className="font-serif text-[30px] leading-tight">
                 {product.name}
               </h2>
-              <div className="tnum whitespace-nowrap pt-2 text-right text-[20px] font-semibold text-[var(--menu-primary-deep)]">
+              <div className="tnum whitespace-nowrap pt-2 text-right text-[20px] font-semibold text-[var(--menu-primary-readable)]">
                 {formatMoney(product.promotionalPrice ?? product.price)}
                 {product.promotionalPrice ? (
                   <span
@@ -1656,9 +1659,7 @@ function RelatedProductCard({
       )}
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold">{product.name}</span>
-        <span
-          className={`mt-1 block text-sm font-medium ${lightTheme ? 'text-[var(--menu-primary-deep)]' : 'text-[var(--menu-primary)]'}`}
-        >
+        <span className="mt-1 block text-sm font-medium text-[var(--menu-primary-readable)]">
           {formatMoney(product.promotionalPrice ?? product.price)}
         </span>
       </span>
@@ -1771,7 +1772,7 @@ function PublicMenuEmpty({
       className={`grid h-full place-items-center px-6 text-center ${lightTheme ? 'bg-cream text-ink' : 'bg-ink text-white'}`}
     >
       <div className="max-w-md space-y-4">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--menu-primary-deep)]">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--menu-primary-readable)]">
           Pratto
         </p>
         <h2 className="font-serif text-[32px] leading-tight">
@@ -1817,7 +1818,7 @@ function FeedError({ lightTheme, onRetry }: { lightTheme: boolean; onRetry: () =
     >
       <span>Não foi possível carregar mais produtos.</span>
       <button
-        className="rounded-full border border-[var(--menu-primary)] px-4 py-2 font-semibold text-[var(--menu-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary)]"
+        className="rounded-full border border-[var(--menu-primary-readable)] px-4 py-2 font-semibold text-[var(--menu-primary-readable)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--menu-primary-readable)]"
         type="button"
         onClick={onRetry}
       >
@@ -1841,35 +1842,6 @@ function formatMoney(value: string): string {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return `R$ ${value}`;
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
-}
-
-function darkenColor(value: string): string {
-  const match = /^#([0-9a-f]{6})$/i.exec(value);
-  if (!match) return '#c63f25';
-  const hex = match[1]!;
-  const channels = [0, 2, 4].map((offset) =>
-    Math.round(Number.parseInt(hex.slice(offset, offset + 2), 16) * 0.82),
-  );
-  return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
-}
-
-function isOpenNow(hours: PublicMenuPageResponse['establishment']['operatingHours']): boolean {
-  const dayKeys = [
-    'sunday',
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
-  ] as const;
-  const current = hours[dayKeys[new Date().getDay()]!];
-  if (!current || current.closed || !current.open || !current.close) return false;
-  const now = new Date();
-  const value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  return current.close < current.open
-    ? value >= current.open || value < current.close
-    : value >= current.open && value < current.close;
 }
 
 function formatAddress(address: PublicMenuPageResponse['establishment']['address']): string {

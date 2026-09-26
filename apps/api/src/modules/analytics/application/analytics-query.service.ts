@@ -12,6 +12,7 @@ export interface AnalyticsQueryScope {
   establishmentId: string;
   from: Date;
   to: Date;
+  timeZone: string;
   categoryId?: string;
   productId?: string;
 }
@@ -73,17 +74,18 @@ export class AnalyticsQueryService {
   async daily(scope: AnalyticsQueryScope): Promise<AnalyticsDailyMetric[]> {
     const productFilter = this.productFilter(scope);
     const categoryFilter = this.categoryFilter(scope);
-    const lastMoment = new Date(scope.to.getTime() - 1);
+    const startDate = this.localDate(scope.from, scope.timeZone);
+    const endDate = this.localDate(new Date(scope.to.getTime() - 1), scope.timeZone);
     const rows = await prisma.$queryRaw<DailyRow[]>`
       WITH days AS (
         SELECT generate_series(
-          date_trunc('day', ${scope.from}),
-          date_trunc('day', ${lastMoment}),
+          ${startDate}::date,
+          ${endDate}::date,
           interval '1 day'
         )::date AS "day"
       ), aggregates AS (
         SELECT
-          date_trunc('day', "occurred_at")::date AS "day",
+          ("occurred_at" AT TIME ZONE ${scope.timeZone})::date AS "day",
           COUNT(DISTINCT "session_id")::bigint AS "sessions",
           COUNT(*) FILTER (WHERE "event_type" = 'MENU_OPENED')::bigint AS "menuAccesses",
           COUNT(*) FILTER (
@@ -101,7 +103,7 @@ export class AnalyticsQueryService {
           )::bigint AS "categoryViews"
         FROM "analytics_events"
         ${this.baseWhere(scope)}
-        GROUP BY date_trunc('day', "occurred_at")::date
+        GROUP BY ("occurred_at" AT TIME ZONE ${scope.timeZone})::date
       )
       SELECT
         days."day",
@@ -206,5 +208,16 @@ export class AnalyticsQueryService {
 
   private toDay(value: Date | string): string {
     return value instanceof Date ? value.toISOString().slice(0, 10) : value;
+  }
+
+  private localDate(value: Date, timeZone: string): string {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(value);
+    const values = new Map(parts.map((part) => [part.type, part.value]));
+    return `${values.get('year')}-${values.get('month')}-${values.get('day')}`;
   }
 }

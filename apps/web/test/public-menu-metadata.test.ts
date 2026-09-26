@@ -17,6 +17,7 @@ const page: PublicMenuPageResponse = {
     whatsapp: null,
     address: null,
     operatingHours: {} as PublicMenuPageResponse['establishment']['operatingHours'],
+    timeZone: 'America/Sao_Paulo',
     logo: { url: 'https://cdn.example/logo.png', contentType: 'image/png' },
     coverImage: { url: 'https://cdn.example/cover.png', contentType: 'image/png' },
     theme: { mode: 'LIGHT' as const, primaryColor: '#166534' },

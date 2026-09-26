@@ -8,8 +8,8 @@ import { AnalyticsDashboardService } from './analytics-dashboard.service';
 const establishmentId = '11111111-1111-4111-8111-111111111111';
 const organizationId = '22222222-2222-4222-8222-222222222222';
 const input: AnalyticsDashboardQueryInput = {
-  from: '2026-08-01T00:00:00.000Z',
-  to: '2026-08-10T00:00:00.000Z',
+  fromDate: '2026-08-01',
+  toDate: '2026-08-10',
 };
 const tenant = (role: 'OWNER' | 'ADMIN' | 'MEMBER' = 'OWNER'): TenantPrincipal => ({
   sessionId: 'session-id',
@@ -37,7 +37,7 @@ describe('AnalyticsDashboardService behavior', () => {
     service = new AnalyticsDashboardService(queryService as never);
     jest
       .spyOn(prisma.establishment, 'findFirst')
-      .mockResolvedValue({ id: establishmentId } as never);
+      .mockResolvedValue({ id: establishmentId, timeZone: 'America/Sao_Paulo' } as never);
     jest.spyOn(prisma.category, 'findFirst').mockResolvedValue({ id: 'category-id' } as never);
     jest
       .spyOn(prisma.product, 'findFirst')
@@ -79,7 +79,7 @@ describe('AnalyticsDashboardService behavior', () => {
     await expect(
       service.getDashboard(tenant(), establishmentId, { ...input, categoryId: 'category-id' }),
     ).resolves.toMatchObject({
-      period: { from: input.from, to: input.to },
+      period: { from: '2026-08-01T03:00:00.000Z', to: '2026-08-11T03:00:00.000Z' },
       summary: { sessions: 1 },
       products: [
         { productId: 'product-id', name: 'Prato', categoryName: 'Pratos' },

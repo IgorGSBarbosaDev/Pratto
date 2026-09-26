@@ -86,12 +86,13 @@ const authContextSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['id', 'publicId', 'name', 'slug'],
+        required: ['id', 'publicId', 'name', 'slug', 'timeZone'],
         properties: {
           id: { type: 'string', format: 'uuid' },
           publicId: { type: 'string' },
           name: { type: 'string' },
           slug: { type: 'string' },
+          timeZone: { type: 'string' },
         },
       },
     },

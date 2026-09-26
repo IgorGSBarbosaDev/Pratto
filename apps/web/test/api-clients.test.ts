@@ -114,8 +114,8 @@ describe('web API clients', () => {
     await teamApi.invite('establishment-id', { email: 'person@example.com', role: 'MEMBER' });
     await teamApi.updateRole('establishment-id', 'membership-id', 'ADMIN');
     await analyticsApi.getDashboard('establishment-id', {
-      from: '2026-08-01T00:00:00.000Z',
-      to: '2026-08-02T00:00:00.000Z',
+      fromDate: '2026-08-01',
+      toDate: '2026-08-02',
       productId: 'product-id',
     });
     await publicMenuApi.getPage('Casa Aurora/centro', { search: 'pão de queijo', limit: 12 });

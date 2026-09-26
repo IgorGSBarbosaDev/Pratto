@@ -7,7 +7,7 @@ import type {
 } from '@pratto/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3, Eye, MousePointerClick, Phone, QrCode, ScanSearch } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { ApiClientError } from '../auth/api-client';
@@ -15,12 +15,11 @@ import { ErrorState, Skeleton } from '../design-system/feedback';
 import { SectionLabel, Select } from '../design-system/primitives';
 
 import { analyticsApi } from './api-client';
+import { dateRangeForDays, formatDashboardDay, inclusiveDays } from './date-range';
 
 type PeriodPreset = '7' | '30' | 'custom';
 type ChartMetric =
   'menuAccesses' | 'impressions' | 'qualifiedViews' | 'interactions' | 'contactClicks';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const chartMetrics: Array<{ value: ChartMetric; label: string }> = [
   { value: 'menuAccesses', label: 'Acessos' },
@@ -30,29 +29,15 @@ const chartMetrics: Array<{ value: ChartMetric; label: string }> = [
   { value: 'contactClicks', label: 'Cliques em contato' },
 ];
 
-function dateInputValue(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function dateRangeForDays(days: number): { fromDate: string; toDate: string } {
-  const today = new Date();
-  const to = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  const from = new Date(to.getTime() - (days - 1) * DAY_MS);
-  return { fromDate: dateInputValue(from), toDate: dateInputValue(to) };
-}
-
 function toDashboardQuery(
   fromDate: string,
   toDate: string,
   categoryId?: string,
   productId?: string,
 ) {
-  const from = new Date(`${fromDate}T00:00:00.000Z`);
-  const to = new Date(`${toDate}T00:00:00.000Z`);
-  to.setUTCDate(to.getUTCDate() + 1);
   const query: AnalyticsDashboardQuery = {
-    from: from.toISOString(),
-    to: to.toISOString(),
+    fromDate,
+    toDate,
   };
   if (categoryId) query.categoryId = categoryId;
   if (productId) query.productId = productId;
@@ -64,18 +49,18 @@ function messageFor(error: unknown): string {
   return 'Não foi possível carregar os dados de analytics.';
 }
 
-function formatDay(day: string): string {
-  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(
-    new Date(`${day}T00:00:00.000Z`),
-  );
-}
-
 function formatNumber(value: number): string {
   return new Intl.NumberFormat('pt-BR').format(value);
 }
 
-export function AnalyticsDashboard({ establishmentId }: { establishmentId: string }) {
-  const defaultRange = dateRangeForDays(30);
+export function AnalyticsDashboard({
+  establishmentId,
+  timeZone = 'America/Sao_Paulo',
+}: {
+  establishmentId: string;
+  timeZone?: string;
+}) {
+  const defaultRange = dateRangeForDays(30, timeZone);
   const [period, setPeriod] = useState<PeriodPreset>('30');
   const [fromDate, setFromDate] = useState(defaultRange.fromDate);
   const [toDate, setToDate] = useState(defaultRange.toDate);
@@ -86,6 +71,18 @@ export function AnalyticsDashboard({ establishmentId }: { establishmentId: strin
   );
   const [filterError, setFilterError] = useState<string | null>(null);
   const [chartMetric, setChartMetric] = useState<ChartMetric>('qualifiedViews');
+  const previousTimeZone = useRef(timeZone);
+
+  useEffect(() => {
+    if (previousTimeZone.current === timeZone) return;
+    previousTimeZone.current = timeZone;
+    if (period === 'custom') return;
+
+    const range = dateRangeForDays(period === '7' ? 7 : 30, timeZone);
+    setFromDate(range.fromDate);
+    setToDate(range.toDate);
+    setAppliedQuery(toDashboardQuery(range.fromDate, range.toDate, categoryId, productId));
+  }, [categoryId, period, productId, timeZone]);
 
   const query = useQuery({
     queryKey: ['analytics-dashboard', establishmentId, appliedQuery],
@@ -102,14 +99,12 @@ export function AnalyticsDashboard({ establishmentId }: { establishmentId: strin
       setFilterError('Informe o início e o fim do período.');
       return;
     }
-    const from = new Date(`${nextFromDate}T00:00:00.000Z`);
-    const to = new Date(`${nextToDate}T00:00:00.000Z`);
-    const duration = to.getTime() - from.getTime();
+    const duration = inclusiveDays(nextFromDate, nextToDate);
     if (duration <= 0) {
       setFilterError('O fim do período deve ser posterior ao início.');
       return;
     }
-    if (duration > 366 * DAY_MS) {
+    if (duration > 366) {
       setFilterError('O período não pode ultrapassar 366 dias.');
       return;
     }
@@ -118,7 +113,7 @@ export function AnalyticsDashboard({ establishmentId }: { establishmentId: strin
   };
 
   const selectPreset = (days: 7 | 30) => {
-    const range = dateRangeForDays(days);
+    const range = dateRangeForDays(days, timeZone);
     setPeriod(String(days) as '7' | '30');
     setFromDate(range.fromDate);
     setToDate(range.toDate);
@@ -485,16 +480,16 @@ function EvolutionPanel({
               </svg>
             </div>
             <div className="mt-3 flex justify-between text-xs text-ink-faint" aria-hidden="true">
-              <span>{formatDay(points[0]!.day)}</span>
+              <span>{formatDashboardDay(points[0]!.day)}</span>
               {points.length > 2 ? (
-                <span>{formatDay(points[Math.floor(points.length / 2)]!.day)}</span>
+                <span>{formatDashboardDay(points[Math.floor(points.length / 2)]!.day)}</span>
               ) : null}
-              {points.length > 1 ? <span>{formatDay(points.at(-1)!.day)}</span> : null}
+              {points.length > 1 ? <span>{formatDashboardDay(points.at(-1)!.day)}</span> : null}
             </div>
             <ol className="sr-only">
               {points.map((point) => (
                 <li key={point.day}>
-                  {formatDay(point.day)}: {formatNumber(point.value)}
+                  {formatDashboardDay(point.day)}: {formatNumber(point.value)}
                 </li>
               ))}
             </ol>

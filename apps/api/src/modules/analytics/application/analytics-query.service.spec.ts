@@ -7,6 +7,7 @@ const scope = {
   establishmentId: 'establishment-id',
   from: new Date('2026-08-01T00:00:00.000Z'),
   to: new Date('2026-08-03T00:00:00.000Z'),
+  timeZone: 'America/Sao_Paulo',
 };
 
 describe('AnalyticsQueryService', () => {

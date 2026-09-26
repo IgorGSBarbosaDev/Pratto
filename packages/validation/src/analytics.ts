@@ -75,32 +75,38 @@ export type AnalyticsEventInput = z.infer<typeof analyticsEventSchema>;
 export type AnalyticsSessionInput = z.infer<typeof analyticsSessionSchema>;
 export type AnalyticsIngestInput = z.infer<typeof analyticsIngestSchema>;
 
-const analyticsDashboardDateSchema = z.string().datetime({ offset: true });
+const analyticsDashboardDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe uma data no formato AAAA-MM-DD.')
+  .refine((value) => {
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }, 'Informe uma data válida.');
 
 export const analyticsDashboardQuerySchema = z
   .object({
-    from: analyticsDashboardDateSchema,
-    to: analyticsDashboardDateSchema,
+    fromDate: analyticsDashboardDateSchema,
+    toDate: analyticsDashboardDateSchema,
     categoryId: categoryIdSchema.optional(),
     productId: productIdSchema.optional(),
   })
   .strict()
   .superRefine((value, context) => {
-    const from = new Date(value.from);
-    const to = new Date(value.to);
-    const durationMs = to.getTime() - from.getTime();
+    const from = new Date(`${value.fromDate}T00:00:00.000Z`);
+    const to = new Date(`${value.toDate}T00:00:00.000Z`);
+    const durationDays = (to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000) + 1;
 
-    if (durationMs <= 0) {
+    if (durationDays <= 0) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['to'],
+        path: ['toDate'],
         message: 'O fim do período deve ser posterior ao início.',
       });
     }
-    if (durationMs > 366 * 24 * 60 * 60 * 1000) {
+    if (durationDays > 366) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['to'],
+        path: ['toDate'],
         message: 'O período não pode ultrapassar 366 dias.',
       });
     }

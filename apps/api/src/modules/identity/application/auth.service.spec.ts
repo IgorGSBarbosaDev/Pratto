@@ -36,7 +36,15 @@ const membership = {
   organization: {
     id: 'organization-id',
     name: 'Organization',
-    establishments: [{ id: 'establishment-id', publicId: 'public-id', name: 'Casa', slug: 'casa' }],
+    establishments: [
+      {
+        id: 'establishment-id',
+        publicId: 'public-id',
+        name: 'Casa',
+        slug: 'casa',
+        timeZone: 'America/Sao_Paulo',
+      },
+    ],
   },
 };
 

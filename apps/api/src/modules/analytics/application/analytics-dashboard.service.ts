@@ -10,6 +10,7 @@ import type { AnalyticsDashboardQueryInput } from '@pratto/validation';
 
 import { StableHttpException } from '../../../common/http/stable-http.exception';
 import type { TenantPrincipal } from '../../identity/domain/auth.types';
+import { nextDate, startOfDateInTimeZone } from '../domain/time-zone';
 
 import { AnalyticsQueryService, type AnalyticsQueryScope } from './analytics-query.service';
 
@@ -24,7 +25,7 @@ export class AnalyticsDashboardService {
     establishmentId: string,
     input: AnalyticsDashboardQueryInput,
   ): Promise<AnalyticsDashboardResponse> {
-    await this.assertEstablishment(tenant, establishmentId);
+    const timeZone = await this.assertEstablishment(tenant, establishmentId);
     if (!hasPermission(tenant.role, Permission.ANALYTICS_READ)) {
       throw new StableHttpException(
         HttpStatus.FORBIDDEN,
@@ -38,8 +39,9 @@ export class AnalyticsDashboardService {
     const scope: AnalyticsQueryScope = {
       organizationId: tenant.organizationId,
       establishmentId,
-      from: new Date(input.from),
-      to: new Date(input.to),
+      from: startOfDateInTimeZone(input.fromDate, timeZone),
+      to: startOfDateInTimeZone(nextDate(input.toDate), timeZone),
+      timeZone,
       categoryId: input.categoryId,
       productId: input.productId,
     };
@@ -68,13 +70,14 @@ export class AnalyticsDashboardService {
   private async assertEstablishment(
     tenant: TenantPrincipal,
     establishmentId: string,
-  ): Promise<void> {
+  ): Promise<string> {
     if (!tenant.establishmentIds.includes(establishmentId)) this.establishmentNotFound();
     const establishment = await prisma.establishment.findFirst({
       where: { id: establishmentId, organizationId: tenant.organizationId, status: 'ACTIVE' },
-      select: { id: true },
+      select: { id: true, timeZone: true },
     });
     if (!establishment) this.establishmentNotFound();
+    return establishment.timeZone;
   }
 
   private async assertFilters(

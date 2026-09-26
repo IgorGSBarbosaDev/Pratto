@@ -33,11 +33,9 @@ describe('AnalyticsDashboardController', () => {
     } as unknown as AnalyticsDashboardService);
 
     expect(() =>
-      controller.getDashboard(
-        establishmentId,
-        { from: 'invalid', to: '2026-08-10T00:00:00.000Z' },
-        { tenant } as never,
-      ),
+      controller.getDashboard(establishmentId, { fromDate: 'invalid', toDate: '2026-08-10' }, {
+        tenant,
+      } as never),
     ).toThrow(
       expect.objectContaining({ response: expect.objectContaining({ code: 'VALIDATION_ERROR' }) }),
     );
@@ -51,11 +49,9 @@ describe('AnalyticsDashboardController', () => {
     } as unknown as AnalyticsDashboardService);
 
     expect(() =>
-      controller.getDashboard(
-        establishmentId,
-        { from: '2025-01-01T00:00:00.000Z', to: '2026-01-03T00:00:00.000Z' },
-        { tenant } as never,
-      ),
+      controller.getDashboard(establishmentId, { fromDate: '2025-01-01', toDate: '2026-01-03' }, {
+        tenant,
+      } as never),
     ).toThrow(
       expect.objectContaining({ response: expect.objectContaining({ code: 'VALIDATION_ERROR' }) }),
     );
@@ -68,8 +64,8 @@ describe('AnalyticsDashboardController', () => {
       getDashboard,
     } as unknown as AnalyticsDashboardService);
     const query = {
-      from: '2026-08-01T00:00:00.000Z',
-      to: '2026-08-10T00:00:00.000Z',
+      fromDate: '2026-08-01',
+      toDate: '2026-08-10',
       categoryId,
     };
 

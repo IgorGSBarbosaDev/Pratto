@@ -500,6 +500,7 @@ describe('public menu analytics integration', () => {
       ...scope,
       from: new Date('2026-08-01T00:00:00.000Z'),
       to: new Date('2026-08-04T00:00:00.000Z'),
+      timeZone: 'America/Sao_Paulo',
     });
     expect(daily).toHaveLength(3);
     expect(daily.every((day) => day.impressions === 0 && day.menuAccesses === 0)).toBe(true);

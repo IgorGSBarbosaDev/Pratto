@@ -18,6 +18,7 @@ export interface AuthEstablishment {
   publicId: string;
   name: string;
   slug: string;
+  timeZone: string;
 }
 
 export interface AuthContextResponse {

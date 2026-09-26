@@ -1,4 +1,5 @@
 import type { PublicMenuPageResponse } from '@pratto/contracts';
+import { DEFAULT_ESTABLISHMENT_OPERATING_HOURS } from '@pratto/validation';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -28,7 +29,8 @@ function page(overrides: Partial<PublicMenuPageResponse> = {}): PublicMenuPageRe
       phone: null,
       whatsapp: null,
       address: null,
-      operatingHours: {} as PublicMenuPageResponse['establishment']['operatingHours'],
+      operatingHours: DEFAULT_ESTABLISHMENT_OPERATING_HOURS,
+      timeZone: 'America/Sao_Paulo',
       logo: null,
       coverImage: null,
       theme: { mode: 'DARK', primaryColor: '#166534' },

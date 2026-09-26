@@ -184,7 +184,7 @@ export class AuthService {
                   establishments: {
                     where: { status: 'ACTIVE' },
                     orderBy: { name: 'asc' },
-                    select: { id: true, publicId: true, name: true, slug: true },
+                    select: { id: true, publicId: true, name: true, slug: true, timeZone: true },
                   },
                 },
               },

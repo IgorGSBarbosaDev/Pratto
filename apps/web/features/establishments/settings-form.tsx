@@ -8,13 +8,18 @@ import type {
   EstablishmentSettingsResponse,
   UpdateEstablishmentInput,
 } from '@pratto/contracts';
-import { establishmentUpdateSchema } from '@pratto/validation';
+import {
+  accessibleThemeColors,
+  DEFAULT_ESTABLISHMENT_THEME,
+  establishmentUpdateSchema,
+} from '@pratto/validation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Image as ImageIcon, Moon, UploadCloud } from 'lucide-react';
 import { useEffect, useRef, type CSSProperties } from 'react';
 import { useForm, type Resolver, type UseFormReturn } from 'react-hook-form';
 
 import { ApiClientError } from '../auth/api-client';
+import { authQueryKey } from '../auth/auth-boundary';
 import { ErrorState, Skeleton } from '../design-system/feedback';
 import { Button, SectionLabel, Toggle } from '../design-system/primitives';
 
@@ -41,6 +46,12 @@ const DAYS: Array<{ key: keyof EstablishmentOperatingHours; label: string }> = [
 ];
 
 const ACCENT_PRESETS = ['#f45b3d', '#c96a4a', '#3f7652', '#d9a62e', '#76506f', '#4b61a8'];
+const BRAZILIAN_TIME_ZONES = [
+  { value: 'America/Noronha', label: 'Fernando de Noronha (UTC−02:00)' },
+  { value: 'America/Sao_Paulo', label: 'Brasília e Sudeste (UTC−03:00)' },
+  { value: 'America/Manaus', label: 'Manaus e Centro-Oeste (UTC−04:00)' },
+  { value: 'America/Rio_Branco', label: 'Rio Branco e Acre (UTC−05:00)' },
+];
 
 function messageFor(error: unknown): string {
   if (error instanceof ApiClientError) return error.message;
@@ -85,14 +96,16 @@ export function EstablishmentSettingsForm({
       whatsapp: query.data.whatsapp ?? '',
       address: query.data.address ?? EMPTY_ADDRESS,
       operatingHours: query.data.operatingHours,
+      timeZone: query.data.timeZone,
       theme: query.data.theme,
     });
   }, [form, query.data]);
 
   const save = useMutation({
     mutationFn: (input: FormValues) => establishmentApi.update(establishmentId, input),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.setQueryData(['establishment-settings', establishmentId], data);
+      await queryClient.invalidateQueries({ queryKey: authQueryKey });
     },
   });
   const upload = useMutation({
@@ -128,7 +141,7 @@ export function EstablishmentSettingsForm({
     section === 'hours' ? 'Horários' : section === 'appearance' ? 'Aparência' : 'Informações';
   const maxWidth =
     section === 'hours' ? 'max-w-2xl' : section === 'appearance' ? 'max-w-5xl' : 'max-w-3xl';
-  const accent = form.watch('theme.primaryColor') ?? '#f45b3d';
+  const accent = form.watch('theme.primaryColor') ?? DEFAULT_ESTABLISHMENT_THEME.primaryColor;
 
   return (
     <div className={`mx-auto ${maxWidth}`}>
@@ -230,52 +243,70 @@ export function EstablishmentSettingsForm({
         ) : null}
 
         {showHours ? (
-          <section className="overflow-hidden rounded-2xl border border-line bg-cream">
-            <ul className="divide-y divide-line">
-              {DAYS.map(({ key, label }) => {
-                const closed = form.watch(`operatingHours.${key}.closed`) ?? false;
-                return (
-                  <li
-                    key={key}
-                    className={`flex flex-wrap items-center gap-4 px-4 py-4 sm:flex-nowrap ${closed ? 'bg-sand/45' : ''}`}
-                  >
-                    <div className="flex w-40 items-center gap-3">
-                      <Toggle
-                        on={!closed}
-                        ariaLabel={`${label} aberto`}
-                        onToggle={() =>
-                          form.setValue(`operatingHours.${key}.closed`, !closed, {
-                            shouldDirty: true,
-                          })
-                        }
-                      />
-                      <span className="text-[15px] font-medium text-ink">{label}</span>
-                    </div>
-                    {closed ? (
-                      <span className="flex flex-1 items-center gap-1.5 text-sm font-medium text-ink-faint">
-                        <Moon size={15} /> Fechado
-                      </span>
-                    ) : (
-                      <div className="flex flex-1 items-center gap-2">
-                        <input
-                          className="pratto-input tnum max-w-36"
-                          type="time"
-                          aria-label={`${label} abre`}
-                          {...form.register(`operatingHours.${key}.open`)}
+          <section className="space-y-5">
+            <label className="pratto-label block max-w-xl">
+              Fuso horário do estabelecimento
+              <select className="pratto-input mt-1" {...form.register('timeZone')}>
+                {BRAZILIAN_TIME_ZONES.map((zone) => (
+                  <option key={zone.value} value={zone.value}>
+                    {zone.label}
+                  </option>
+                ))}
+                {!BRAZILIAN_TIME_ZONES.some(({ value }) => value === settings.timeZone) ? (
+                  <option value={settings.timeZone}>{settings.timeZone}</option>
+                ) : null}
+              </select>
+              <span className="mt-1 block text-xs font-normal text-ink-faint">
+                Este fuso define os horários públicos e os dias do painel de analytics.
+              </span>
+            </label>
+            <div className="overflow-hidden rounded-2xl border border-line bg-cream">
+              <ul className="divide-y divide-line">
+                {DAYS.map(({ key, label }) => {
+                  const closed = form.watch(`operatingHours.${key}.closed`) ?? false;
+                  return (
+                    <li
+                      key={key}
+                      className={`flex flex-wrap items-center gap-4 px-4 py-4 sm:flex-nowrap ${closed ? 'bg-sand/45' : ''}`}
+                    >
+                      <div className="flex w-40 items-center gap-3">
+                        <Toggle
+                          on={!closed}
+                          ariaLabel={`${label} aberto`}
+                          onToggle={() =>
+                            form.setValue(`operatingHours.${key}.closed`, !closed, {
+                              shouldDirty: true,
+                            })
+                          }
                         />
-                        <span className="text-ink-faint">até</span>
-                        <input
-                          className="pratto-input tnum max-w-36"
-                          type="time"
-                          aria-label={`${label} fecha`}
-                          {...form.register(`operatingHours.${key}.close`)}
-                        />
+                        <span className="text-[15px] font-medium text-ink">{label}</span>
                       </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                      {closed ? (
+                        <span className="flex flex-1 items-center gap-1.5 text-sm font-medium text-ink-faint">
+                          <Moon size={15} /> Fechado
+                        </span>
+                      ) : (
+                        <div className="flex flex-1 items-center gap-2">
+                          <input
+                            className="pratto-input tnum max-w-36"
+                            type="time"
+                            aria-label={`${label} abre`}
+                            {...form.register(`operatingHours.${key}.open`)}
+                          />
+                          <span className="text-ink-faint">até</span>
+                          <input
+                            className="pratto-input tnum max-w-36"
+                            type="time"
+                            aria-label={`${label} fecha`}
+                            {...form.register(`operatingHours.${key}.close`)}
+                          />
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </section>
         ) : null}
 
@@ -298,7 +329,10 @@ export function EstablishmentSettingsForm({
                       style={{ backgroundColor: color }}
                     >
                       {accent.toLowerCase() === color ? (
-                        <Check size={18} className="text-white" />
+                        <Check
+                          size={18}
+                          style={{ color: accessibleThemeColors(color).onPrimary }}
+                        />
                       ) : null}
                     </button>
                   ))}
@@ -319,10 +353,13 @@ export function EstablishmentSettingsForm({
                 <p className="mt-4 pratto-help">
                   Aplicada a chips, botões, navegação ativa e pequenos destaques.
                 </p>
+                <p className="mt-2 pratto-help">
+                  O contraste do texto é ajustado automaticamente para cada cor e superfície.
+                </p>
               </section>
               <section>
                 <h2 className="mb-3 text-[15px] font-semibold text-ink">Modo do menu</h2>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {(['LIGHT', 'DARK'] as const).map((mode) => (
                     <button
                       key={mode}
@@ -341,7 +378,11 @@ export function EstablishmentSettingsForm({
                 </div>
               </section>
             </div>
-            <AppearancePreview settings={settings} accent={accent} />
+            <AppearancePreview
+              settings={settings}
+              accent={accent}
+              mode={form.watch('theme.mode') ?? settings.theme.mode}
+            />
           </div>
         ) : null}
 
@@ -510,20 +551,30 @@ function AssetCard({
 function AppearancePreview({
   settings,
   accent,
+  mode,
 }: {
   settings: EstablishmentSettingsResponse;
   accent: string;
+  mode: 'LIGHT' | 'DARK';
 }) {
-  const style = { '--preview-accent': accent } as CSSProperties;
+  const light = mode === 'LIGHT';
+  const themeColors = accessibleThemeColors(accent);
+  const style = {
+    '--preview-accent': accent,
+    '--preview-on-accent': themeColors.onPrimary,
+    '--preview-ink': light ? '#181716' : '#fff9f4',
+    '--preview-surface': light ? '#fff9f4' : '#181716',
+    '--preview-hero': light ? '#f3ebe3' : '#242220',
+  } as CSSProperties;
   return (
     <div className="lg:sticky lg:top-8" style={style}>
       <div className="mb-3 flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-[var(--preview-accent)]" />
         <span className="text-[13px] font-medium text-ink-soft">Prévia ao vivo</span>
       </div>
-      <div className="mx-auto w-fit rounded-[40px] border-[9px] border-ink bg-ink shadow-[0_24px_50px_-24px_rgba(24,23,22,0.5)]">
-        <div className="relative h-[600px] w-[300px] overflow-hidden rounded-[31px] bg-cream">
-          <div className="relative h-[46%] bg-sand">
+      <div className="mx-auto w-full max-w-[318px] rounded-[40px] border-[9px] border-ink bg-ink shadow-[0_24px_50px_-24px_rgba(24,23,22,0.5)]">
+        <div className="relative h-[600px] w-full overflow-hidden rounded-[31px] bg-cream">
+          <div className="relative h-[46%] bg-[var(--preview-hero)]">
             {settings.coverImage ? (
               <span
                 className="absolute inset-0 bg-cover bg-center"
@@ -534,9 +585,9 @@ function AppearancePreview({
                 <ImageIcon size={28} />
               </span>
             )}
-            <span className="absolute inset-0 bg-gradient-to-t from-cream to-transparent" />
+            <span className="absolute inset-0 bg-gradient-to-t from-[var(--preview-surface)] to-transparent" />
           </div>
-          <div className="relative -mt-10 flex flex-col items-center px-5 text-center">
+          <div className="relative -mt-10 flex flex-col items-center bg-[var(--preview-surface)] px-5 pb-6 text-center text-[var(--preview-ink)]">
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-ink font-serif text-4xl text-cream shadow-[0_14px_30px_-16px_rgba(24,23,22,.55)]">
               {settings.logo ? (
                 <span
@@ -547,11 +598,13 @@ function AppearancePreview({
                 settings.name.slice(0, 1)
               )}
             </div>
-            <h3 className="mt-4 font-serif text-[32px] leading-none text-ink">{settings.name}</h3>
-            <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink-soft">
+            <h3 className="mt-4 font-serif text-[32px] leading-none">{settings.name}</h3>
+            <p
+              className={`mt-3 line-clamp-3 text-sm leading-6 ${light ? 'text-ink-soft' : 'text-cream/70'}`}
+            >
               {settings.description || 'A descrição do restaurante aparecerá aqui.'}
             </p>
-            <span className="mt-6 rounded-full bg-[var(--preview-accent)] px-6 py-3 text-sm font-medium text-white">
+            <span className="mt-6 rounded-full bg-[var(--preview-accent)] px-6 py-3 text-sm font-medium text-[var(--preview-on-accent)]">
               Explorar o menu
             </span>
           </div>

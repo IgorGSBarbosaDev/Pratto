@@ -4,8 +4,8 @@ import { AnalyticsDashboardService } from './analytics-dashboard.service';
 
 const establishmentId = '11111111-1111-4111-8111-111111111111';
 const input: AnalyticsDashboardQueryInput = {
-  from: '2026-08-01T00:00:00.000Z',
-  to: '2026-08-10T00:00:00.000Z',
+  fromDate: '2026-08-01',
+  toDate: '2026-08-10',
 };
 
 describe('AnalyticsDashboardService', () => {
